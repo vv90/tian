@@ -1,6 +1,7 @@
 module Geo.GeoUtils exposing (..)
 import Nav.Units exposing (..)
 import Geo.Constants exposing (..)
+import Math.Vector3 as V3 exposing (Vec3, vec3, getX, getY, getZ, cross, normalize, negate)
 
 -- function lon2tile(lon,zoom) { 
   -- return (Math.floor((lon+180)/360*Math.pow(2,zoom))); }
@@ -133,48 +134,39 @@ destination b (Meters d) p =
     , lat = latRad2 |> Rad |> radToDeg |> LatDeg
     }
 
-toSpherical : GeoPoint -> (Float, Float, Float)
+toSpherical : GeoPoint -> Vec3
 toSpherical p = 
   let 
     lonRad = (getLon >> degToRad >> getRad) p.lon
     latRad = (getLat >> degToRad >> getRad) p.lat
   in
-    ( cos latRad * cos lonRad
-    , cos latRad * sin lonRad
-    , sin latRad
-    )
---  r = cos phi
--- cos theta = x/r = x/cos phi
--- theta = acos (x/cos phi)
-fromSpherical : (Float, Float, Float) -> GeoPoint
-fromSpherical (x, y, z) =
+    vec3 
+      (cos latRad * cos lonRad)
+      (cos latRad * sin lonRad)
+      (sin latRad)
+    
+
+fromSpherical : Vec3 -> GeoPoint
+fromSpherical v =
   let
-    latRad = asin z
+    latRad = asin (getZ v)
     tmp = cos latRad
-    sign = if asin (y / tmp) > 0 then 1 else -1
-    lonRad = acos (x / tmp) * sign
+    sign = if asin (getY v / tmp) > 0 then 1 else -1
+    lonRad = acos (getX v / tmp) * sign
   in
     GeoPoint 
       ((Rad >> radToDeg >> LonDeg) lonRad) 
       ((Rad >> radToDeg >> LatDeg) latRad)
 
 
-crossProduct : (Float, Float, Float) -> (Float, Float, Float) -> (Float, Float, Float)
-crossProduct (u1, u2, u3) (v1, v2, v3) =
-  ( u2 * v3 - u3 * v2
-  , u3 * v1 - u1 * v3
-  , u1 * v2 - u2 * v1
-  )
-
 intersection : (GeoPoint, GeoPoint) -> (GeoPoint, GeoPoint) -> Maybe GeoPoint
 intersection (p11, p12) (p21, p22) =
   let
-    n1 = crossProduct (toSpherical p11) (toSpherical p12)
-    n2 = crossProduct (toSpherical p21) (toSpherical p22)
-    (d1, d2, d3) = crossProduct n1 n2
-    dlen = sqrt (d1^2 + d2^2 + d3^2)
-    s1 = fromSpherical (d1/dlen, d2/dlen, d3/dlen)
-    s2 = fromSpherical (-d1/dlen, -d2/dlen, -d3/dlen)
+    n1 = cross (toSpherical p11) (toSpherical p12)
+    n2 = cross (toSpherical p21) (toSpherical p22)
+    d = cross n1 n2 |> normalize
+    s1 = fromSpherical d
+    s2 = (V3.negate >> fromSpherical) d
     getDegLat = getLat >> getDeg
     getDegLon = getLon >> getDeg
     isBetweenE a b x = x >= min a b && x <= max a b

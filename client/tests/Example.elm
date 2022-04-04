@@ -3,8 +3,9 @@ module Example exposing (..)
 import Expect exposing (FloatingPointTolerance(..))
 import Fuzz exposing (Fuzzer, int, list, string)
 import Test exposing (..)
-import Geo.GeoUtils exposing (GeoPoint, Latitude(..), Longitude(..), toSpherical, fromSpherical, crossProduct, getLon, getLat)
+import Geo.GeoUtils exposing (GeoPoint, Latitude(..), Longitude(..), toSpherical, fromSpherical, getLon, getLat)
 import Nav.Units exposing (Deg(..), getDeg)
+import Math.Vector3 as V3
 
 angle : (Float, Float, Float) -> (Float, Float, Float) -> Float
 angle (x1, y1, z1) (x2, y2, z2) =
@@ -61,24 +62,8 @@ testToSpherical =
                 ((Deg >> LonDeg) 39.94354248046875) 
                 ((Deg >> LatDeg) 52.16550896167103)
             
-            (x, y, z) = toSpherical geoPoint
-            len = sqrt (x^2 + y^2 + z^2)
+            v = toSpherical geoPoint
           in
-            Expect.within (Absolute 0.000001) len 1
+            Expect.within (Absolute 0.000001) (V3.length v) 1
     ]
   
-testCrossProduct : Test
-testCrossProduct = 
-  describe "crossProduct"
-    [ test "cross product result is perpendicular to each of the input vectors" <|
-        \_ ->
-          let 
-            a = (1, 1, 1)
-            b = (0, 1, 0)
-          in
-            Expect.all 
-              [ \cp -> Expect.within (Absolute 0.000001) (90 * pi / 180) (angle a cp)
-              , \cp -> Expect.within (Absolute 0.000001) (90 * pi / 180) (angle b cp)
-              ]
-              (crossProduct a b)
-    ]

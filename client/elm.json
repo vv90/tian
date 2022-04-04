@@ -20,6 +20,7 @@
             "elm-community/list-extra": "8.5.1",
             "elm-community/maybe-extra": "5.2.1",
             "elm-community/result-extra": "2.4.0",
+            "elm-explorations/linear-algebra": "1.0.3",
             "joakin/elm-canvas": "5.0.0",
             "mdgriffith/elm-ui": "1.1.8",
             "mgold/elm-nonempty-list": "4.2.0"

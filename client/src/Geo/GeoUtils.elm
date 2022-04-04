@@ -158,7 +158,7 @@ fromSpherical v =
       ((Rad >> radToDeg >> LonDeg) lonRad) 
       ((Rad >> radToDeg >> LatDeg) latRad)
 
-
+-- todo: handle the case where all 4 points lie on the same great circle (i.e. collinear paths)
 intersection : (GeoPoint, GeoPoint) -> (GeoPoint, GeoPoint) -> Maybe GeoPoint
 intersection (p11, p12) (p21, p22) =
   let

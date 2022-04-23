@@ -1,9 +1,8 @@
 module PlaybackState exposing (..)
 import Time exposing (Posix, millisToPosix, posixToMillis)
 import Nav.FlightTrack exposing (FlightTrack, TrackPoint)
-import Array
-import Maybe.Extra as MaybeX
 import List.Extra as ListX
+import List.Nonempty as Nonempty
 
 -- type PlaybackSpeed = X1 | X10 | X100
 
@@ -23,23 +22,30 @@ type alias PlaybackState =
   , trackPoints: List TrackPoint
   }
 
+stop : PlaybackState -> PlaybackState
+stop state =
+  { state | playing = False }
+
+start : PlaybackState -> PlaybackState
+start state =
+  { state | playing = True }
+
+setSpeed : Int -> PlaybackState -> PlaybackState
+setSpeed speed state =
+  { state | speed = speed }
 
 initPlaybackState : FlightTrack -> PlaybackState 
 initPlaybackState track =
   let
-    start = 
-      Array.get 0 track.points 
-      |> MaybeX.unwrap (millisToPosix 0) (\p -> p.time)
-    end = 
-      Array.get (Array.length track.points - 1) track.points
-      |> MaybeX.unwrap (millisToPosix 0) (\p -> p.time)
+    firstPoint = Nonempty.head track.points 
+    lastPoint = Nonempty.last track.points
   in
     { speed = 1 
     , playing = False
-    , startTime = start
-    , endTime = end
-    , currentTime = start
-    , trackPoints = Array.toList track.points
+    , startTime = firstPoint.time
+    , endTime = lastPoint.time
+    , currentTime = firstPoint.time
+    , trackPoints = Nonempty.toList track.points
     }
 
 advancePlaybackState : PlaybackState -> (Maybe TrackPoint, PlaybackState)

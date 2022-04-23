@@ -7,9 +7,11 @@ import Date exposing (Date(..), toPosix)
 import Result.Extra as ResultX
 import Maybe.Extra as MaybeX
 import Date exposing (formatDate)
-import Geo.GeoUtils exposing (Latitude(..), Longitude(..), Altitude(..), getLat, getLon, getAltitude, toDecimalDegrees)
+import Geo.GeoUtils exposing (GeoPoint, Latitude(..), Longitude(..), Altitude(..), getLat, getLon, getAltitude, toDecimalDegrees)
 import Nav.Units exposing (Meters(..), Deg(..), getDeg, getMeters)
 import Array exposing (Array)
+import List.Nonempty exposing (Nonempty(..))
+import List.Nonempty as Nonempty
 
 type FixValidity = Gps3D | Baro2D
 type alias TrackPoint = 
@@ -20,6 +22,10 @@ type alias TrackPoint =
   , altitudeBaro: Altitude
   , altitudeGps: Altitude
   }
+
+trackPointToGeoPoint : TrackPoint -> GeoPoint
+trackPointToGeoPoint tp =
+  GeoPoint tp.longitude tp.latitude
 
 showTrackPoint : TrackPoint -> String
 showTrackPoint tp =
@@ -51,24 +57,30 @@ showFlightInfo fi =
     UnknownRecord -> "???"
 
 type alias FlightTrack = 
-  { date: Maybe Posix
-  , compId: Maybe String
-  , points: Array TrackPoint
+  { date: Posix
+  , compId: String
+  , points: Nonempty TrackPoint
   }
 
+type alias FlightTrackAggregateValue = (Maybe Posix, Maybe String, Array TrackPoint)
 
+type FlightTrackReadError 
+  = ParseError (List DeadEnd)
+  | MissingData String
+
+showFlightTrackReadError : FlightTrackReadError -> String
+showFlightTrackReadError error =
+  case error of
+    ParseError e -> Debug.toString e
+    MissingData msg -> msg
 
 showFlightTrack : FlightTrack -> String
 showFlightTrack ft =
-  MaybeX.unwrap "---" formatDate ft.date
-  ++ " | " ++ MaybeX.unwrap "--" identity ft.compId
-  ++ " | " ++ (Array.length >> String.fromInt) ft.points
+  formatDate ft.date
+  ++ " | " ++ ft.compId
+  ++ " | " ++ (Nonempty.length >> String.fromInt) ft.points
   ++ " points \n"
   -- ++ (Array.map showTrackPoint >> Array.toList >> String.join "\n") ft.points
-
-type TrackLoadError 
-  = NoFile
-  | TrackParsingError (List DeadEnd)
 
 
 intToMonth : Int -> Parser Month
@@ -92,7 +104,10 @@ trackDateParser : Parser FlightInfo
 trackDateParser = 
   succeed 
     (\d m y -> Date (y + 2000) m d |> (toPosix >> FlightDate) )
-    |. symbol "HFDTE"
+    |. oneOf 
+      [ succeed () |. symbol "HFDTEDATE:" 
+      , succeed () |. symbol "HFDTE"
+      ]
     |= (digits 2 |> andThen digitsToInt)
     |= (digits 2 |> andThen digitsToInt |> andThen intToMonth)
     |= (digits 2 |> andThen digitsToInt)
@@ -184,34 +199,47 @@ flightInfoParser =
     , unknownRecordParser
     ]
 
-emptyFlightTrack : FlightTrack
-emptyFlightTrack = 
-  { date = Nothing
-  , compId = Nothing
-  , points = Array.empty
-  }
-
-withFlightInfo : FlightInfo -> FlightTrack -> FlightTrack
-withFlightInfo info ft = 
+withFlightInfo : FlightInfo -> (Maybe Posix, Maybe String, Array TrackPoint) -> (Maybe Posix, Maybe String, Array TrackPoint)
+withFlightInfo info (date, compId, points) = 
   case info of
-    FlightDate d -> { ft | date = Just d }
-    CompId id -> { ft | compId = Just id }
-    Fix tp -> { ft | points = Array.push tp ft.points }
-    UnknownRecord -> ft
+    FlightDate d -> (Just d, compId, points)
+    CompId id -> (date, Just id, points)
+    Fix tp -> (date, compId, Array.push tp points)
+    UnknownRecord -> (date, compId, points)
 
-aggregateFlightInfo : List FlightInfo -> FlightTrack
-aggregateFlightInfo = 
-  List.foldr withFlightInfo emptyFlightTrack
+-- aggregateFlightInfo : List FlightInfo -> Result FlightTrackReadError FlightTrack
+-- aggregateFlightInfo fiItems = 
+--   let 
+--     aggregate = 
+--       List.foldr withFlightInfo (Nothing, Nothing, Array.empty) fiItems
+--       |> (\(date, compId, points) -> (date, compId, Array.toList points))
+--   in
+--     case aggregate of
+--       (Just date, Just compId, p::ps) -> 
+--         Ok
+--           { date = date
+--           , compId = compId
+--           , points = p::ps 
+--           }
+--       (Nothing, _, _) -> 
+--         (MissingData >> Err) "Missing date"
+--       (_, Nothing, _) ->
+--         (MissingData >> Err) "Missing CompId"
+--       (_, _, []) ->
+--         (MissingData >> Err) "No track points"
 
-parseTrackFile : List String -> Result (List DeadEnd) FlightTrack
-parseTrackFile = 
-  List.map (Parser.run flightInfoParser) >> ResultX.combine >> Result.map aggregateFlightInfo
+-- parseTrackFile : List String -> Result FlightTrackReadError FlightTrack
+-- parseTrackFile = 
+--   List.map (Parser.run flightInfoParser) 
+--   >> ResultX.combine 
+--   >> Result.mapError ParseError
+--   >> Result.andThen aggregateFlightInfo
 
-flightTrackParser : Parser FlightTrack
+flightTrackParser : Parser FlightTrackAggregateValue
 flightTrackParser =
-  loop emptyFlightTrack flightTrackParserStep
+  loop (Nothing, Nothing, Array.empty) flightTrackParserStep
 
-flightTrackParserStep : FlightTrack -> Parser (Step FlightTrack FlightTrack)
+flightTrackParserStep : FlightTrackAggregateValue -> Parser (Step FlightTrackAggregateValue FlightTrackAggregateValue)
 flightTrackParserStep track =
   oneOf 
     [ succeed (\x -> Loop (withFlightInfo x track))
@@ -221,3 +249,25 @@ flightTrackParserStep track =
     , succeed (Done track)
       |. symbol ""
     ]
+
+validateFlightTrack : FlightTrackAggregateValue -> Result FlightTrackReadError FlightTrack
+validateFlightTrack (date, compId, points) =
+  case (date, compId, Array.toList points) of
+    (Just d, Just cid, p::ps) -> 
+      Ok
+        { date = d
+        , compId = cid
+        , points = Nonempty p ps
+        }
+    (Nothing, _, _) -> 
+      (MissingData >> Err) "Missing date"
+    (_, Nothing, _) ->
+      (MissingData >> Err) "Missing CompId"
+    (_, _, []) ->
+      (MissingData >> Err) "No track points"
+
+parseFlightTrack : String -> Result FlightTrackReadError FlightTrack
+parseFlightTrack =
+  Parser.run flightTrackParser
+  >> Result.mapError ParseError
+  >> Result.andThen validateFlightTrack

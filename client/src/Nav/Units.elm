@@ -5,6 +5,12 @@ type Meters = Meters Float
 getMeters : Meters -> Float
 getMeters (Meters x) = x
 
+{-| Less than or equal Meters
+-}
+leMeters : Meters -> Meters -> Bool
+leMeters (Meters x) (Meters y) = 
+  x <= y
+
 type Rad = Rad Float
 
 getRad : Rad -> Float

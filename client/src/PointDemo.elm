@@ -1,6 +1,6 @@
 module PointDemo exposing (..)
 import Html exposing (..)
-import Geo.GeoUtils exposing (GeoPoint)
+import Geo.GeoUtils exposing (GeoPoint, Bearing, bearingFromDeg, getBearing)
 import Nav.Units exposing (Meters(..), getMeters, Deg(..), getDeg)
 import Geo.GeoUtils exposing (getLon, getLat, bearing)
 import Html.Attributes as A exposing (type_, min, max)
@@ -9,14 +9,14 @@ import Parser as Parser exposing (int, float)
 import Geo.GeoUtils exposing (destination)
 
 type alias Model =
-  { heading: Deg
+  { heading: Bearing
   , distance: Meters
   , projectedPoint: Maybe GeoPoint
   }
 
 init : () -> Model 
 init _ =
-  { heading = Deg 0 
+  { heading = bearingFromDeg (Deg 0) 
   , distance = Meters 1000
   , projectedPoint = Nothing
   }
@@ -46,7 +46,7 @@ update msg model =
         )
     HeadingChanged origin h -> 
       let
-        newHeading = h |> Parser.run Parser.float |> Result.map Deg |> Result.withDefault model.heading 
+        newHeading = h |> Parser.run Parser.float |> Result.map (Deg >> bearingFromDeg) |> Result.withDefault model.heading 
       in
       
       ( { model 
@@ -66,7 +66,7 @@ view cursorPoint selectedPoint =
       [ input [ A.type_ "number", A.step "1", onInput (DistanceChanged selectedPoint)] []
       , input [ A.type_ "range", A.min "0", A.max "360", onInput (HeadingChanged selectedPoint) ] [] 
       , h2 [] [ selectedPoint |> Maybe.map showPoint |> Maybe.withDefault "--, --" |> text ]
-      , h2 [] [ headingToCursor |> Maybe.map (getDeg >> String.fromFloat) |> Maybe.withDefault "" |> text ] ]
+      , h2 [] [ headingToCursor |> Maybe.map (getBearing >> getDeg >> String.fromFloat) |> Maybe.withDefault "" |> text ] ]
 
 showPoint : GeoPoint -> String
 showPoint geoPoint =

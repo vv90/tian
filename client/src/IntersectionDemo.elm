@@ -1,6 +1,6 @@
 module IntersectionDemo exposing (..)
 
-import Geo.GeoUtils exposing (GeoPoint, intersection)
+import Geo.GeoUtils exposing (GeoPoint, lineIntersection)
 import Maybe.Extra exposing (isNothing)
 import Maybe.Extra as MaybeX
 import PointDemo exposing (showPoint)
@@ -40,7 +40,7 @@ selectIntersection model =
   { model 
   | intersectionPoint = 
       MaybeX.andThen4 
-        (\p1 p2 p3 p4 -> intersection (p1, p2) (p3, p4))
+        (\p1 p2 p3 p4 -> lineIntersection (p1, p2) (p3, p4))
         model.p1
         model.p2
         model.p3

@@ -1,8 +1,9 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, button, div, text)
+import Html exposing (Html, button, div, text, p)
 import Html.Events exposing (onClick)
+import Html.Attributes exposing (style)
 import Map as Map exposing (..)
 import MapUtils exposing (..)
 import Geo.GeoUtils exposing (..)
@@ -11,10 +12,17 @@ import Nav.NavPoint exposing (navPointParser, NavPoint)
 import Nav.NavPointList exposing (navPointLines)
 import Parser as Parser
 import Utils exposing (..)
-import List.Extra
-import Result.Extra
+import List.Extra as ListX
+import Result.Extra as ResultX
+import Maybe.Extra as MaybeX
 import Nav.Units exposing (..)
 import Nav.FlightTask exposing (Turnpoint(..), FlightTask, TaskStart(..), TaskFinish(..), taskToMapItems)
+import LogViewDemo
+import Nav.FlightTrack exposing (FlightTrackReadError(..), parseFlightTrack, showFlightTrackReadError)
+import Parser exposing (DeadEnd)
+import File exposing (File)
+import File.Select as Select
+import Task
 
 main : Program Flags Model Msg
 main =
@@ -25,17 +33,27 @@ main =
     , subscriptions = subscriptions
     }
 
+type TaskReadError 
+  = NavPointParseError (List DeadEnd) 
+  | NavPointMissing String
+
+type TrackLoadError 
+  = NoFile
+  | NoTask TaskReadError
+  | TrackReadError FlightTrackReadError
+
 type alias Model = 
   { mapModel : Map.Model
+  , flightTask : Result TaskReadError FlightTask
+  , logViewModel : Result TrackLoadError LogViewDemo.Model
   }
 
 
-
-lookupNavPoint : String -> List NavPoint -> Result MapInitError NavPoint
+lookupNavPoint : String -> List NavPoint -> Result TaskReadError NavPoint
 lookupNavPoint name navPoints =
-  List.Extra.find (\np -> np.name == name) navPoints
-  |> Result.fromMaybe ("Point " ++ name ++ " not found")
-  |> Result.mapError LookupError
+  ListX.find (\np -> np.name == name) navPoints
+  |> Result.fromMaybe name
+  |> Result.mapError NavPointMissing
 
 -- turnPointsToMapItems : List Turnpoint -> List MapItem
 -- turnPointsToMapItems turnpoints = 
@@ -51,14 +69,18 @@ lookupNavPoint name navPoints =
 init : Flags -> (Model, Cmd Msg)
 init flags =
   let
-    navPointsResult : Result MapInitError (List NavPoint)
-    navPointsResult = navPointLines |> List.map (Parser.run navPointParser) |> Result.Extra.combine |> Result.mapError ParsingError
+    navPointsResult : Result TaskReadError (List NavPoint)
+    navPointsResult = 
+      navPointLines 
+      |> List.map (Parser.run navPointParser) 
+      |> ResultX.combine 
+      |> Result.mapError NavPointParseError
 
-    fromNavPointName : String -> Result MapInitError NavPoint
+    fromNavPointName : String -> Result TaskReadError NavPoint
     fromNavPointName = \pointName -> navPointsResult |> Result.andThen (lookupNavPoint pointName) 
 
-    initTaskPoint : (String, a) -> Result MapInitError (NavPoint, a)
-    initTaskPoint = Tuple.mapFirst fromNavPointName >> Result.Extra.combineFirst
+    initTaskPoint : (String, a) -> Result TaskReadError (NavPoint, a)
+    initTaskPoint = Tuple.mapFirst fromNavPointName >> ResultX.combineFirst
     
     start = initTaskPoint ("USMAER", StartLine (Meters 5e3))
     finish = initTaskPoint ("USMAER", FinishCylinder (Meters 3e3))
@@ -71,7 +93,7 @@ init flags =
       , ("U12DEVI", Cylinder (Meters 5e2))
       ] 
       |> List.map initTaskPoint
-      |> Result.Extra.combine
+      |> ResultX.combine
 
 
     flightTask = 
@@ -89,13 +111,21 @@ init flags =
         } 
   in 
     ( { mapModel = mapModel
+      , flightTask = flightTask
+      , logViewModel = Err NoFile
       }
     , Cmd.none
     )
 
 
 
-type Msg = MapMsg Map.Msg | Nothing
+type Msg 
+  = MapMsg Map.Msg 
+  | LogViewMsg LogViewDemo.Msg
+  | LogRequested 
+  | LogSelected File
+  | LogLoaded String
+  | NoMsg
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -105,14 +135,108 @@ update msg model =
         (nextModel, cmd) = Map.update m model.mapModel
       in
         ({ model | mapModel = nextModel}, Cmd.map MapMsg cmd)
-    Nothing -> (model, Cmd.none)
+
+    LogViewMsg m ->
+      model.logViewModel
+      |> Result.map (LogViewDemo.update m)
+      |> Result.map 
+          (\(nextModel, cmd) -> 
+              ( {model | logViewModel = Ok nextModel}
+              , Cmd.map LogViewMsg cmd
+              )
+          )
+      |> Result.withDefault 
+          (model, Cmd.none)
+
+    LogRequested ->
+      ( model
+      , Select.file [] LogSelected
+      )
+
+    LogSelected file ->
+      ( model
+      , Task.perform LogLoaded (File.toString file)
+      )
+    
+    LogLoaded content -> 
+      ( { model 
+        | logViewModel = 
+            Result.map2
+              LogViewDemo.init
+              (Result.mapError NoTask model.flightTask)
+              ((parseFlightTrack >> Result.mapError TrackReadError) content)
+              
+        -- | flightTrack = 
+        --     content 
+        --     |> Parser.run flightTrackParser 
+        --     |> Result.map (\t -> (t, initPlaybackState t)) 
+        --     |> Result.mapError TrackParsingError
+        -- , content = content |> String.lines
+        }
+      , Cmd.none
+      )
+    NoMsg -> (model, Cmd.none)
 
 subscriptions : Model -> Sub Msg
 subscriptions model = 
-  Sub.map MapMsg (Map.subscriptions model.mapModel)
+  Sub.batch
+    [ Sub.map MapMsg (Map.subscriptions model.mapModel)
+    , model.logViewModel
+      |> Result.map (LogViewDemo.subscriptions >> Sub.map LogViewMsg)
+      |> Result.withDefault Sub.none
+    ]
 
 view : Model -> Html Msg
 view model =
-  div []
-    [ Map.view model.mapModel |> Html.map MapMsg
-    ]
+  let
+    trackPositionMarker : Maybe Marker
+    trackPositionMarker = 
+      Result.toMaybe model.logViewModel
+      |> Maybe.map 
+          (\m -> 
+              { position = m.progress.lastPoint
+              , markerType = Glider
+              , caption = m.flightTrack.compId ++ " " ++ (getAltitude >> getMeters >> String.fromFloat) m.currentPosition.altitudeGps ++ "m"
+              } 
+          )
+      
+    markers = MaybeX.unwrap [] List.singleton trackPositionMarker
+  in
+  
+    div []
+      [ Map.view model.mapModel markers |> Html.map MapMsg
+      , div
+          [ style "position" "absolute"
+          , style "top" "10px"
+          , style "right" "10px"
+          , style "padding" "10px"
+          , style "background" "white"
+          , style "border" "1px solid gray"
+          , style "border-radius" "10px"
+          ]
+          [ viewLog model.logViewModel ]
+      ]
+
+viewLog : Result TrackLoadError LogViewDemo.Model -> Html Msg
+viewLog rLogModel =
+  case rLogModel of
+    Ok logModel -> 
+      LogViewDemo.view logModel |> Html.map LogViewMsg
+
+    Err NoFile ->
+      div 
+        []
+        [ p [] [ text "No File" ]
+        , button [ onClick LogRequested ] [ text "Upload" ] 
+        ]
+
+    Err (NoTask _) ->
+      text "Failed to read task"
+
+    Err (TrackReadError e) -> 
+      div
+        []
+        [ (showFlightTrackReadError >> text) e 
+        , button [ onClick LogRequested ] [ text "Upload" ] 
+        ]
+     

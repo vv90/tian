@@ -1,4 +1,26 @@
-module Geo.GeoUtils exposing (..)
+module Geo.GeoUtils exposing 
+  ( Longitude(..)
+  , Latitude(..)
+  , Altitude(..)
+  , getAltitude
+  , GeoPoint
+  , getLon
+  , getLat
+  , Bearing
+  , getBearing
+  , bearingFromDeg
+  , toMercatorWeb
+  , fromMercatorWeb
+  , toDecimalDegrees
+  , distance
+  , bearing
+  , bearingDifference
+  , addDeg
+  , destination
+  , lineIntersection
+  , linePerpendicularToBearing
+  )
+
 import Nav.Units exposing (..)
 import Geo.Constants exposing (..)
 import Math.Vector3 as V3 exposing (Vec3, vec3, getX, getY, getZ, cross, normalize, negate)
@@ -26,6 +48,23 @@ getLon (LonDeg lon) = lon
 
 getLat : Latitude -> Deg
 getLat (LatDeg lat) = lat
+
+type Bearing = Bearing Deg
+
+getBearing : Bearing -> Deg
+getBearing (Bearing deg) = 
+  deg
+
+{-| Returns normalized bearing from 0 to 360 degrees
+-}
+bearingFromDeg : Deg -> Bearing
+bearingFromDeg (Deg b) =
+  if 
+    b < 0 || b > 360
+  then
+    (Deg >> Bearing) (b - 360 * (truncate >> toFloat) (b / 360))
+  else 
+    (Deg >> Bearing) b
 
 toMercatorWeb : GeoPoint -> (Float, Float)
 toMercatorWeb ({lon, lat}) = 
@@ -57,11 +96,14 @@ fromMercatorWeb (x, y) =
   in
     GeoPoint (LonDeg (Deg lonDeg)) (LatDeg (Deg latDeg))
 
-
+{-| Converts from degrees, minutes, seconds to decimal degrees
+-}
 toDecimalDegrees : Int -> Float -> Float -> Float
 toDecimalDegrees degrees minutes seconds =
   toFloat degrees + minutes/60 + seconds/3600
 
+{-| Distance between 2 geo points
+-}
 distance : GeoPoint -> GeoPoint -> Meters
 distance p1 p2 =
   let
@@ -87,7 +129,9 @@ distance p1 p2 =
   in
     Meters d
 
-bearing : GeoPoint -> GeoPoint -> Deg
+{-| Bearing from first point to the second
+-}
+bearing : GeoPoint -> GeoPoint -> Bearing
 bearing p1 p2 =
   let
     (lonRad1, latRad1) = 
@@ -104,22 +148,29 @@ bearing p1 p2 =
     y = cos latRad1 * sin latRad2 - sin latRad1 * cos latRad2 * cos deltaLon
     b = atan2 x y |> Rad |> radToDeg -- bearing between -180 and 180 degrees
   in
-    normalizeBearing b
+    bearingFromDeg b
 
-normalizeBearing : Deg -> Deg
-normalizeBearing (Deg b) =
-  if 
-    b < 0 || b > 360
-  then
-    Deg (b - 360 * (truncate >> toFloat) (b / 360))
-  else 
-    Deg b
+{-| Returns the angle between 2 bearings (from 0 to 180 degrees)
+-}
+bearingDifference : Bearing -> Bearing -> Deg
+bearingDifference (Bearing (Deg b1)) (Bearing (Deg b2)) =
+  let
+    angle = max b1 b2 - min b1 b2
+  in
+    if 
+      (angle > 180)
+    then 
+      Deg (360 - angle)
+    else 
+      Deg angle
 
 addDeg : Deg -> Deg -> Deg
 addDeg (Deg x) (Deg y) = Deg (x + y)
 
-destination : Deg -> Meters -> GeoPoint -> GeoPoint
-destination b (Meters d) p = 
+{-| Calculates the destination geo point when traveling on a set bearing for a set distance from the start geo point
+-}
+destination : Bearing -> Meters -> GeoPoint -> GeoPoint
+destination (Bearing b) (Meters d) p = 
   let
     (lonRad1, latRad1) = 
       ( p.lon |> getLon |> degToRad |> getRad
@@ -158,9 +209,13 @@ fromSpherical v =
       ((Rad >> radToDeg >> LonDeg) lonRad) 
       ((Rad >> radToDeg >> LatDeg) latRad)
 
+{-| Calculates a point of intersection of 2 lines (each represented by a tuple of 2 geo points)
+
+    Returns `Nothing` if lines don't intersect
+-}
+lineIntersection : (GeoPoint, GeoPoint) -> (GeoPoint, GeoPoint) -> Maybe GeoPoint
+lineIntersection (p11, p12) (p21, p22) =
 -- todo: handle the case where all 4 points lie on the same great circle (i.e. collinear paths)
-intersection : (GeoPoint, GeoPoint) -> (GeoPoint, GeoPoint) -> Maybe GeoPoint
-intersection (p11, p12) (p21, p22) =
   let
     n1 = cross (toSpherical p11) (toSpherical p12)
     n2 = cross (toSpherical p21) (toSpherical p22)
@@ -187,3 +242,15 @@ intersection (p11, p12) (p21, p22) =
       Just s2
     else
       Nothing
+
+{-| Returns a line of length `lineLength`, with midpoint of `origin`, 
+perpendicular to the bearing of `bearing`
+-}
+linePerpendicularToBearing : Meters -> GeoPoint -> Bearing -> (GeoPoint, GeoPoint)
+linePerpendicularToBearing (Meters lineLength) origin (Bearing b) =
+  let
+    radius = Meters (lineLength / 2)
+    lp1 = destination (addDeg (Deg 90) b |> bearingFromDeg) radius origin
+    lp2 = destination (addDeg (Deg -90) b |> bearingFromDeg) radius origin
+  in
+    (lp1, lp2)

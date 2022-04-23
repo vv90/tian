@@ -13,6 +13,7 @@ import Nav.Units exposing (Deg(..))
 import Nav.FlightTrack exposing (FlightTrack, flightTrackParser, showFlightTrack, showFlightInfo, FlightInfo, flightInfoParser)
 import Date exposing (formatDate)
 import Maybe.Extra as MaybeX
+import Nav.FlightTrack exposing (FlightTrackAggregateValue)
 
 
 -- demoParser : Parser String
@@ -20,7 +21,7 @@ import Maybe.Extra as MaybeX
 
 type alias Model = 
   { input : String
-  , output : Result (List DeadEnd) FlightTrack
+  , output : Result (List DeadEnd) FlightTrackAggregateValue
   }
 
 init : () -> Model
@@ -45,4 +46,4 @@ view model =
   div 
     []
     [ textarea [ onInput InputChanged ] []
-    , h2 [] [showParseResult model.output showFlightTrack |> text] ]
+    , h2 [] [showParseResult model.output (\_ -> "OK") |> text] ]

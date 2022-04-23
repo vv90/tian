@@ -17,33 +17,17 @@ import Dict exposing (Dict)
 import Flags exposing (WindowSize)
 import Svg exposing (Svg)
 import Svg.Attributes as SvgAttr
-import Nav.NavPoint exposing (NavPoint)
-import Parser exposing (DeadEnd)
 import MapUtils exposing (..)
-import Result.Extra as ResultX
-import Nav.Units exposing (getDeg, getRad, degToRad, getMeters, Meters(..), Deg(..))
-import Nav.FlightTrack exposing (FlightTrack, TrackLoadError(..), parseTrackFile, flightTrackParser)
+import Nav.Units exposing (getDeg, getRad, degToRad, Meters(..), Deg(..))
 import Geo.Constants exposing (metersPerPixel)
-import File exposing (File)
-import File.Select as Select
-import Task
-import Time
 import TimeUtils exposing (..)
-import Date exposing (monthToString)
-import PlaybackState exposing (PlaybackState, advancePlaybackState)
-import Utils exposing (showParseErrors)
-import PlaybackState exposing (initPlaybackState)
-
 import ParsingDemo
-import LogViewDemo
-import PointDemo
 import IntersectionDemo
+import Nav.FlightTrack exposing (FlightTrackReadError)
 
 type DragState = MovingFrom (Float, Float) | Static 
 
-type MapInitError 
-  = ParsingError (List DeadEnd) 
-  | LookupError String
+
 
 type DemoModel 
   = ParsingDemoModel ParsingDemo.Model
@@ -59,16 +43,11 @@ getDemoPoints demoModel =
 type alias Model = 
   { tiles: Dict TileKey (Maybe Texture)
   , tileSources: Dict TileKey String
-  , markers: List Marker
   , mapItems: List MapItem
   , mapView: MapView
   , dragState: DragState
   , mousePosition: (Float, Float)
   , initPoint: (Float, Float)
-  , logSize: Maybe Int
-  , content: List String
-  , flightTrack: Result TrackLoadError (FlightTrack, PlaybackState)
-  -- , playbackState: PlaybackState
   , demoModel: DemoModel
   -- , pointDemoModel: PointDemo.Model
   -- , selectedPoint: Maybe GeoPoint
@@ -93,16 +72,11 @@ init windowSize mapItems zoom point =
   in 
     { tiles = Dict.empty
     , tileSources = addTileSources mapView Dict.empty
-    , markers = [Marker (GeoPoint ((Deg >> LonDeg) 39.4) ((Deg >> LatDeg) 52.01)) Glider "00"]
     , mapItems = mapItems
     , mapView = mapView
     , dragState = Static
     , mousePosition = (0, 0)
     , initPoint = toMercatorWeb point
-    , logSize = Nothing
-    , flightTrack = Err NoFile
-    -- , playbackState = 
-    , content = []
     , demoModel = ParsingDemoModel (ParsingDemo.init ())
     -- , pointDemoModel = PointDemo.init ()
     -- , selectedPoint = Nothing
@@ -127,13 +101,6 @@ type Msg
   | DragMove Bool (Float, Float)
   | DragStop (Float, Float)
   | TileLoaded TileKey (Maybe Texture)
-  | LogRequested
-  | LogSelected File
-  | LogLoaded String
-  | PlaybackStarted
-  | PlaybackStopped
-  | PlaybackSpeedChanged Int
-  | PlaybackTick Time.Posix
   | DemoChanged String
 
   | ParsingDemoMsg ParsingDemo.Msg
@@ -210,80 +177,6 @@ update msg model =
       , Cmd.none
       )
     
-    LogRequested ->
-      ( model
-      , Select.file [] LogSelected
-      )
-
-    LogSelected file ->
-      ( model
-      , Task.perform LogLoaded (File.toString file)
-      )
-    
-    LogLoaded content -> 
-      ( { model 
-        | logSize = (String.length >> Just) content 
-        , flightTrack = 
-            content 
-            |> Parser.run flightTrackParser 
-            |> Result.map (\t -> (t, initPlaybackState t)) 
-            |> Result.mapError TrackParsingError
-        -- , content = content |> String.lines
-        }
-      , Cmd.none
-      )
-
-    PlaybackStarted -> 
-      case model.flightTrack of
-        Err _ -> (model, Cmd.none)
-        Ok _ -> 
-          ( { model 
-            | flightTrack = 
-                Result.map 
-                  (\(ft, pst) -> (ft, {pst | playing = True}))
-                  model.flightTrack
-            }
-          , Cmd.none
-          )
-    PlaybackStopped ->
-      ( { model
-        | flightTrack = 
-            Result.map
-              (\(ft, pst) -> (ft, {pst | playing = False}))
-              model.flightTrack
-        }
-      , Cmd.none
-      )
-    PlaybackSpeedChanged speed ->
-      ( { model
-        | flightTrack = 
-            Result.map
-              (\(ft, pst) -> (ft, {pst | speed = speed}))
-              model.flightTrack
-        }
-      , Cmd.none
-      )
-
-    PlaybackTick _ -> 
-      case model.flightTrack of
-        Err _ -> 
-          (model, Cmd.none)
-        Ok (ft, pst) -> 
-          let
-            (p, nextPst) = advancePlaybackState pst
-            markerCaption altitude = Maybe.withDefault "" ft.compId ++ " " ++ String.fromFloat altitude ++ "m"
-          in
-            ( { model 
-              | flightTrack = Ok (ft, nextPst) 
-              , markers = 
-                  MaybeX.unwrap 
-                    model.markers
-                    (\x -> [ Marker (GeoPoint x.longitude x.latitude) Glider ((getAltitude >> getMeters >> markerCaption) x.altitudeGps) ]) 
-                    p
-              }
-            , Cmd.none
-            )
-
     DemoChanged str ->
       case str of
         "Parsing" -> 
@@ -329,25 +222,17 @@ subscriptions model =
             [ BE.onMouseMove (D.map2 DragMove decodeButtons decodePosition) 
             , BE.onMouseUp (D.map DragStop decodePosition)
             ]
-    playbackSubs = 
-      ResultX.unwrap 
-        Sub.none 
-        (\(_, pst) -> 
-          if pst.playing then Time.every 100 PlaybackTick else Sub.none
-        )
-        model.flightTrack
   in
     Sub.batch 
     [ dragSubs
-    , playbackSubs
     , BE.onMouseMove (D.map MouseMoved decodePosition)
     , BE.onResize Resized
     -- , BE.onMouseDown (D.map DragStart decodePosition)
     ]
 
 
-view : Model -> Html Msg
-view model = 
+view : Model -> (List Marker) -> Html Msg
+view model markers = 
   let
     -- scaleCoefficient = getScaleCoefficient model.mapView
     scaleCoefficient = 2 ^ (model.mapView.zoom - (floor >> toFloat) model.mapView.zoom) 
@@ -366,7 +251,7 @@ view model =
       tilesInView model.mapView
       |> List.map (lookupTileTexture >> renderTile)
       
-    renderedMarkers = List.map (renderMarker model.mapView) model.markers
+    renderedMarkers = List.map (renderMarker model.mapView) markers
     -- renderedMarkersSvg = List.map (renderMarkerSvg model.mapView) model.markers
     renderedDemoPoints = 
       getDemoPoints model.demoModel
@@ -498,23 +383,6 @@ view model =
               , option [ value "Intersection" ] [ text "Intersection" ]
               ]
             , viewDemo model.demoModel
-            ]
-          -- replay window
-          , div 
-            [ style "position" "absolute"
-            , style "top" "10px"
-            , style "right" "10px"
-            , style "padding" "10px"
-            , style "background" "white"
-            , style "border" "1px solid gray"
-            , style "border-radius" "10px"
-            ] 
-            [ button [ onClick LogRequested ] [ text "Upload" ] 
-            , h2 [] 
-              [ model.logSize |> Maybe.map (String.fromInt >> text) |> Maybe.withDefault (text "")]
-            , h2 [] 
-              [ (Result.map(Tuple.first) >> LogViewDemo.view) model.flightTrack ]
-            , viewReplayControls model.flightTrack 
             ]
       ]
 
@@ -669,44 +537,6 @@ renderMarker mapView marker =
       ]
       [Svg.text marker.caption]
     ]
-
-viewReplayControls : Result TrackLoadError(FlightTrack, PlaybackState) -> Html Msg
-viewReplayControls rTrack =
-  case rTrack of
-    Err NoFile -> div [] []
-    Err e -> viewTrackLoadError e
-    Ok (_, pst) -> 
-      div 
-      [ ]
-      [ select [ on "change" (D.map PlaybackSpeedChanged D.int) ] 
-        [ option [ value "1" ] [ text "1x" ] 
-        , option [ value "10" ] [ text "10x"]
-        , option [ value "100" ] [ text "100x"]
-        ] 
-      , viewPlayButton pst
-      , viewPlaybackState pst
-      ]
-
-viewPlaybackState : PlaybackState -> Html Msg
-viewPlaybackState state = 
-  div []
-  [ addTime state.startTime state.currentTime |> formatTime |> text
-  ]
-
-viewTrackLoadError : TrackLoadError -> Html Msg
-viewTrackLoadError err =
-  case err of
-    NoFile -> text "No file..."
-    TrackParsingError es -> (showParseErrors >> text) es
-
-viewPlayButton : PlaybackState -> Html Msg
-viewPlayButton ps =
-  if 
-    ps.playing 
-  then 
-    button [onClick PlaybackStopped] [ text "Pause" ]
-  else
-    button [onClick PlaybackStarted] [ text "Play" ]
 
 {-
 The "buttons" value is 1 when "left-click" is pressed, so we use that to

@@ -18,7 +18,7 @@ import Maybe.Extra as MaybeX
 import Nav.Units exposing (..)
 import Nav.FlightTask exposing (Turnpoint(..), FlightTask, TaskStart(..), TaskFinish(..), taskToMapItems)
 import LogViewDemo
-import Nav.FlightTrack exposing (FlightTrackReadError(..), parseFlightTrack, showFlightTrackReadError)
+import Nav.FlightTrack exposing (FlightTrackReadError(..), parseFlightTrack, showFlightTrackReadError, trackPointToGeoPoint)
 import Parser exposing (DeadEnd)
 import File exposing (File)
 import File.Select as Select
@@ -194,7 +194,7 @@ view model =
       Result.toMaybe model.logViewModel
       |> Maybe.map 
           (\m -> 
-              { position = m.progress.lastPoint
+              { position = trackPointToGeoPoint m.currentPosition
               , markerType = Glider
               , caption = m.flightTrack.compId ++ " " ++ (getAltitude >> getMeters >> String.fromFloat) m.currentPosition.altitudeGps ++ "m"
               } 
@@ -213,8 +213,10 @@ view model =
           , style "background" "white"
           , style "border" "1px solid gray"
           , style "border-radius" "10px"
+          , style "min-width" "200px"
           ]
-          [ viewLog model.logViewModel ]
+          [ viewLog model.logViewModel
+          ]
       ]
 
 viewLog : Result TrackLoadError LogViewDemo.Model -> Html Msg

@@ -4,6 +4,7 @@ module Geo.GeoUtils exposing
   , Altitude(..)
   , getAltitude
   , GeoPoint
+  , showGeoPoint
   , getLon
   , getLat
   , Bearing
@@ -42,6 +43,13 @@ type alias GeoPoint =
   { lon: Longitude 
   , lat: Latitude
   }
+
+showGeoPoint : GeoPoint -> String
+showGeoPoint geoPoint =
+  (getLon >> getDeg >> String.fromFloat) geoPoint.lon 
+  ++ ", " 
+  ++ (getLat >> getDeg >> String.fromFloat) geoPoint.lat
+  
 
 getLon : Longitude -> Deg
 getLon (LonDeg lon) = lon

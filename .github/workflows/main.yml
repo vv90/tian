@@ -36,5 +36,10 @@ jobs:
       # Runs a set of commands using the runners shell
     - name: Run a multi-line script
       run: |
-        gzip --version
-        echo test, and deploy your project.
+        cd client/
+        curl -L -o elm.gz https://github.com/elm/compiler/releases/download/0.19.1/binary-for-linux-64-bit.gz
+        gunzip elm.gz
+        chmod +x elm
+        elm make src/Main.elm --output=assets/inline/bundle.js
+        mv index.src.html index.html
+        aws s3 sync . s3://${{ S3_BUCKET_NAME }}

@@ -4,8 +4,8 @@ name: CI-contest-viewer
 
 #Environment variables
 env:
-  S3_BUCKET_NAME : contest-viewer
-  AWS_REGION         : us-east-1
+  AWS_S3_BUCKET : contest-viewer
+  AWS_REGION    : us-east-1
 # Workflow will run on push to master
 on:
   # Triggers the workflow on push request events but only for the "master" branch
@@ -42,4 +42,11 @@ jobs:
         chmod +x elm
         elm make src/Main.elm --output=assets/inline/bundle.js
         mv index.src.html index.html
-        aws s3 sync . s3://${{ env.S3_BUCKET_NAME }}
+
+      # Deploys new files to S3 static website with s3-sync https://github.com/jakejarvis/s3-sync-action
+    - name: sync folder with S3
+      uses: jakejarvis/s3-sync-action@master
+      with:
+        args: --acl public-read --follow-symlinks --delete
+      env:
+        SOURCE_DIR : client

@@ -19,7 +19,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Git clone files
-      - uses: actions/checkout@v3
+        uses: actions/checkout@v3
       
       # AWS programmatic access to the bucket s3://contest-viewer with permissions
       #- name: Configure AWS access

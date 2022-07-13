@@ -42,4 +42,4 @@ jobs:
         chmod +x elm
         elm make src/Main.elm --output=assets/inline/bundle.js
         mv index.src.html index.html
-        aws s3 sync . s3://${{ S3_BUCKET_NAME }}
+        aws s3 sync . s3://${{ env.S3_BUCKET_NAME }}

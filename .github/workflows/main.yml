@@ -43,11 +43,11 @@ jobs:
         mv bundle.js assets/inline/
     
 
-      # Deploys new files to S3 static website with s3-sync https://github.com/jakejarvis/s3-sync-action
+      # Deploys new  files to S3 static website with s3-sync https://github.com/jakejarvis/s3-sync-action
     - name: sync folder with S3
       uses: jakejarvis/s3-sync-action@master
       with:
-        args: --follow-symlinks --delete
+        args: --follow-symlinks --exclude '.git/*' --delete
       env:
         AWS_S3_BUCKET: ${{ env.AWS_S3_BUCKET }}
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

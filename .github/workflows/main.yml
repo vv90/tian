@@ -35,17 +35,24 @@ jobs:
 
       # Runs a set of commands using the runners shell
       
-    #- name: Install and use elm
-    #  uses: jorelali/setup-elm@v3
-    #  with:
-    #    elm-version: 0.19.1
-    #- run: elm make client/src/Main.elm --output='client/assets/inline/bundle.js'
 
     - name: Run a multi-line script
       run: |
-        ls -la
-        ls client/src/
-        # mv client/index.src.html client/index.html
+        cd client/
+        ls 
+        mv index.src.html index.html
+
+    - name: Install and use elm
+      uses: jorelali/setup-elm@v3
+      with:
+        elm-version: 0.19.1
+    - run: elm make src/Main.elm --output=bundle.js
+    
+    - name: Run a multi-line script2
+      run: |
+        mv bundle.js assets/inline/
+        ls client/assets/inline/
+
 
       # Deploys new files to S3 static website with s3-sync https://github.com/jakejarvis/s3-sync-action
     #- name: sync folder with S3

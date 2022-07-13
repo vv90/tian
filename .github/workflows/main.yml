@@ -31,7 +31,7 @@ jobs:
         elm-version: 0.19.1
     - run: |
         cd client
-        elm make src/Main.elm --output=bundle.js
+        elm make src/Main.elm --optimize --output=bundle.js
         mv index.src.html index.html
         mv bundle.js assets/inline/  
 

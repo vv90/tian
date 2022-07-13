@@ -6,32 +6,25 @@ name: CI-contest-viewer
 env:
   AWS_S3_BUCKET : contest-viewer
   AWS_REGION    : us-east-1
+
 # Workflow will run on push to master
 on:
-  # Triggers the workflow on push request events but only for the "master" branch
   push:
     branches: [ "master" ]
 
-# A workflow run is made up of two jobs that build and deploy. Jobs run sequentially
+# A workflow run is made up of build and deploy job
 jobs:
-  # Two job called "build" and "deploy"
   build:
   # The type of runner that the job will run on
     runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - name: Git clone files
-      uses: actions/checkout@v3
-      
+      # Checks-out your repository
+    - name: Git clone
+      uses: actions/checkout@v3      
 
-    - name: Run a multi-line script
-      run: |
-        cd client/
-        ls 
-        
-
+      # installs elm end creates bundle.js
     - name: Install and use elm
       uses: jorelali/setup-elm@v3
       with:
@@ -40,11 +33,10 @@ jobs:
         cd client
         elm make src/Main.elm --output=bundle.js
         mv index.src.html index.html
-        mv bundle.js assets/inline/
-    
+        mv bundle.js assets/inline/  
 
-      # Deploys new  files to S3 static website with s3-sync https://github.com/jakejarvis/s3-sync-action
-    - name: sync folder with S3
+      # Deploys new  files to S3 static website http://contest-viewer.s3-website-us-east-1.amazonaws.com/
+    - name: sync folder with s3
       uses: jakejarvis/s3-sync-action@master
       with:
         args: --follow-symlinks --exclude '.git/*' --delete

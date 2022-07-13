@@ -36,12 +36,12 @@ jobs:
       # Runs a set of commands using the runners shell
     - name: Run a multi-line script
       run: |
-        cd client/
         curl -L -o elm.gz https://github.com/elm/compiler/releases/download/0.19.1/binary-for-linux-64-bit.gz
         gunzip elm.gz
         chmod +x elm
-        elm make src/Main.elm --output=assets/inline/bundle.js
-        mv index.src.html index.html
+        elm make client/src/Main.elm --output=client/assets/inline/bundle.js
+        ls client/assets/inline/
+        mv client/index.src.html client/index.html
 
       # Deploys new files to S3 static website with s3-sync https://github.com/jakejarvis/s3-sync-action
     - name: sync folder with S3

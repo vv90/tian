@@ -37,4 +37,6 @@ jobs:
     - name: Run a multi-line script
       run: |
         ls -la
+        elm --version
+        gzip --version
         echo test, and deploy your project.

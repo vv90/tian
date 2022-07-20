@@ -47,7 +47,7 @@ type alias Model =
   , mapView: MapView
   , dragState: DragState
   , mousePosition: (Float, Float)
-  , initPoint: (Float, Float)
+  -- , initPoint: (Float, Float)
   , demoModel: DemoModel
   -- , pointDemoModel: PointDemo.Model
   -- , selectedPoint: Maybe GeoPoint
@@ -76,7 +76,7 @@ init windowSize mapItems zoom point =
     , mapView = mapView
     , dragState = Static
     , mousePosition = (0, 0)
-    , initPoint = toMercatorWeb point
+    -- , initPoint = toMercatorWeb point
     , demoModel = ParsingDemoModel (ParsingDemo.init ())
     -- , pointDemoModel = PointDemo.init ()
     -- , selectedPoint = Nothing

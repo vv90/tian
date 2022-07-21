@@ -38,21 +38,22 @@ jobs:
         PATH=~/.npm-global/bin:$PATH
         npm install --location=global elm-test
         elm-test tests/Example.elm
+        echo "Test successfull"
       
-#    - run: |
-#        cd client
-#        elm make src/Main.elm --output=bundle.js
-#        mv index.src.html index.html
-#        mv bundle.js assets/inline/  
-#
-#      # Deploys new  files to S3 static website http://contest-viewer.s3-website-us-east-1.amazonaws.com/
-#    - name: sync folder with s3
-#      uses: jakejarvis/s3-sync-action@master
-#      with:
-#        args: --follow-symlinks --exclude '.git/*' --delete
-#      env:
-#        AWS_S3_BUCKET: ${{ env.AWS_S3_BUCKET }}
-#        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#        AWS_REGION: ${{ env.AWS_REGION }}
-#        SOURCE_DIR: 'client'  
+    - run: |
+        cd client
+        elm make src/Main.elm --output=bundle.js
+        mv index.src.html index.html
+        mv bundle.js assets/inline/  
+
+      # Deploys new  files to S3 static website http://contest-viewer.s3-website-us-east-1.amazonaws.com/
+    - name: sync folder with s3
+      uses: jakejarvis/s3-sync-action@master
+      with:
+        args: --follow-symlinks --exclude '.git/*' --delete
+      env:
+        AWS_S3_BUCKET: ${{ env.AWS_S3_BUCKET }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ env.AWS_REGION }}
+        SOURCE_DIR: 'client'  

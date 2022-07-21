@@ -20,6 +20,8 @@ module Geo.GeoUtils exposing
   , destination
   , lineIntersection
   , linePerpendicularToBearing
+  , toSpherical
+  , fromSpherical
   )
 
 import Nav.Units exposing (..)

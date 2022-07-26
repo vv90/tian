@@ -23,12 +23,23 @@ jobs:
       # Checks-out your repository
     - name: Git clone
       uses: actions/checkout@v3      
-
-      # installs elm end creates bundle.js
-    - name: Install and use elm
-      uses: jorelali/setup-elm@v3
+     
+    - name: Setup Elm environment
+      uses: JorelAli/setup-elm@v3
       with:
         elm-version: 0.19.1
+              
+      # installs npm and runs  test
+    - name: Install npm and test 
+      run: |
+        cd client
+        mkdir ~/.npm-global
+        npm config set prefix '~/.npm-global'
+        PATH=~/.npm-global/bin:$PATH
+        npm install --location=global elm-test
+        elm-test tests/Example.elm
+        echo "Test successfull"
+      
     - run: |
         cd client
         elm make src/Main.elm --output=bundle.js

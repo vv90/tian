@@ -1,49 +1,54 @@
 module ParsingDemo exposing (..)
 
-import Nav.NavPoint exposing (..)
-
-import Parser exposing (..)
-import ParserUtils exposing (..)
+import Date exposing (formatDate)
+import Geo.GeoUtils exposing (Latitude(..))
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Utils exposing (showParseResult)
-import Geo.GeoUtils exposing (Latitude(..))
-import Nav.Units exposing (Deg(..))
-import Nav.FlightTrack exposing (FlightTrack, flightTrackParser, showFlightTrack, showFlightInfo, FlightInfo, flightInfoParser)
-import Date exposing (formatDate)
 import Maybe.Extra as MaybeX
-import Nav.FlightTrack exposing (FlightTrackAggregateValue)
+import Nav.FlightTrack exposing (FlightInfo, FlightTrack, FlightTrackAggregateValue, flightInfoParser, flightTrackParser, showFlightInfo, showFlightTrack)
+import Nav.NavPoint exposing (..)
+import Nav.Units exposing (Deg(..))
+import Parser exposing (..)
+import ParserUtils exposing (..)
+import Utils exposing (showParseResult)
+
 
 
 -- demoParser : Parser String
 -- demoParser = succeed ""
 
-type alias Model = 
-  { input : String
-  , output : Result (List DeadEnd) FlightTrackAggregateValue
-  }
+
+type alias Model =
+    { input : String
+    , output : Result (List DeadEnd) FlightTrackAggregateValue
+    }
+
 
 init : () -> Model
 init () =
-  { input = ""
-  , output = Err []
-  }
+    { input = ""
+    , output = Err []
+    }
 
-type Msg =
-  InputChanged String
 
-update : Msg -> Model -> (Model, Cmd Msg)
+type Msg
+    = InputChanged String
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-  case msg of
-    InputChanged s -> 
-      ( { model | output = Parser.run flightTrackParser s }
-      , Cmd.none
-      )
+    case msg of
+        InputChanged s ->
+            ( { model | output = Parser.run flightTrackParser s }
+            , Cmd.none
+            )
+
 
 view : Model -> Html Msg
 view model =
-  div 
-    []
-    [ textarea [ onInput InputChanged ] []
-    , h2 [] [showParseResult model.output (\_ -> "OK") |> text] ]
+    div
+        []
+        [ textarea [ onInput InputChanged ] []
+        , h2 [] [ showParseResult model.output (\_ -> "OK") |> text ]
+        ]

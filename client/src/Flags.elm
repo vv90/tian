@@ -1,12 +1,13 @@
 module Flags exposing (..)
 
+
 type alias Flags =
-  { backendUrl : String
-  , windowSize : WindowSize
-  }
+    { backendUrl : String
+    , windowSize : WindowSize
+    }
 
 
 type alias WindowSize =
-  { height : Int
-  , width : Int
-  }
+    { height : Int
+    , width : Int
+    }

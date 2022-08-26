@@ -3,7 +3,7 @@ module Nav.TaskProgress exposing (..)
 import Geo.GeoUtils exposing (GeoPoint, bearing, bearingDifference, distance, lineIntersection, linePerpendicularToBearing)
 import List.Nonempty as Nonempty
 import Maybe.Extra as MaybeX
-import Nav.FlightTask exposing (FlightTask, TaskFinish(..), TaskStart(..), Turnpoint(..), firstNavPointAfterStart, lastNavPointBeforFinish)
+import Nav.FlightTask exposing (FlightTask, TaskFinish(..), TaskStart(..), Turnpoint(..), firstNavPointAfterStart, lastNavPointBeforeFinish)
 import Nav.FlightTrack exposing (FlightTrack, TrackPoint, trackPointToGeoPoint)
 import Nav.NavPoint exposing (NavPoint)
 import Nav.Units exposing (Meters(..), getDeg, leMeters)
@@ -114,14 +114,11 @@ checkStarted point progress =
                 firstTaskTarget =
                     (firstNavPointAfterStart >> (\x -> x.geoPoint)) progress.task
 
-                startGeo =
-                    startNavPoint.geoPoint
-
                 startBearing =
-                    bearing startGeo firstTaskTarget
+                    bearing startNavPoint.geoPoint firstTaskTarget
 
                 startLine =
-                    linePerpendicularToBearing radius startGeo startBearing
+                    linePerpendicularToBearing radius startNavPoint.geoPoint startBearing
 
                 startLineIntersection =
                     lineIntersection
@@ -190,7 +187,7 @@ checkFinished point ( targetNavPoint, taskFinish ) progress =
                     trackPointToGeoPoint point
 
                 prevTargetGeo =
-                    (lastNavPointBeforFinish >> (\x -> x.geoPoint)) progress.task
+                    (lastNavPointBeforeFinish >> (\x -> x.geoPoint)) progress.task
 
                 finishGeo =
                     targetNavPoint.geoPoint

@@ -1,0 +1,5 @@
+.stack-work/
+*~
+.env
+/cache/*.tar
+temp/

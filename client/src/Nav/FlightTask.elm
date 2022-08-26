@@ -104,8 +104,8 @@ firstNavPointAfterStart task =
         |> Maybe.withDefault (Tuple.first task.finish)
 
 
-lastNavPointBeforFinish : FlightTask -> NavPoint
-lastNavPointBeforFinish task =
+lastNavPointBeforeFinish : FlightTask -> NavPoint
+lastNavPointBeforeFinish task =
     task.turnpoints
         |> ListX.last
         |> Maybe.map Tuple.first
@@ -118,7 +118,7 @@ taskToMapItems task =
         -- at each step take the current turnpoint (`(np, tp)`) and add the corresponding circle for it and a line from the previous nav point (`prev`)
         (\( np, tp ) ( prev, lines ) -> ( np, turnpointToMapItem ( np, tp ) :: Line [ prev.geoPoint, np.geoPoint ] :: lines ))
         -- initialize with the finish nav point and a map item for the finish
-        ( Tuple.first task.finish, [ finishToMapItem (lastNavPointBeforFinish task) task.finish ] )
+        ( Tuple.first task.finish, [ finishToMapItem (lastNavPointBeforeFinish task) task.finish ] )
         task.turnpoints
         -- add a map item for the start and a line to it from the first nav point (`firstAfterStart`)
         |> (\( prev, lines ) -> startToMapItem (firstNavPointAfterStart task) task.start :: Line [ prev.geoPoint, (Tuple.first >> (\x -> x.geoPoint)) task.start ] :: lines)

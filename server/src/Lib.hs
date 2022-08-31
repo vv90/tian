@@ -17,9 +17,11 @@ module Lib
 import Relude
 import Data.Aeson ( defaultOptions, ToJSON, FromJSON )
 import Data.Aeson.TH ( deriveJSON )
-import Network.Wai ( Application )
+import Network.Wai ( Application, Middleware )
+
 import Network.Wai.Handler.Warp ( run )
 import Servant
+-- import Servant.Multipart
 import Control.Monad.IO.Class
     ( MonadIO(liftIO) )
 import Control.Monad.Reader
@@ -28,14 +30,20 @@ import Data.Time (UTCTime(UTCTime))
 import Control.Monad.Logger (NoLoggingT)
 import Data.Char (toUpper)
 import GHC.Generics (Generic)
-import NavPoint (NavPoint)
+import NavPoint (NavPoint, navPointLinesParser)
 import qualified Hasql.Connection as Connection
 import qualified Hasql.Session as Session
 -- import Session (getNavPointsSession)
 import Data.Vector (Vector)
 import Control.Monad.Except (withExceptT)
 import Data.Text.Lazy (pack)
-
+import qualified Data.ByteString.Lazy as LBS
+import Network.Wai.Middleware.Cors (simpleCors, corsMethods, corsRequestHeaders, corsIgnoreFailures, simpleCorsResourcePolicy, cors)
+import Network.HTTP.Types.Method (methodDelete, methodGet, methodOptions, methodPost, methodPut)
+import Servant.Multipart (MultipartForm, Mem, MultipartData (files), FileData (fdFileName, fdFileCType, fdPayload), FromMultipart (fromMultipart))
+import Data.ByteString (unpack)
+import Text.Parsec (parse, ParseError)
+import Control.Arrow (ArrowChoice(left))
 
 
 
@@ -62,7 +70,10 @@ data Entity a = Entity
 
 
 users :: Handler [Entity User]
-users = pure []
+users = liftIO $ print "Users" >> pure []
+
+postUser :: Int -> Handler ()
+postUser _ = liftIO $ print "Post User" >> pure ()
 
 data LibError
     = ConnectionError Connection.ConnectionError
@@ -91,20 +102,51 @@ navPoints = do
     --     Right v -> return v
     pure empty
 
+
+instance FromMultipart Mem [NavPoint] where
+    fromMultipart form = 
+        let
+            fls = left show . parseLines . decodeUtf8 . fdPayload <$> files form
+            parseLines = parse navPointLinesParser "Multipoart form data"
+        in 
+            concat <$> sequence fls
+
+upload :: [NavPoint] -> Handler String
+upload navPoints = do
+    liftIO $ print navPoints
+    pure ""
+    
+
 type API =
     "users" :> Get '[JSON] [Entity User]
+    :<|> "upload" :> MultipartForm Mem [NavPoint] :> Post '[PlainText] String
+    :<|> "postUser" :> ReqBody '[JSON] Int :> Post '[JSON] ()
     -- :<|> "navpoints" :> Get '[JSON] (Vector NavPoint)
 
 startApp :: IO ()
-startApp = run 8080 app
+startApp = run 8081 app
 
 app :: Application
-app = serve api server
+app = corsMiddleware $ serve api server
+    where
+        corsMiddleware :: Middleware
+        corsMiddleware = cors (const $ Just corsPolicy)
+
+        corsPolicy =
+            simpleCorsResourcePolicy
+                { corsMethods = [methodOptions, methodGet, methodPost, methodPut, methodDelete]
+                -- Note: Content-Type header is necessary for POST requests
+                , corsRequestHeaders = ["Authorization", "Origin", "Content-Type", "Browser-Locale-Data"]
+                -- , corsIgnoreFailures = True
+                }
 
 api :: Proxy API
 api = Proxy
 
 
 server :: Server API
-server = users -- :<|> navPoints
+server =
+    users
+    :<|> upload
+    :<|> postUser-- :<|> navPoints
 

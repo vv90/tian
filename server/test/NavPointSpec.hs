@@ -115,6 +115,14 @@ spec = do
         it "fails for invalid units" $ do
             isLeft (parse navPointRwlenParser "" "1.23x") `shouldBe` True
         
+    context "navPointFreqParser" $ do
+        it "parses freq correctly" $ do
+            parse navPointFreqParser "" "123.455" `shouldBe` Right "123.455"
+        it "parses freq in quotes" $ do
+            parse navPointFreqParser "" "\"123.450\"" `shouldBe` Right "123.450"
+        it "fails for frequencies outside of VHF Air spectrum (118 - 137 MHz)" $ do
+            isLeft (parse navPointFreqParser "" "223.450") `shouldBe` True
+
     context "navPointStyleParser" $ do
         it "parses style correctly" $ do
             parse navPointStyleParser "" "0" `shouldBe` Right Unknown

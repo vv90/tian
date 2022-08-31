@@ -7,6 +7,7 @@ import Canvas.Settings.Advanced exposing (scale, transform, translate)
 import Canvas.Texture as Texture exposing (..)
 import Color as Color exposing (..)
 import Dict exposing (Dict)
+import FileUpload
 import Flags exposing (WindowSize)
 import Geo.Constants exposing (metersPerPixel)
 import Geo.GeoUtils exposing (..)
@@ -35,6 +36,7 @@ type DragState
 type DemoModel
     = ParsingDemoModel ParsingDemo.Model
     | IntersectionDemoModel IntersectionDemo.Model
+    | FileUploadDemoModel FileUpload.Model
 
 
 getDemoPoints : DemoModel -> List GeoPoint
@@ -45,6 +47,9 @@ getDemoPoints demoModel =
 
         IntersectionDemoModel m ->
             List.filterMap identity [ m.p1, m.p2, m.p3, m.p4, m.intersectionPoint ]
+
+        FileUploadDemoModel _ ->
+            []
 
 
 type alias Model =
@@ -98,7 +103,8 @@ init windowSize mapItems zoom point =
     , mousePosition = ( 0, 0 )
 
     -- , initPoint = toMercatorWeb point
-    , demoModel = ParsingDemoModel (ParsingDemo.init ())
+    -- , demoModel = ParsingDemoModel (ParsingDemo.init ())
+    , demoModel = FileUploadDemoModel (FileUpload.init ())
 
     -- , pointDemoModel = PointDemo.init ()
     -- , selectedPoint = Nothing
@@ -128,6 +134,7 @@ type Msg
     | DemoChanged String
     | ParsingDemoMsg ParsingDemo.Msg
     | IntersectionDemoMsg IntersectionDemo.Msg
+    | FileUploadDemoMsg FileUpload.Msg
 
 
 
@@ -260,6 +267,9 @@ update msg model =
                 "Intersection" ->
                     ( { model | demoModel = IntersectionDemo.init () |> IntersectionDemoModel }, Cmd.none )
 
+                "File Upload" ->
+                    ( { model | demoModel = FileUpload.init () |> FileUploadDemoModel }, Cmd.none )
+
                 _ ->
                     ( model, Cmd.none )
 
@@ -286,6 +296,20 @@ update msg model =
                     in
                     ( { model | demoModel = IntersectionDemoModel m }
                     , Cmd.map IntersectionDemoMsg c
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        FileUploadDemoMsg fileUploadDemoMsg ->
+            case model.demoModel of
+                FileUploadDemoModel fileUploadModel ->
+                    let
+                        ( m, c ) =
+                            FileUpload.update fileUploadDemoMsg fileUploadModel
+                    in
+                    ( { model | demoModel = FileUploadDemoModel m }
+                    , Cmd.map FileUploadDemoMsg c
                     )
 
                 _ ->
@@ -479,7 +503,8 @@ view model markers =
             , style "border-radius" "10px"
             ]
             [ select [ onChange DemoChanged ]
-                [ option [ value "Parser" ] [ text "Parser" ]
+                [ option [ value "File Upload" ] [ text "File Upload" ]
+                , option [ value "Parser" ] [ text "Parser" ]
                 , option [ value "Intersection" ] [ text "Intersection" ]
                 ]
             , viewDemo model.demoModel
@@ -495,6 +520,9 @@ viewDemo demoModel =
 
         IntersectionDemoModel intersectionModel ->
             Html.map IntersectionDemoMsg (IntersectionDemo.view intersectionModel)
+
+        FileUploadDemoModel fileUploadModel ->
+            Html.map FileUploadDemoMsg (FileUpload.view fileUploadModel)
 
 
 renderTile : ( TileKey, Maybe Texture ) -> Renderable

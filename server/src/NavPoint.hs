@@ -1,5 +1,4 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
+
 
 module NavPoint
     where
@@ -9,18 +8,8 @@ import Data.Aeson (ToJSON, FromJSON)
 import GHC.Generics ( Generic )
 import Data.Int (Int32)
 import Data.Text (Text, pack, unpack)
--- import Numeric.Units.Dimensional.Prelude (Length)
--- import Numeric.Units.Dimensional.NonSI (mile, foot, nauticalMile)
--- import Numeric.Units.Dimensional.Prelude (Length)
--- import Numeric.Units.Dimensional.NonSI (mile, foot, nauticalMile)
--- import Numeric.Units.Dimensional.Prelude (Length)
--- import Numeric.Units.Dimensional.NonSI (mile, foot, nauticalMile)
--- import Numeric.Units.Dimensional.Prelude (Length)
--- import Numeric.Units.Dimensional.NonSI (mile, foot, nauticalMile)
-import Text.Parsec (Parsec, oneOf, digit, many1, count, between, alphaNum, choice, string, letter, optionMaybe, option, noneOf)
+import Text.Parsec (Parsec, oneOf, digit, many1, count, between, alphaNum, choice, string, letter, optionMaybe, option, noneOf, sepEndBy1)
 import Text.Parsec.Char (char, digit)
--- import Text.Parsec.Prim ((<!>))
--- import Text.Parsec.Prim ((<!>))
 import Data.Geo.Jord.Angle (Angle, decimalDegrees)
 import Data.Geo.Jord.Length (Length, metres)
 import Data.Geo.Jord.Geodetic (Position, latLongHeightPos)
@@ -54,24 +43,6 @@ data WaypointStyle
 
 newtype Elevation = Elevation Length
     deriving (Show)
--- data RwLenUnits
---     = Meters
---     | NauticalMiles
---     | StatuteMiles
---     deriving (Show, ToJSON, FromJSON, Generic)
-
--- data Elevation 
---     = ElevMeters Double
---     | ElevFeet Double
---     deriving (Show, ToJSON, FromJSON, Generic)
-
--- data RwLen
---     = LenMeters Float
---     | LenNauticalMiles Float
---     | LenStatuteMiles Float
---     deriving (Show, ToJSON, FromJSON, Generic)
-
-
 
 data NavPoint = NavPoint
     { name :: Text
@@ -96,6 +67,10 @@ navPointPositionParser =
 
     where
         wgs84Position lat lon elev = latLongHeightPos lat lon (metres elev) WGS84
+
+navPointLinesParser :: Parsec String () [NavPoint]
+navPointLinesParser = 
+    sepEndBy1 navPointParser (char '\n')
 
 navPointParser :: Parsec String () NavPoint
 navPointParser =
@@ -239,12 +214,16 @@ navPointRwlenParser = do
 navPointFreqParser :: Parsec String () Text
 navPointFreqParser = 
     toText
-    <$> count 1 (char '1') 
-    <> count 1 (oneOf ['1', '2', '3'])
-    <> count 1 digit 
-    <> count 1 (char '.')
-    <> count 2 digit 
-    <> count 1 (oneOf ['0', '5'])
+    <$> choice [inQuotations freq, freq]
+    where 
+        freq :: Parsec String () String
+        freq = 
+            count 1 (char '1') 
+            <> count 1 (oneOf ['1', '2', '3'])
+            <> count 1 digit 
+            <> count 1 (char '.')
+            <> count 2 digit 
+            <> count 1 (oneOf ['0', '5'])
 
 intParser :: Parsec String () Int
 intParser = do

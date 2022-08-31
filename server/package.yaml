@@ -45,8 +45,13 @@ dependencies:
 - relude
 - aeson
 - servant-server
+- servant-multipart
+# - servant-foreign
+# - servant-multipart
 - wai
+- wai-cors
 - warp
+- http-types
 # monad transformer library
 - mtl
 - monad-logger
@@ -60,7 +65,8 @@ dependencies:
 - profunctors
 - vector
 # statically checked physical dimensions
-- dimensional
+# - dimensional
+# Parser combinators
 - parsec
 # Geographical Position Calculations
 - jord

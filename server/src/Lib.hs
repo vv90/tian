@@ -33,9 +33,9 @@ import GHC.Generics (Generic)
 import NavPoint (NavPoint, navPointLinesParser)
 import qualified Hasql.Connection as Connection
 import qualified Hasql.Session as Session
--- import Session (getNavPointsSession)
+import Session (getNavPointsSession)
 import Data.Vector (Vector)
-import Control.Monad.Except (withExceptT)
+import Control.Monad.Except (withExceptT, catchError, mapExcept, mapExceptT)
 import Data.Text.Lazy (pack)
 import qualified Data.ByteString.Lazy as LBS
 import Network.Wai.Middleware.Cors (simpleCors, corsMethods, corsRequestHeaders, corsIgnoreFailures, simpleCorsResourcePolicy, cors)
@@ -44,6 +44,8 @@ import Servant.Multipart (MultipartForm, Mem, MultipartData (files), FileData (f
 import Data.ByteString (unpack)
 import Text.Parsec (parse, ParseError)
 import Control.Arrow (ArrowChoice(left))
+import Control.Monad.Error.Class (liftEither)
+-- import Control.Monad.Error (mapErrorT, MonadError (catchError))
 
 
 
@@ -78,6 +80,7 @@ postUser _ = liftIO $ print "Post User" >> pure ()
 data LibError
     = ConnectionError Connection.ConnectionError
     | QueryError Session.QueryError
+    | DataParseError Text
     deriving (Show)
 
 getConn :: ExceptT LibError IO Connection.Connection
@@ -88,40 +91,46 @@ getConn
     $ Connection.settings "localhost" 5433 "admin" "admin" "cvdb"
 
 
--- getPoints :: ExceptT LibError IO (Vector NavPoint)
--- getPoints
---     = getConn
---     >>= (withExceptT QueryError . ExceptT . Session.run getNavPointsSession)
+getNavPoints :: ExceptT LibError IO (Either Text (Vector NavPoint))
+getNavPoints = 
+    getConn >>= withExceptT QueryError . ExceptT . Session.run getNavPointsSession
 
+handleDataError :: Monad m => ExceptT LibError m (Either Text a) -> ExceptT LibError m a
+handleDataError x =
+    x >>= (withExceptT DataParseError . liftEither) 
+
+-- mapServerError :: Either LibError a -> Either ServerError a
+-- mapServerError (Left e) = Left $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
+-- mapServerError (Right x) = Right x
 
 navPoints :: Handler (Vector NavPoint)
 navPoints = do
-    -- result <- liftIO $ runExceptT getPoints
-    -- case result of
-    --     Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
-    --     Right v -> return v
+    result <- liftIO $ runExceptT $ handleDataError getNavPoints
+    case result of
+        Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
+        Right v -> return v
     pure empty
 
 
 instance FromMultipart Mem [NavPoint] where
-    fromMultipart form = 
+    fromMultipart form =
         let
             fls = left show . parseLines . decodeUtf8 . fdPayload <$> files form
             parseLines = parse navPointLinesParser "Multipoart form data"
-        in 
+        in
             concat <$> sequence fls
 
 upload :: [NavPoint] -> Handler String
 upload navPoints = do
     liftIO $ print navPoints
     pure ""
-    
+
 
 type API =
     "users" :> Get '[JSON] [Entity User]
     :<|> "upload" :> MultipartForm Mem [NavPoint] :> Post '[PlainText] String
     :<|> "postUser" :> ReqBody '[JSON] Int :> Post '[JSON] ()
-    -- :<|> "navpoints" :> Get '[JSON] (Vector NavPoint)
+    :<|> "navpoints" :> Get '[JSON] (Vector NavPoint)
 
 startApp :: IO ()
 startApp = run 8081 app
@@ -148,5 +157,6 @@ server :: Server API
 server =
     users
     :<|> upload
-    :<|> postUser-- :<|> navPoints
+    :<|> postUser
+    :<|> navPoints
 

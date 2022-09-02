@@ -18,6 +18,20 @@ packages:
       sha256: b5ab9c31e3dba2e2296156359077e928c79b3163947861220dfbd6334f597c49
   original:
     hackage: jord-2.0.0.0
+- completed:
+    hackage: haskell-to-elm-0.3.2.0@sha256:02085cf6ac5c1c696c1dc923033b5f01509fcbed67c32cc79139704888821e60,4441
+    pantry-tree:
+      size: 650
+      sha256: 118740f5a865608a00049a271f2a84af8ae1957f02c013967a2d363b1a80c800
+  original:
+    hackage: haskell-to-elm-0.3.2.0
+- completed:
+    hackage: elm-syntax-0.3.2.0@sha256:08b3eb8b0573c2667fde3869c333b302c793381b47b40de635075a6eee1264b1,2257
+    pantry-tree:
+      size: 788
+      sha256: 49cf1e844575293f10590c434cb957f3b754f209d3593a44a1012b58749139a6
+  original:
+    hackage: elm-syntax-0.3.2.0
 snapshots:
 - completed:
     size: 619173

@@ -44,7 +44,10 @@ extra-deps:
 - hspec-wai-json-0.11.0
 # Geographical Position Calculations
 - jord-2.0.0.0
+- haskell-to-elm-0.3.2.0
+- elm-syntax-0.3.2.0
 
+allow-newer: true
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

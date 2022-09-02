@@ -4,20 +4,22 @@ module NavPoint
     where
 
 import Relude
-import Data.Aeson (ToJSON, FromJSON)
+import qualified Data.Aeson as Aeson
 import GHC.Generics ( Generic )
 import Data.Int (Int32)
 import Data.Text (Text, pack, unpack)
 import Text.Parsec (Parsec, oneOf, digit, many1, count, between, alphaNum, choice, string, letter, optionMaybe, option, noneOf, sepEndBy1)
 import Text.Parsec.Char (char, digit)
-import Data.Geo.Jord.Angle (Angle, decimalDegrees)
-import Data.Geo.Jord.Length (Length, metres)
-import Data.Geo.Jord.Geodetic (Position, latLongHeightPos)
-import Data.Geo.Jord.Models (WGS84 (WGS84))
+-- import Data.Geo.Jord.Angle (Angle, decimalDegrees)
+-- import Data.Geo.Jord.Length (Length, metres)
+-- import Data.Geo.Jord.Geodetic (Position, latLongHeightPos)
+-- import Data.Geo.Jord.Models (WGS84 (WGS84))
 import Data.Char (digitToInt)
 import Text.Parsec.Pos (updatePosString, updatePosChar)
 import Text.Parsec.Prim (tokenPrim, token, tokens, (<?>))
-
+import qualified Generics.SOP as SOP
+import Language.Haskell.To.Elm (HasElmEncoder, HasElmDecoder, HasElmType)
+import Magic.ElmDeriving
 
 
 data WaypointStyle
@@ -39,34 +41,75 @@ data WaypointStyle
     | PowerPlant
     | Castle
     | Intersection
-    deriving (Show, Eq)
+    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value) 
+        via ElmType "Api.NavPoint.WaypointStyle" WaypointStyle
 
-newtype Elevation = Elevation Length
-    deriving (Show)
+newtype Latitude = LatitudeDegrees Double
+    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value) 
+        via ElmType "Api.NavPoint.Latitude" Latitude
+
+degreesLatitude :: Latitude -> Double
+degreesLatitude (LatitudeDegrees x) = x
+
+newtype Longitude = LongitudeDegrees Double
+    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value) 
+        via ElmType "Api.NavPoint.Longitude" Longitude
+
+degreesLongitude :: Longitude -> Double
+degreesLongitude (LongitudeDegrees x) = x
+newtype Elevation = ElevationMeters Double
+    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value) 
+        via ElmType "Api.NavPoint.Elevation" Elevation
+
+metersElevation :: Elevation -> Double
+metersElevation (ElevationMeters x) = x
+newtype Direction = DirectionDegrees Int32
+    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value) 
+        via ElmType "Api.NavPoint.Direction" Direction
+
+degreesDirection :: Direction -> Int32
+degreesDirection (DirectionDegrees x) = x
+newtype Length = LengthMeters Double
+    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value) 
+        via ElmType "Api.NavPoint.Length" Length
+
+metersLength :: Length -> Double
+metersLength (LengthMeters x) = x
 
 data NavPoint = NavPoint
     { name :: Text
     , code :: Text
     , country :: Maybe Text
-    , position :: Position WGS84
+    -- , position :: Position WGS84
+    , lat :: Latitude
+    , lon :: Longitude
+    , elev :: Elevation
     , style :: WaypointStyle
-    , rwdir :: Maybe Angle
+    , rwdir :: Maybe Direction
     , rwlen :: Maybe Length
     , freq :: Maybe Text
     , desc :: Text
-    } deriving (Show, Eq)
+    } deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value) 
+        via ElmType "Api.NavPoint.NavPoint" NavPoint
 
-navPointPositionParser :: Parsec String () (Position WGS84)
-navPointPositionParser =
-    wgs84Position
-    <$> navPointLatParser
-    <* char ','
-    <*> navPointLonParser
-    <* char ','
-    <*> navPointElevationParser
+-- navPointPositionParser :: Parsec String () (Position WGS84)
+-- navPointPositionParser =
+--     wgs84Position
+--     <$> navPointLatParser
+--     <* char ','
+--     <*> navPointLonParser
+--     <* char ','
+--     <*> navPointElevationParser
 
-    where
-        wgs84Position lat lon elev = latLongHeightPos lat lon (metres elev) WGS84
+--     where
+--         wgs84Position lat lon elev = latLongHeightPos lat lon (metres elev) WGS84
 
 navPointLinesParser :: Parsec String () [NavPoint]
 navPointLinesParser = 
@@ -81,13 +124,17 @@ navPointParser =
     <* char ','
     <*> navPointCountryParser
     <* char ','
-    <*> navPointPositionParser
+    <*> navPointLatParser
+    <* char ','
+    <*> navPointLonParser
+    <* char ','
+    <*> navPointElevationParser
     <* char ','
     <*> navPointStyleParser
     <* char ','
-    <*> optionMaybe (fmap (decimalDegrees . fromIntegral) navPointRwdirParser)
+    <*> optionMaybe navPointRwdirParser
     <* char ','
-    <*> optionMaybe (fmap metres navPointRwlenParser)
+    <*> optionMaybe navPointRwlenParser
     <* char ','
     <*> optionMaybe navPointFreqParser
     <* char ','
@@ -138,7 +185,7 @@ navPointStyleParser =
         matchIdParser id = fail $ "Failed to parse waypoint style. Unknown style: " <> id
 
 
-navPointLatParser :: Parsec String () Double
+navPointLatParser :: Parsec String () Latitude
 navPointLatParser = do
     deg <- readEither <$> count 2 digit
     min <- readEither <$> count 2 digit
@@ -151,14 +198,14 @@ navPointLatParser = do
             ]
 
     case toAngle <$> deg <*> min <*> decMin of
-        Right x -> pure $ adjustForHemisphereFn x
+        Right x -> pure $ LatitudeDegrees $ adjustForHemisphereFn x
         Left e -> fail $ "Failed to parse latitude: " ++ toString e
 
     where
         toAngle deg min decMin =
             fromIntegral deg + fromIntegral min / 60 + fromIntegral decMin / 60000
 
-navPointLonParser :: Parsec String () Double
+navPointLonParser :: Parsec String () Longitude
 navPointLonParser = do
     deg <- readEither <$> count 3 digit
     min <- readEither <$> count 2 digit
@@ -171,13 +218,13 @@ navPointLonParser = do
             ]
 
     case toAngle <$> deg <*> min <*> decMin of
-        Right x -> pure $ adjustForHemisphereFn x
+        Right x -> pure $ LongitudeDegrees $ adjustForHemisphereFn x
         Left e -> fail $ "Failed to parse longitude: " ++ toString e
     where
         toAngle deg min decMin =
             fromIntegral deg + fromIntegral min / 60 + fromIntegral decMin / 60000
 
-navPointElevationParser :: Parsec String () Double
+navPointElevationParser :: Parsec String () Elevation
 navPointElevationParser = do
     elev <- doubleParser
     unitConversionFn <-
@@ -186,18 +233,18 @@ navPointElevationParser = do
             , (/3.2808) <$ string "ft" -- feet
             ]
 
-    pure $ unitConversionFn elev
+    pure $ ElevationMeters $ unitConversionFn elev
 
 
-navPointRwdirParser :: Parsec String () Int
+navPointRwdirParser :: Parsec String () Direction
 navPointRwdirParser = do
     dir <- readEither <$> count 1 (oneOf ['0', '1', '2', '3']) <> count 2 digit
 
     case dir of
-        Right x -> pure x
+        Right x -> pure $ DirectionDegrees x
         Left e -> fail $ "Failed to parse rwdir: " ++ toString e
 
-navPointRwlenParser :: Parsec String () Double
+navPointRwlenParser :: Parsec String () Length
 navPointRwlenParser = do
     len <- doubleParser
     unit <-
@@ -206,7 +253,7 @@ navPointRwlenParser = do
             , (* 1852) <$ string "nm" -- nautical miles
             ]
 
-    pure $ unit len
+    pure $ LengthMeters $ unit len
 
     where
         ml = (* 1609.344) <$ string "l" -- statute miles

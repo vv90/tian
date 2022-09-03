@@ -18,6 +18,7 @@ import System.Directory (createDirectoryIfMissing, doesDirectoryExist, findExecu
 import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath.Posix (takeDirectory)
 import System.Process (readProcessWithExitCode)
+import FlightTask (Turnpoint, TaskStart, TaskFinish, FlightTask (FlightTask))
 
 typeDefinitions :: [Definition]
 typeDefinitions =
@@ -29,6 +30,10 @@ typeDefinitions =
         , jsonDefinitions @Direction
         , jsonDefinitions @Length
         , jsonDefinitions @NavPoint
+        , jsonDefinitions @Turnpoint
+        , jsonDefinitions @TaskStart
+        , jsonDefinitions @TaskFinish
+        , jsonDefinitions @FlightTask
         ]
 
 elmSrcPath :: FilePath

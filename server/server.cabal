@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Codegen
+      FlightTask
       Lib
       Magic.ElmDeriving
       NavPoint

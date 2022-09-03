@@ -30,10 +30,10 @@ import Data.Time (UTCTime(UTCTime))
 import Control.Monad.Logger (NoLoggingT)
 import Data.Char (toUpper)
 import GHC.Generics (Generic)
-import NavPoint (NavPoint, navPointLinesParser)
+import NavPoint (NavPoint, navPointLinesParser, name)
 import qualified Hasql.Connection as Connection
 import qualified Hasql.Session as Session
-import Session (getNavPointsSession)
+import Session (getNavPointsSession, saveNavPointsSession, deleteDuplicateNavPointsSession)
 import Data.Vector (Vector)
 import Control.Monad.Except (withExceptT, catchError, mapExcept, mapExceptT)
 import Data.Text.Lazy (pack)
@@ -45,7 +45,7 @@ import Data.ByteString (unpack)
 import Text.Parsec (parse, ParseError)
 import Control.Arrow (ArrowChoice(left))
 import Control.Monad.Error.Class (liftEither)
--- import Control.Monad.Error (mapErrorT, MonadError (catchError))
+import Statement (saveNavPointsStatement)
 
 
 
@@ -60,10 +60,6 @@ data FixValidity
     | Baro2D
     deriving (Eq, Show, Read)
 
-data User = User
-    { name :: String
-    , age :: Int
-    } deriving (Show, ToJSON, FromJSON, Generic)
 
 data Entity a = Entity
     { key :: Int
@@ -71,16 +67,9 @@ data Entity a = Entity
     } deriving (Show, ToJSON, FromJSON, Generic)
 
 
-users :: Handler [Entity User]
-users = liftIO $ print "Users" >> pure []
-
-postUser :: Int -> Handler ()
-postUser _ = liftIO $ print "Post User" >> pure ()
-
 data LibError
     = ConnectionError Connection.ConnectionError
     | QueryError Session.QueryError
-    | DataParseError Text
     deriving (Show)
 
 getConn :: ExceptT LibError IO Connection.Connection
@@ -91,26 +80,24 @@ getConn
     $ Connection.settings "localhost" 5433 "admin" "admin" "cvdb"
 
 
-getNavPoints :: ExceptT LibError IO (Either Text (Vector NavPoint))
+getNavPoints :: ExceptT LibError IO (Vector NavPoint)
 getNavPoints = 
     getConn >>= withExceptT QueryError . ExceptT . Session.run getNavPointsSession
 
-handleDataError :: Monad m => ExceptT LibError m (Either Text a) -> ExceptT LibError m a
-handleDataError x =
-    x >>= (withExceptT DataParseError . liftEither) 
+saveNavPoints :: Vector NavPoint -> ExceptT LibError IO (Int64, Int64)
+saveNavPoints nps = do
+    conn <- getConn 
+    deleted <- withExceptT QueryError . ExceptT $ Session.run (deleteDuplicateNavPointsSession $ toText . name <$> nps) conn
+    added <- withExceptT QueryError . ExceptT $ Session.run (saveNavPointsSession nps) conn
+    pure (deleted, added)
 
--- mapServerError :: Either LibError a -> Either ServerError a
--- mapServerError (Left e) = Left $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
--- mapServerError (Right x) = Right x
 
 navPoints :: Handler (Vector NavPoint)
 navPoints = do
-    result <- liftIO $ runExceptT $ handleDataError getNavPoints
+    result <- liftIO $ runExceptT getNavPoints
     case result of
         Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
-        Right v -> return v
-    pure empty
-
+        Right v -> pure v
 
 instance FromMultipart Mem [NavPoint] where
     fromMultipart form =
@@ -120,16 +107,16 @@ instance FromMultipart Mem [NavPoint] where
         in
             concat <$> sequence fls
 
-upload :: [NavPoint] -> Handler String
+upload :: [NavPoint] -> Handler (Int, Int64, Int64)
 upload navPoints = do
-    liftIO $ print navPoints
-    pure ""
+    result <- liftIO $ runExceptT $ saveNavPoints $ fromList navPoints
+    case result of
+        Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
+        Right (d, a) -> pure (length navPoints, d, a)
 
 
 type API =
-    "users" :> Get '[JSON] [Entity User]
-    :<|> "upload" :> MultipartForm Mem [NavPoint] :> Post '[PlainText] String
-    :<|> "postUser" :> ReqBody '[JSON] Int :> Post '[JSON] ()
+    "upload" :> MultipartForm Mem [NavPoint] :> Post '[JSON] (Int, Int64, Int64)
     :<|> "navpoints" :> Get '[JSON] (Vector NavPoint)
 
 startApp :: IO ()
@@ -155,8 +142,6 @@ api = Proxy
 
 server :: Server API
 server =
-    users
-    :<|> upload
-    :<|> postUser
+    upload
     :<|> navPoints
 

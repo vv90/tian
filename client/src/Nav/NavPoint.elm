@@ -3,8 +3,8 @@ module Nav.NavPoint exposing (..)
 import Geo.GeoUtils exposing (GeoPoint, Latitude(..), Longitude(..), toDecimalDegrees)
 import Nav.Units exposing (Deg(..))
 import Parser exposing (..)
-import ParserUtils exposing (..)
 import Set
+import Utils.ParserUtils exposing (..)
 
 
 type WaypointStyle

@@ -53,18 +53,42 @@ taskStartDecoder =
 
 type TaskFinish
     = FinishLine Float
+    | FinishCylinder Float
 
 
 taskFinishEncoder : TaskFinish -> Json.Encode.Value
 taskFinishEncoder a =
     case a of
         FinishLine b ->
-            Json.Encode.float b
+            Json.Encode.object
+                [ ( "tag", Json.Encode.string "FinishLine" )
+                , ( "contents", Json.Encode.float b )
+                ]
+
+        FinishCylinder b ->
+            Json.Encode.object
+                [ ( "tag", Json.Encode.string "FinishCylinder" )
+                , ( "contents", Json.Encode.float b )
+                ]
 
 
 taskFinishDecoder : Json.Decode.Decoder TaskFinish
 taskFinishDecoder =
-    Json.Decode.map FinishLine Json.Decode.float
+    Json.Decode.field "tag" Json.Decode.string
+        |> Json.Decode.andThen
+            (\a ->
+                case a of
+                    "FinishLine" ->
+                        Json.Decode.succeed FinishLine
+                            |> Json.Decode.Pipeline.required "contents" Json.Decode.float
+
+                    "FinishCylinder" ->
+                        Json.Decode.succeed FinishCylinder
+                            |> Json.Decode.Pipeline.required "contents" Json.Decode.float
+
+                    _ ->
+                        Json.Decode.fail "No matching constructor"
+            )
 
 
 type alias FlightTask =

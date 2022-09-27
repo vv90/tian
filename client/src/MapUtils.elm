@@ -1,9 +1,14 @@
 module MapUtils exposing (..)
 
+-- import Geo.GeoUtils exposing (..)
+
+import Api.NavPoint exposing (Latitude(..), Length(..), Longitude(..))
 import Dict exposing (Dict)
-import Geo.GeoUtils exposing (..)
 import List.Extra as ListX
-import Nav.Units exposing (Meters(..))
+
+
+
+-- import Nav.Units exposing (Meters(..))
 
 
 tileSize : Int
@@ -43,11 +48,18 @@ type MarkerType
     = Glider
 
 
+type alias GeoPoint =
+    ( Latitude, Longitude )
+
+
 type MapItem
     = Point GeoPoint
-    | Circle GeoPoint Meters
+    | Circle GeoPoint Length
     | Line (List GeoPoint)
-    | Polygon (List GeoPoint)
+
+
+
+-- | Polygon (List GeoPoint)
 
 
 type alias Marker =
@@ -63,6 +75,44 @@ type alias MapView =
     , zoom : Float
     , offset : ( Float, Float )
     }
+
+
+toMercatorWeb : GeoPoint -> ( Float, Float )
+toMercatorWeb ( LatitudeDegrees lat, LongitudeDegrees lon ) =
+    let
+        latRad =
+            -- lat |> (\(LatDeg latVal) -> degToRad latVal) |> getRad
+            degrees lat
+
+        lonDeg =
+            -- lon |> (\(LonDeg lonVal) -> getDeg lonVal)
+            lon
+
+        sec x =
+            1 / cos x
+
+        resY =
+            logBase e (tan latRad + sec latRad)
+    in
+    ( (lonDeg + 180) / 360, (1 - resY / pi) / 2 )
+
+
+fromMercatorWeb : ( Float, Float ) -> GeoPoint
+fromMercatorWeb ( x, y ) =
+    let
+        sinh a =
+            (e ^ a - e ^ -a) / 2
+
+        lonDeg =
+            x * 360 - 180
+
+        latRad =
+            atan (sinh (pi * (1 - 2 * y)))
+
+        latDeg =
+            latRad * 180 / pi
+    in
+    ( LatitudeDegrees latDeg, LongitudeDegrees lonDeg )
 
 
 scaleOffset : ( Float, Float ) -> Float -> ( Float, Float ) -> ( Float, Float )
@@ -288,3 +338,82 @@ scaleCoords scaleCoeffcitient offset =
             x / scaleCoeffcitient
     in
     Tuple.mapBoth applyScale applyScale offset
+
+
+metersPerPixel : Int -> Maybe Length
+metersPerPixel zoom =
+    let
+        mpp =
+            case zoom of
+                0 ->
+                    Just 156412
+
+                1 ->
+                    Just 78206
+
+                2 ->
+                    Just 39103
+
+                3 ->
+                    Just 19551
+
+                4 ->
+                    Just 9776
+
+                5 ->
+                    Just 4888
+
+                6 ->
+                    Just 2444
+
+                7 ->
+                    Just 1222
+
+                8 ->
+                    Just 610.984
+
+                9 ->
+                    Just 305.492
+
+                10 ->
+                    Just 152.746
+
+                11 ->
+                    Just 76.373
+
+                12 ->
+                    Just 38.187
+
+                13 ->
+                    Just 19.093
+
+                14 ->
+                    Just 9.547
+
+                15 ->
+                    Just 4.773
+
+                16 ->
+                    Just 2.387
+
+                17 ->
+                    Just 1.193
+
+                18 ->
+                    Just 0.596
+
+                19 ->
+                    Just 0.298
+
+                20 ->
+                    Just 0.149
+
+                _ ->
+                    Nothing
+    in
+    Maybe.map LengthMeters mpp
+
+
+earthRadius : Length
+earthRadius =
+    LengthMeters 6372798.2

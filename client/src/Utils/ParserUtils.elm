@@ -1,4 +1,4 @@
-module ParserUtils exposing (..)
+module Utils.ParserUtils exposing (..)
 
 import Geo.GeoUtils exposing (Latitude(..), Longitude(..), toDecimalDegrees)
 import Nav.Units exposing (Deg(..))

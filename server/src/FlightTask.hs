@@ -20,8 +20,8 @@ newtype TaskStart =
     deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
         via ElmType "Api.FlightTask.TaskStart" TaskStart
 
-newtype TaskFinish =
-    FinishLine Double
+data TaskFinish =
+    FinishLine Double | FinishCylinder Double
     deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
     deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
         via ElmType "Api.FlightTask.TaskFinish" TaskFinish
@@ -37,25 +37,25 @@ data FlightTask =
         via ElmType "Api.FlightTask.FlightTask" FlightTask
 
 
-makeFlightTask :: [NavPoint] -> (String, TaskStart) -> [(String, Turnpoint)] -> (String, TaskFinish) -> Either String FlightTask
-makeFlightTask navPoints (startName, startLine) turnpointItems (finishName, finishLine) = do
-    startPoint <- findNavPoint startName
-    finishPoint <- findNavPoint finishName
-    turnpoints <- mapM makeTp turnpointItems
+-- makeFlightTask :: [NavPoint] -> (Text, TaskStart) -> [(Text, Turnpoint)] -> (Text, TaskFinish) -> Either Text FlightTask
+-- makeFlightTask navPoints (startName, startLine) turnpointItems (finishName, finishLine) = do
+--     startPoint <- findNavPoint startName
+--     finishPoint <- findNavPoint finishName
+--     turnpoints <- mapM makeTp turnpointItems
 
-    pure FlightTask
-        { start = (startPoint, startLine)
-        , turnpoints = turnpoints
-        , finish = (finishPoint, finishLine)
-        }
-    where
-        findNavPoint name = 
-            maybeToRight 
-                ("NavPoint " <> name <> " not found") 
-                (find (\NavPoint {name = n} -> n == name) navPoints)
+--     pure FlightTask
+--         { start = (startPoint, startLine)
+--         , turnpoints = turnpoints
+--         , finish = (finishPoint, finishLine)
+--         }
+--     where
+--         findNavPoint name = 
+--             maybeToRight 
+--                 ("NavPoint " <> name <> " not found") 
+--                 (find (\NavPoint {name = n} -> n == name) navPoints)
         
-        makeTp :: (String, Turnpoint) -> Either String (NavPoint, Turnpoint)
-        makeTp (name, tp) = 
-            (,tp) <$> findNavPoint name
+--         makeTp :: (Text, Turnpoint) -> Either Text (NavPoint, Turnpoint)
+--         makeTp (name, tp) = 
+--             (,tp) <$> findNavPoint name
         
 

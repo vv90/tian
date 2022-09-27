@@ -1,15 +1,15 @@
 module Nav.FlightTrack exposing (..)
 
 import Array exposing (Array)
-import Date exposing (Date(..), formatDate, toPosix)
 import Geo.GeoUtils exposing (Altitude(..), GeoPoint, Latitude(..), Longitude(..), getAltitude, getLat, getLon, toDecimalDegrees)
 import List.Nonempty as Nonempty exposing (Nonempty(..))
 import Maybe.Extra as MaybeX
 import Nav.Units exposing (Deg(..), Meters(..), getDeg, getMeters)
 import Parser exposing (..)
-import ParserUtils exposing (..)
 import Result.Extra as ResultX
 import Time exposing (..)
+import Utils.Date exposing (Date(..), formatDate, toPosix)
+import Utils.ParserUtils exposing (..)
 
 
 type FixValidity

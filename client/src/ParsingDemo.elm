@@ -1,6 +1,5 @@
 module ParsingDemo exposing (..)
 
-import Date exposing (formatDate)
 import Geo.GeoUtils exposing (Latitude(..))
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -10,8 +9,9 @@ import Nav.FlightTrack exposing (FlightInfo, FlightTrack, FlightTrackAggregateVa
 import Nav.NavPoint exposing (..)
 import Nav.Units exposing (Deg(..))
 import Parser exposing (..)
-import ParserUtils exposing (..)
 import Utils exposing (showParseResult)
+import Utils.Date exposing (formatDate)
+import Utils.ParserUtils exposing (..)
 
 
 

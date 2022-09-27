@@ -1,5 +1,10 @@
 module Map exposing (..)
 
+-- import Geo.Constants exposing (metersPerPixel)
+-- import Geo.GeoUtils exposing (..)
+-- import Nav.Units exposing (Deg(..), Meters(..), degToRad, getDeg, getRad)
+
+import Api.NavPoint exposing (Latitude(..), Length(..), Longitude(..))
 import Browser.Events as BE
 import Canvas exposing (Point, Renderable, clear, group, rect, shapes, texture)
 import Canvas.Settings exposing (fill)
@@ -7,22 +12,14 @@ import Canvas.Settings.Advanced exposing (scale, transform, translate)
 import Canvas.Texture as Texture exposing (..)
 import Color as Color exposing (..)
 import Dict exposing (Dict)
-import FileUpload
 import Flags exposing (WindowSize)
-import Geo.Constants exposing (metersPerPixel)
-import Geo.GeoUtils exposing (..)
 import Html exposing (Html, button, div, h2, h5, img, label, object, option, p, select, text)
 import Html.Attributes exposing (attribute, class, height, src, style, value, width)
 import Html.Events exposing (on, onClick)
-import Html.Events.Extra exposing (onChange)
-import IntersectionDemo
 import Json.Decode as D
 import List.Extra as ListX
 import MapUtils exposing (..)
 import Maybe.Extra as MaybeX
-import Nav.FlightTrack exposing (FlightTrackReadError)
-import Nav.Units exposing (Deg(..), Meters(..), degToRad, getDeg, getRad)
-import ParsingDemo
 import Svg exposing (Svg)
 import Svg.Attributes as SvgAttr
 import TimeUtils exposing (..)
@@ -33,48 +30,17 @@ type DragState
     | Static
 
 
-type DemoModel
-    = ParsingDemoModel ParsingDemo.Model
-    | IntersectionDemoModel IntersectionDemo.Model
-    | FileUploadDemoModel FileUpload.Model
-
-
-getDemoPoints : DemoModel -> List GeoPoint
-getDemoPoints demoModel =
-    case demoModel of
-        ParsingDemoModel _ ->
-            []
-
-        IntersectionDemoModel m ->
-            List.filterMap identity [ m.p1, m.p2, m.p3, m.p4, m.intersectionPoint ]
-
-        FileUploadDemoModel _ ->
-            []
-
-
 type alias Model =
     { tiles : Dict TileKey (Maybe Texture)
     , tileSources : Dict TileKey String
-    , mapItems : List MapItem
     , mapView : MapView
     , dragState : DragState
     , mousePosition : ( Float, Float )
-
-    -- , initPoint: (Float, Float)
-    , demoModel : DemoModel
-
-    -- , pointDemoModel: PointDemo.Model
-    -- , selectedPoint: Maybe GeoPoint
     }
 
 
-
--- init : (WindowSize, Result MapInitError (List MapItem)) -> Float -> GeoPoint -> Model
--- init (windowSize, mapItems) zoom point =
-
-
-init : WindowSize -> List MapItem -> Float -> GeoPoint -> Model
-init windowSize mapItems zoom point =
+init : WindowSize -> Float -> GeoPoint -> Model
+init windowSize zoom point =
     let
         toTileCoord =
             (*) (2 ^ zoom) >> floor
@@ -97,17 +63,9 @@ init windowSize mapItems zoom point =
     in
     { tiles = Dict.empty
     , tileSources = addTileSources mapView Dict.empty
-    , mapItems = mapItems
     , mapView = mapView
     , dragState = Static
     , mousePosition = ( 0, 0 )
-
-    -- , initPoint = toMercatorWeb point
-    -- , demoModel = ParsingDemoModel (ParsingDemo.init ())
-    , demoModel = FileUploadDemoModel (FileUpload.init ())
-
-    -- , pointDemoModel = PointDemo.init ()
-    -- , selectedPoint = Nothing
     }
 
 
@@ -131,14 +89,6 @@ type Msg
     | DragMove Bool ( Float, Float )
     | DragStop ( Float, Float )
     | TileLoaded TileKey (Maybe Texture)
-    | DemoChanged String
-    | ParsingDemoMsg ParsingDemo.Msg
-    | IntersectionDemoMsg IntersectionDemo.Msg
-    | FileUploadDemoMsg FileUpload.Msg
-
-
-
--- | PointDemoMsg PointDemo.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -207,7 +157,6 @@ update msg model =
                         , zoom = newZoom
                     }
             in
-            -- (model, Cmd.none)
             ( setMapView newMapView model
             , Cmd.none
             )
@@ -259,62 +208,6 @@ update msg model =
             , Cmd.none
             )
 
-        DemoChanged str ->
-            case str of
-                "Parsing" ->
-                    ( { model | demoModel = ParsingDemo.init () |> ParsingDemoModel }, Cmd.none )
-
-                "Intersection" ->
-                    ( { model | demoModel = IntersectionDemo.init () |> IntersectionDemoModel }, Cmd.none )
-
-                "File Upload" ->
-                    ( { model | demoModel = FileUpload.init () |> FileUploadDemoModel }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
-
-        ParsingDemoMsg parsingDemoMsg ->
-            case model.demoModel of
-                ParsingDemoModel parsingModel ->
-                    let
-                        ( m, c ) =
-                            ParsingDemo.update parsingDemoMsg parsingModel
-                    in
-                    ( { model | demoModel = ParsingDemoModel m }
-                    , Cmd.map ParsingDemoMsg c
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
-
-        IntersectionDemoMsg intersectionDemoMsg ->
-            case model.demoModel of
-                IntersectionDemoModel intersectionModel ->
-                    let
-                        ( m, c ) =
-                            IntersectionDemo.update intersectionDemoMsg intersectionModel
-                    in
-                    ( { model | demoModel = IntersectionDemoModel m }
-                    , Cmd.map IntersectionDemoMsg c
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
-
-        FileUploadDemoMsg fileUploadDemoMsg ->
-            case model.demoModel of
-                FileUploadDemoModel fileUploadModel ->
-                    let
-                        ( m, c ) =
-                            FileUpload.update fileUploadDemoMsg fileUploadModel
-                    in
-                    ( { model | demoModel = FileUploadDemoModel m }
-                    , Cmd.map FileUploadDemoMsg c
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
-
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -339,8 +232,8 @@ subscriptions model =
         ]
 
 
-view : Model -> List Marker -> Html Msg
-view model markers =
+view : List MapItem -> Model -> Html Msg
+view mapItems model =
     let
         -- scaleCoefficient = getScaleCoefficient model.mapView
         scaleCoefficient =
@@ -371,19 +264,29 @@ view model markers =
             tilesInView model.mapView
                 |> List.map (lookupTileTexture >> renderTile)
 
-        renderedMarkers =
-            List.map (renderMarker model.mapView) markers
-
+        -- renderedMarkers =
+        --     List.map (renderMarker model.mapView) markers
         -- renderedMarkersSvg = List.map (renderMarkerSvg model.mapView) model.markers
-        renderedDemoPoints =
-            getDemoPoints model.demoModel
-                |> List.map (renderPoint model.mapView)
-
+        -- renderedDemoPoints =
+        --     getDemoPoints model.demoModel
+        --         |> List.map (renderPoint model.mapView)
         renderedMapItems =
             -- ResultX.unpack
             -- (always [])
             List.map (renderVectorItem model.mapView)
-                model.mapItems
+                mapItems
+
+        showMapItem : MapItem -> String
+        showMapItem item =
+            case item of
+                Point ( LatitudeDegrees lat, LongitudeDegrees lon ) ->
+                    "Point " ++ (lat |> String.fromFloat) ++ " " ++ (lon |> String.fromFloat)
+
+                Line ps ->
+                    "Line " ++ (ps |> List.map (\( LatitudeDegrees lat, LongitudeDegrees lon ) -> (lat |> String.fromFloat) ++ " " ++ (lon |> String.fromFloat)) |> String.join ", ")
+
+                Circle ( LatitudeDegrees lat, LongitudeDegrees lon ) (LengthMeters r) ->
+                    "Circle " ++ (lat |> String.fromFloat) ++ " " ++ (lon |> String.fromFloat) ++ " " ++ (r |> String.fromFloat)
 
         -- withOptPoint : Maybe GeoPoint -> List (Svg Msg) -> List (Svg Msg)
         -- withOptPoint optPoint mapItems =
@@ -394,7 +297,7 @@ view model markers =
     div
         []
         [ div
-            [ onClick (IntersectionDemoMsg ((viewCoordsToGeoPoint model.mapView >> IntersectionDemo.PointSelected) model.mousePosition))
+            [ onClick Clicked
             , on "mousedown" (D.map DragStart decodePosition)
             , on "wheel" (D.map ZoomChanged decodeWheelEvent)
             ]
@@ -426,7 +329,7 @@ view model markers =
                 --   |> Maybe.map (\p -> renderPoint model.mapView p :: renderedMapItems)
                 --   |> Maybe.withDefault renderedMapItems
                 -- )
-                (renderedMapItems ++ renderedMarkers ++ renderedDemoPoints
+                (renderedMapItems
                  -- |> withOptPoint model.selectedPoint
                  -- |> withOptPoint model.pointDemoModel.projectedPoint
                 )
@@ -461,7 +364,9 @@ view model markers =
                             |> Tuple.mapBoth
                                 (\x -> x / (toFloat tileSize * 2 ^ model.mapView.zoom))
                                 (\y -> y / (toFloat tileSize * 2 ^ model.mapView.zoom))
-                            |> (fromMercatorWeb >> (\p -> ( (getLon >> getDeg) p.lon, (getLat >> getDeg) p.lat )))
+                            -- |> (fromMercatorWeb >> (\p -> ( (getLon >> getDeg) p.lon, (getLat >> getDeg) p.lat )))
+                            |> fromMercatorWeb
+                            |> (\( LatitudeDegrees lat, LongitudeDegrees lon ) -> ( lat, lon ))
                             |> Tuple.mapBoth String.fromFloat String.fromFloat
                             |> stringFromTuple
                         ]
@@ -487,42 +392,14 @@ view model markers =
                         , "Loaded: " ++ (Dict.size model.tiles |> String.fromInt)
                         , "Succeded: " ++ (Dict.values model.tiles |> ListX.count MaybeX.isJust |> String.fromInt)
                         , "Rendered: " ++ (List.length renderedTiles |> String.fromInt)
+                        , "Scale coefficient: " ++ String.fromFloat (scaleFromZoom model.mapView.zoom)
                         ]
                     )
                 ]
-            ]
-
-        -- demo component window
-        , div
-            [ style "position" "absolute"
-            , style "top" "10px"
-            , style "left" "10px"
-            , style "padding" "10px"
-            , style "background" "white"
-            , style "border" "1px solid gray"
-            , style "border-radius" "10px"
-            ]
-            [ select [ onChange DemoChanged ]
-                [ option [ value "File Upload" ] [ text "File Upload" ]
-                , option [ value "Parser" ] [ text "Parser" ]
-                , option [ value "Intersection" ] [ text "Intersection" ]
-                ]
-            , viewDemo model.demoModel
+            , h5 []
+                (List.map (showMapItem >> text) mapItems)
             ]
         ]
-
-
-viewDemo : DemoModel -> Html Msg
-viewDemo demoModel =
-    case demoModel of
-        ParsingDemoModel parsingModel ->
-            Html.map ParsingDemoMsg (ParsingDemo.view parsingModel)
-
-        IntersectionDemoModel intersectionModel ->
-            Html.map IntersectionDemoMsg (IntersectionDemo.view intersectionModel)
-
-        FileUploadDemoModel fileUploadModel ->
-            Html.map FileUploadDemoMsg (FileUpload.view fileUploadModel)
 
 
 renderTile : ( TileKey, Maybe Texture ) -> Renderable
@@ -552,8 +429,10 @@ renderVectorItem mapView item =
         Line points ->
             renderLine mapView points
 
-        Polygon points ->
-            renderPolygon mapView points
+
+
+-- Polygon points ->
+--     renderPolygon mapView points
 
 
 renderPoint : MapView -> GeoPoint -> Svg.Svg Msg
@@ -584,18 +463,21 @@ renderPoint mapView point =
         ]
 
 
-renderCircle : MapView -> GeoPoint -> Meters -> Svg Msg
-renderCircle mapView point (Meters radius) =
+renderCircle : MapView -> GeoPoint -> Length -> Svg Msg
+renderCircle mapView point (LengthMeters radius) =
     let
         ( x, y ) =
             geoPointToViewCoords mapView point
+
+        ( LatitudeDegrees lat, LongitudeDegrees lon ) =
+            point
 
         scaleCoefficient =
             scaleFromZoom mapView.zoom
 
         rPixels =
             metersPerPixel (floor mapView.zoom)
-                |> Maybe.map (\(Meters m) -> radius / (cos (point.lat |> getLat |> degToRad |> getRad) * m / scaleCoefficient))
+                |> Maybe.map (\(LengthMeters m) -> radius / (cos (degrees lat) * m / scaleCoefficient))
                 |> MaybeX.unpack (always 5) identity
     in
     Svg.circle

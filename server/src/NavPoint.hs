@@ -86,9 +86,9 @@ metersLength :: Length -> Double
 metersLength (LengthMeters x) = x
 
 data NavPoint = NavPoint
-    { name :: String
-    , code :: String
-    , country :: Maybe String
+    { name :: Text
+    , code :: Text
+    , country :: Maybe Text
     -- , position :: Position WGS84
     , lat :: Latitude
     , lon :: Longitude
@@ -96,8 +96,8 @@ data NavPoint = NavPoint
     , style :: WaypointStyle
     , rwdir :: Maybe Direction
     , rwlen :: Maybe Length
-    , freq :: Maybe String
-    , desc :: String
+    , freq :: Maybe Text
+    , desc :: Text
     } deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
     deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
         via ElmType "Api.NavPoint.NavPoint" NavPoint
@@ -141,22 +141,22 @@ navPointParser =
     <* char ','
     <*> optionMaybe navPointFreqParser
     <* char ','
-    <*> inQuotations (many1 $ noneOf ['"'])
+    <*> (toText <$> inQuotations (many1 $ noneOf ['"']))
 
-navPointNameParser :: Parsec String () String
+navPointNameParser :: Parsec String () Text
 navPointNameParser =
-    inQuotations (many1 $ noneOf ['"'])
+    toText <$> inQuotations (many1 $ noneOf ['"'])
 
-navPointCodeParser :: Parsec String () String
+navPointCodeParser :: Parsec String () Text
 navPointCodeParser =
-    choice
+    toText <$> choice
         [ inQuotations (many1 $ noneOf ['"'])
         , many1 $ noneOf [',']
         ]
 
-navPointCountryParser :: Parsec String () (Maybe String)
+navPointCountryParser :: Parsec String () (Maybe Text)
 navPointCountryParser =
-    optionMaybe $ many1 letter
+    optionMaybe $ toText <$> many1 letter
 
 navPointStyleParser :: Parsec String () WaypointStyle
 navPointStyleParser =
@@ -262,9 +262,9 @@ navPointRwlenParser = do
     where
         ml = (* 1609.344) <$ string "l" -- statute miles
 
-navPointFreqParser :: Parsec String () String
+navPointFreqParser :: Parsec String () Text
 navPointFreqParser =
-    choice [inQuotations freq, freq]
+    toText <$> choice [inQuotations freq, freq]
     where
         freq :: Parsec String () String
         freq =
@@ -296,7 +296,7 @@ doubleParser = do
         Left e -> fail $ "Failed to parse double: " ++ toString e
 
 
-inQuotations :: Parsec String () String -> Parsec String () String
+inQuotations :: Parsec String () a -> Parsec String () a
 inQuotations =
     between (char '"') (char '"')
 

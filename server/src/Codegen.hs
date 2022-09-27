@@ -19,6 +19,7 @@ import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath.Posix (takeDirectory)
 import System.Process (readProcessWithExitCode)
 import FlightTask (Turnpoint, TaskStart, TaskFinish, FlightTask (FlightTask))
+import Entity (Entity(Entity))
 
 typeDefinitions :: [Definition]
 typeDefinitions =
@@ -34,6 +35,7 @@ typeDefinitions =
         , jsonDefinitions @TaskStart
         , jsonDefinitions @TaskFinish
         , jsonDefinitions @FlightTask
+        , jsonDefinitions @Entity
         ]
 
 elmSrcPath :: FilePath

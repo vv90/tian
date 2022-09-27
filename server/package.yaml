@@ -63,6 +63,7 @@ dependencies:
 # for database interaction
 - hasql
 - hasql-th
+- hasql-transaction
 - profunctors
 - vector
 # statically checked physical dimensions
@@ -89,7 +90,7 @@ library:
   source-dirs: src
 
 executables:
-  server:
+  server-exe:
     main:                Main.hs
     source-dirs:         app
     ghc-options:

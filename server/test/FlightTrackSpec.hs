@@ -1,8 +1,9 @@
 module FlightTrackSpec where
 
 import Relude
-import FlightTrack ( FlightInfo(..), trackPointParser, trackPointTimeParser, trackDateParser, compIdParser, FixValidity(..), TrackPoint(..), trackDateIdentifier, compIdIdentifier, trackPointIdentifier )
-import NavPoint ( Latitude(..), Longitude(..), Elevation(..) )
+import FlightTrack 
+import NavPoint 
+import Geo
 import Test.Hspec
 import Text.Parsec (parse)
 import Test.Hspec.QuickCheck (prop)

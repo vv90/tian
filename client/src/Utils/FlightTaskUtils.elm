@@ -1,7 +1,8 @@
 module Utils.FlightTaskUtils exposing (..)
 
 import Api.FlightTask exposing (FlightTask, TaskFinish(..), TaskStart(..), Turnpoint(..))
-import Api.NavPoint exposing (Length(..), NavPoint)
+import Api.Geo exposing (Distance(..))
+import Api.NavPoint exposing (NavPoint)
 import List.Extra as ListX
 import MapUtils exposing (MapItem(..))
 import Nav.Units exposing (Meters(..))
@@ -36,7 +37,7 @@ startToMapItem nextPoint ( np, start ) =
     case start of
         StartLine r ->
             -- makePerpendicularLine r np nextPoint
-            Circle ( np.lat, np.lon ) (LengthMeters r)
+            Circle ( np.lat, np.lon ) (DistanceMeters r)
 
 
 
@@ -49,17 +50,17 @@ finishToMapItem prevPoint ( np, finish ) =
     case finish of
         FinishLine r ->
             -- makePerpendicularLine r np prevPoint
-            Circle ( np.lat, np.lon ) (LengthMeters r)
+            Circle ( np.lat, np.lon ) (DistanceMeters r)
 
         FinishCylinder r ->
-            Circle ( np.lat, np.lon ) (LengthMeters r)
+            Circle ( np.lat, np.lon ) (DistanceMeters r)
 
 
 turnpointToMapItem : ( NavPoint, Turnpoint ) -> MapItem
 turnpointToMapItem ( np, tp ) =
     case tp of
         Cylinder r ->
-            Circle ( np.lat, np.lon ) (LengthMeters r)
+            Circle ( np.lat, np.lon ) (DistanceMeters r)
 
 
 firstNavPointAfterStart : FlightTask -> NavPoint

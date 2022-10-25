@@ -3,7 +3,8 @@ module Main exposing (..)
 -- import Geo.GeoUtils exposing (..)
 
 import Api.FlightTask exposing (FlightTask)
-import Api.NavPoint exposing (Latitude(..), Longitude(..), NavPoint, navPointDecoder)
+import Api.Geo exposing (Latitude(..), Longitude(..))
+import Api.NavPoint exposing (NavPoint, navPointDecoder)
 import AppState
 import Browser
 import Element exposing (Element, layout, text)

@@ -20,6 +20,7 @@ import Text.Parsec.Prim (tokenPrim, token, tokens, (<?>))
 import qualified Generics.SOP as SOP
 import Language.Haskell.To.Elm (HasElmEncoder, HasElmDecoder, HasElmType)
 import Magic.ElmDeriving
+import Geo (Latitude (..), Longitude (..), Elevation (..), Direction (..), Distance (..), HasCoordinates(..))
 
 roundN :: (RealFrac a, Integral b) => b -> a -> a
 roundN n x = (fromIntegral . round $ x * f) / f
@@ -54,42 +55,6 @@ data WaypointStyle
     deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
         via ElmType "Api.NavPoint.WaypointStyle" WaypointStyle
 
-newtype Latitude = LatitudeDegrees Double
-    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
-    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-        via ElmType "Api.NavPoint.Latitude" Latitude
-
-degreesLatitude :: Latitude -> Double
-degreesLatitude (LatitudeDegrees x) = x
-
-newtype Longitude = LongitudeDegrees Double
-    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
-    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-        via ElmType "Api.NavPoint.Longitude" Longitude
-
-degreesLongitude :: Longitude -> Double
-degreesLongitude (LongitudeDegrees x) = x
-newtype Elevation = ElevationMeters Double
-    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
-    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-        via ElmType "Api.NavPoint.Elevation" Elevation
-
-metersElevation :: Elevation -> Double
-metersElevation (ElevationMeters x) = x
-newtype Direction = DirectionDegrees Int32
-    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
-    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-        via ElmType "Api.NavPoint.Direction" Direction
-
-degreesDirection :: Direction -> Int32
-degreesDirection (DirectionDegrees x) = x
-newtype Length = LengthMeters Double
-    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
-    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-        via ElmType "Api.NavPoint.Length" Length
-
-metersLength :: Length -> Double
-metersLength (LengthMeters x) = x
 
 data NavPoint = NavPoint
     { name :: Text
@@ -101,12 +66,16 @@ data NavPoint = NavPoint
     , elev :: Elevation
     , style :: WaypointStyle
     , rwdir :: Maybe Direction
-    , rwlen :: Maybe Length
+    , rwlen :: Maybe Distance
     , freq :: Maybe Text
     , desc :: Text
     } deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
     deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
         via ElmType "Api.NavPoint.NavPoint" NavPoint
+
+instance HasCoordinates NavPoint where
+    latitude = lat
+    longitude = lon
 
 -- navPointPositionParser :: Parsec String () (Position WGS84)
 -- navPointPositionParser =
@@ -246,7 +215,7 @@ navPointRwdirParser = do
         Right x -> pure $ DirectionDegrees x
         Left e -> fail $ "Failed to parse rwdir: " ++ toString e
 
-navPointRwlenParser :: Parsec Text () Length
+navPointRwlenParser :: Parsec Text () Distance
 navPointRwlenParser = do
     len <- doubleParser
     unit <-
@@ -255,7 +224,7 @@ navPointRwlenParser = do
             , (* 1852) <$ string "nm" -- nautical miles
             ]
 
-    pure $ LengthMeters $ unit len
+    pure $ DistanceMeters $ unit len
 
     where
         ml = (* 1609.344) <$ string "l" -- statute miles

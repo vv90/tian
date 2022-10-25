@@ -29,6 +29,7 @@ library
       Entity
       FlightTask
       FlightTrack
+      Geo
       Lib
       Magic.ElmDeriving
       NavPoint

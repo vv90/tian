@@ -2,7 +2,7 @@ module MapUtils exposing (..)
 
 -- import Geo.GeoUtils exposing (..)
 
-import Api.NavPoint exposing (Latitude(..), Length(..), Longitude(..))
+import Api.Geo exposing (Distance(..), Latitude(..), Longitude(..))
 import Dict exposing (Dict)
 import List.Extra as ListX
 
@@ -54,7 +54,7 @@ type alias GeoPoint =
 
 type MapItem
     = Point GeoPoint
-    | Circle GeoPoint Length
+    | Circle GeoPoint Distance
     | Line (List GeoPoint)
 
 
@@ -340,7 +340,7 @@ scaleCoords scaleCoeffcitient offset =
     Tuple.mapBoth applyScale applyScale offset
 
 
-metersPerPixel : Int -> Maybe Length
+metersPerPixel : Int -> Maybe Distance
 metersPerPixel zoom =
     let
         mpp =
@@ -411,9 +411,9 @@ metersPerPixel zoom =
                 _ ->
                     Nothing
     in
-    Maybe.map LengthMeters mpp
+    Maybe.map DistanceMeters mpp
 
 
-earthRadius : Length
+earthRadius : Distance
 earthRadius =
-    LengthMeters 6372798.2
+    DistanceMeters 6372798.2

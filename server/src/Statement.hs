@@ -10,7 +10,7 @@ import Hasql.Statement (Statement, refineResult)
 import Hasql.TH ( singletonStatement, maybeStatement, vectorStatement, rowsAffectedStatement)
 import Data.Text (Text)
 import Data.Int (Int32)
-import NavPoint (NavPoint (..), WaypointStyle, Latitude (LatitudeDegrees), Longitude (LongitudeDegrees), Elevation (ElevationMeters), Direction (DirectionDegrees), Length (LengthMeters), degreesLatitude, degreesLongitude, metersElevation, degreesDirection, metersLength)
+import NavPoint (NavPoint (..), WaypointStyle)
 import Data.Profunctor (dimap, Profunctor (lmap))
 import Data.Vector (Vector)
 import Data.Vector as V ( Vector, foldl, fromList, indexed )
@@ -22,6 +22,7 @@ import Control.Arrow (left)
 import qualified Hasql.Encoders as Encoders
 import FlightTask (FlightTask (..), TaskStart (..), TaskFinish (..), Turnpoint (..))
 import Entity (Entity (..))
+import Geo (Latitude(..), Longitude (..), Elevation (..), Direction (..), Distance (..), degreesLatitude, degreesLongitude, metersElevation, degreesDirection, metersDistance)
 
 newtype NavPointId = NavPointId Int32
 
@@ -39,7 +40,7 @@ decodeNavPoint (name, code, country, lat, lon, elev, style, rwdir, rwlen, freq, 
             (ElevationMeters elev)
             wpStyle
             (DirectionDegrees <$> rwdir)
-            (LengthMeters <$> rwlen)
+            (DistanceMeters <$> rwlen)
             freq
             descr
 
@@ -98,7 +99,7 @@ saveNavPointsStatement =
                 elevations = metersElevation . elev <$> nps
                 styles = show . style <$> nps
                 rwdirs = fmap degreesDirection . rwdir <$> nps
-                rwlens = fmap metersLength . rwlen <$> nps
+                rwlens = fmap metersDistance . rwlen <$> nps
                 freqs = fmap toText . freq <$> nps
                 descs = toText . desc <$> nps
             in

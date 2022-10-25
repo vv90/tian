@@ -3,7 +3,7 @@ module FlightTrack where
 
 import Data.Time
 import Relude
-import NavPoint (Latitude (..), Longitude (..), Elevation (ElevationMeters), roundN, ddmTodd)
+import NavPoint (roundN, ddmTodd)
 import Text.Parsec
     ( Parsec,
       string,
@@ -15,6 +15,7 @@ import Text.Parsec
       alphaNum,
       char,
       oneOf, noneOf, many1, sepEndBy1, eof, try )
+import Geo (Latitude (..), Longitude (..), Elevation (..), HasCoordinates(..))
 
 data FixValidity
     = Gps3D
@@ -29,6 +30,10 @@ data TrackPoint = TrackPoint
     , altitudeBaro :: Elevation
     , altitudeGps :: Elevation
     } deriving (Show, Eq)
+
+instance HasCoordinates TrackPoint where
+    latitude = lat
+    longitude = lon
 
 data FlightInfo
     = FlightDate UTCTime

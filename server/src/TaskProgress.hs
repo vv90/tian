@@ -1,9 +1,8 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module TaskProgress where
 
 import Relude
-import NavPoint (NavPoint, Longitude(..), Latitude(..))
+import NavPoint (NavPoint)
 import qualified NavPoint
 import qualified FlightTrack
 import qualified FlightTask
@@ -17,22 +16,23 @@ import Data.Time (DiffTime)
 import FlightTask (FlightTask, TaskStart(..), Turnpoint(..), TaskFinish(..))
 import Data.Geo.Jord.Geodetic (HorizontalPosition)
 import Data.Geo.Jord.Models (S84)
+import Geo (Latitude (..), Longitude (..), Elevation, Distance (..), HasCoordinates (..), s84position)
 
 data ProgressPoint = ProgressPoint
     { time :: DiffTime
     , lat :: Latitude
     , lon :: Longitude
-    , altitude :: NavPoint.Elevation
-    , target :: Maybe (NavPoint, NavPoint.Length)
+    , altitude :: Elevation
+    , target :: Maybe (NavPoint, Distance)
     -- , distanceToTarget :: NavPoint.Length
     -- , distanceCovered :: NavPoint.Length
     }
 
-s84position :: Latitude -> Longitude -> HorizontalPosition S84
-s84position (LatitudeDegrees lat) (LongitudeDegrees lon) = 
-    Geodetic.s84Pos lat lon
+instance HasCoordinates ProgressPoint where
+    latitude = lat
+    longitude = lon
 
-distanceToTurnpoint :: NavPoint -> TrackPoint -> NavPoint.Length
+distanceToTurnpoint :: NavPoint -> TrackPoint -> Distance
 distanceToTurnpoint np tp =
     let
         (LongitudeDegrees xLon) = NavPoint.lon np
@@ -45,7 +45,7 @@ distanceToTurnpoint np tp =
 
         dis = GreatCircle.distance xPos yPos
     in
-        NavPoint.LengthMeters $ Length.toMetres dis
+        DistanceMeters $ Length.toMetres dis
 
 data TaskProgress = TaskProgress ProgressPoint [TrackPoint -> ProgressPoint]
 
@@ -94,7 +94,7 @@ progressStart ft tp =
     -- , startNp
     -- )
 
-startLineCrossed :: FlightTask -> (TrackPoint, TrackPoint) -> Maybe (ProgressPoint)
+startLineCrossed :: FlightTask -> (TrackPoint, TrackPoint) -> Maybe ProgressPoint
 startLineCrossed ft (lastTp, currTp) =
     let
         (startNp, StartLine startRadius) = FlightTask.start ft
@@ -105,16 +105,15 @@ startLineCrossed ft (lastTp, currTp) =
                 (fst <$> viaNonEmpty head (FlightTask.turnpoints ft))
 
         targetPosition =
-            s84position (NavPoint.lat targetNp) (NavPoint.lon targetNp)
+            s84position targetNp
 
         startPosition = 
-            s84position (NavPoint.lat startNp) (NavPoint.lon startNp)
+            s84position startNp
 
         lastPosition = 
-            s84position (FlightTrack.lat lastTp) (FlightTrack.lon lastTp)
-
+            s84position lastTp
         currPosition =
-            s84position (FlightTrack.lat currTp) (FlightTrack.lon currTp)
+            s84position currTp
 
         startBearing = 
             GreatCircle.initialBearing 
@@ -169,7 +168,7 @@ startLineCrossed ft (lastTp, currTp) =
 turnpointCrossed :: (NavPoint, Turnpoint) -> NavPoint -> (TrackPoint, TrackPoint) -> Maybe ProgressPoint
 turnpointCrossed (np, Cylinder radius) targetNp (lastTp, currTp) =
     let
-        (NavPoint.LengthMeters npDistance) = distanceToTurnpoint np currTp
+        (DistanceMeters npDistance) = distanceToTurnpoint np currTp
     in
         if npDistance <= radius
         then 
@@ -185,7 +184,7 @@ turnpointCrossed (np, Cylinder radius) targetNp (lastTp, currTp) =
 finishCrossed :: (NavPoint, TaskFinish) -> NavPoint -> (TrackPoint, TrackPoint) -> Maybe ProgressPoint
 finishCrossed (np, FinishCylinder radius) prevNp (lastTp, currTp) =
     let
-        (NavPoint.LengthMeters npDistance) = distanceToTurnpoint np currTp
+        (DistanceMeters npDistance) = distanceToTurnpoint np currTp
     in
         if npDistance <= radius
         then 
@@ -202,16 +201,16 @@ finishCrossed (np, FinishLine radius) prevNp (lastTp, currTp) =
     let 
         reversedFinishBearing =
             GreatCircle.initialBearing 
-                (s84position (NavPoint.lat np) (NavPoint.lon np))
-                (s84position (NavPoint.lat prevNp) (NavPoint.lon prevNp))
+                (s84position np)
+                (s84position prevNp)
         finishPosition = 
-            s84position (NavPoint.lat np) (NavPoint.lon np)
+            s84position np
 
         lastPosition = 
-            s84position (FlightTrack.lat lastTp) (FlightTrack.lon lastTp)
+            s84position lastTp
 
         currPosition =
-            s84position (FlightTrack.lat currTp) (FlightTrack.lon currTp)
+            s84position currTp
 
         trackLine = 
             GreatCircle.minorArc lastPosition currPosition

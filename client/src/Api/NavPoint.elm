@@ -1,27 +1,13 @@
 module Api.NavPoint exposing
-    ( Direction(..)
-    , Elevation(..)
-    , Latitude(..)
-    , Length(..)
-    , Longitude(..)
-    , NavPoint
+    ( NavPoint
     , WaypointStyle(..)
-    , directionDecoder
-    , directionEncoder
-    , elevationDecoder
-    , elevationEncoder
-    , latitudeDecoder
-    , latitudeEncoder
-    , lengthDecoder
-    , lengthEncoder
-    , longitudeDecoder
-    , longitudeEncoder
     , navPointDecoder
     , navPointEncoder
     , waypointStyleDecoder
     , waypointStyleEncoder
     )
 
+import Api.Geo
 import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
@@ -172,96 +158,16 @@ waypointStyleDecoder =
             )
 
 
-type Latitude
-    = LatitudeDegrees Float
-
-
-latitudeEncoder : Latitude -> Json.Encode.Value
-latitudeEncoder a =
-    case a of
-        LatitudeDegrees b ->
-            Json.Encode.float b
-
-
-latitudeDecoder : Json.Decode.Decoder Latitude
-latitudeDecoder =
-    Json.Decode.map LatitudeDegrees Json.Decode.float
-
-
-type Longitude
-    = LongitudeDegrees Float
-
-
-longitudeEncoder : Longitude -> Json.Encode.Value
-longitudeEncoder a =
-    case a of
-        LongitudeDegrees b ->
-            Json.Encode.float b
-
-
-longitudeDecoder : Json.Decode.Decoder Longitude
-longitudeDecoder =
-    Json.Decode.map LongitudeDegrees Json.Decode.float
-
-
-type Elevation
-    = ElevationMeters Float
-
-
-elevationEncoder : Elevation -> Json.Encode.Value
-elevationEncoder a =
-    case a of
-        ElevationMeters b ->
-            Json.Encode.float b
-
-
-elevationDecoder : Json.Decode.Decoder Elevation
-elevationDecoder =
-    Json.Decode.map ElevationMeters Json.Decode.float
-
-
-type Direction
-    = DirectionDegrees Int
-
-
-directionEncoder : Direction -> Json.Encode.Value
-directionEncoder a =
-    case a of
-        DirectionDegrees b ->
-            Json.Encode.int b
-
-
-directionDecoder : Json.Decode.Decoder Direction
-directionDecoder =
-    Json.Decode.map DirectionDegrees Json.Decode.int
-
-
-type Length
-    = LengthMeters Float
-
-
-lengthEncoder : Length -> Json.Encode.Value
-lengthEncoder a =
-    case a of
-        LengthMeters b ->
-            Json.Encode.float b
-
-
-lengthDecoder : Json.Decode.Decoder Length
-lengthDecoder =
-    Json.Decode.map LengthMeters Json.Decode.float
-
-
 type alias NavPoint =
     { name : String
     , code : String
     , country : Maybe String
-    , lat : Latitude
-    , lon : Longitude
-    , elev : Elevation
+    , lat : Api.Geo.Latitude
+    , lon : Api.Geo.Longitude
+    , elev : Api.Geo.Elevation
     , style : WaypointStyle
-    , rwdir : Maybe Direction
-    , rwlen : Maybe Length
+    , rwdir : Maybe Api.Geo.Direction
+    , rwlen : Maybe Api.Geo.Distance
     , freq : Maybe String
     , desc : String
     }
@@ -273,12 +179,12 @@ navPointEncoder a =
         [ ( "name", Json.Encode.string a.name )
         , ( "code", Json.Encode.string a.code )
         , ( "country", Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.country )
-        , ( "lat", latitudeEncoder a.lat )
-        , ( "lon", longitudeEncoder a.lon )
-        , ( "elev", elevationEncoder a.elev )
+        , ( "lat", Api.Geo.latitudeEncoder a.lat )
+        , ( "lon", Api.Geo.longitudeEncoder a.lon )
+        , ( "elev", Api.Geo.elevationEncoder a.elev )
         , ( "style", waypointStyleEncoder a.style )
-        , ( "rwdir", Maybe.Extra.unwrap Json.Encode.null directionEncoder a.rwdir )
-        , ( "rwlen", Maybe.Extra.unwrap Json.Encode.null lengthEncoder a.rwlen )
+        , ( "rwdir", Maybe.Extra.unwrap Json.Encode.null Api.Geo.directionEncoder a.rwdir )
+        , ( "rwlen", Maybe.Extra.unwrap Json.Encode.null Api.Geo.distanceEncoder a.rwlen )
         , ( "freq", Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.freq )
         , ( "desc", Json.Encode.string a.desc )
         ]
@@ -290,11 +196,11 @@ navPointDecoder =
         |> Json.Decode.Pipeline.required "name" Json.Decode.string
         |> Json.Decode.Pipeline.required "code" Json.Decode.string
         |> Json.Decode.Pipeline.required "country" (Json.Decode.nullable Json.Decode.string)
-        |> Json.Decode.Pipeline.required "lat" latitudeDecoder
-        |> Json.Decode.Pipeline.required "lon" longitudeDecoder
-        |> Json.Decode.Pipeline.required "elev" elevationDecoder
+        |> Json.Decode.Pipeline.required "lat" Api.Geo.latitudeDecoder
+        |> Json.Decode.Pipeline.required "lon" Api.Geo.longitudeDecoder
+        |> Json.Decode.Pipeline.required "elev" Api.Geo.elevationDecoder
         |> Json.Decode.Pipeline.required "style" waypointStyleDecoder
-        |> Json.Decode.Pipeline.required "rwdir" (Json.Decode.nullable directionDecoder)
-        |> Json.Decode.Pipeline.required "rwlen" (Json.Decode.nullable lengthDecoder)
+        |> Json.Decode.Pipeline.required "rwdir" (Json.Decode.nullable Api.Geo.directionDecoder)
+        |> Json.Decode.Pipeline.required "rwlen" (Json.Decode.nullable Api.Geo.distanceDecoder)
         |> Json.Decode.Pipeline.required "freq" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "desc" Json.Decode.string

@@ -13,13 +13,14 @@ import Language.Elm.Simplification qualified as Simplification
 import Language.Haskell.To.Elm (jsonDefinitions)
 import Prettyprinter (Doc)
 import Prettyprinter.Render.Text (hPutDoc)
-import NavPoint (WaypointStyle, Latitude, Longitude, Elevation, Direction, Length, NavPoint)
+import NavPoint (WaypointStyle, NavPoint)
 import System.Directory (createDirectoryIfMissing, doesDirectoryExist, findExecutable, removeDirectoryRecursive)
 import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath.Posix (takeDirectory)
 import System.Process (readProcessWithExitCode)
 import FlightTask (Turnpoint, TaskStart, TaskFinish, FlightTask (FlightTask))
 import Entity (Entity(Entity))
+import Geo (Latitude, Elevation, Direction, Longitude, Distance)
 
 typeDefinitions :: [Definition]
 typeDefinitions =
@@ -29,7 +30,7 @@ typeDefinitions =
         , jsonDefinitions @Longitude
         , jsonDefinitions @Elevation
         , jsonDefinitions @Direction
-        , jsonDefinitions @Length
+        , jsonDefinitions @Distance
         , jsonDefinitions @NavPoint
         , jsonDefinitions @Turnpoint
         , jsonDefinitions @TaskStart

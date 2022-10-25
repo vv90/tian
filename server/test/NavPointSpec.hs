@@ -5,12 +5,13 @@ module NavPointSpec
 import Relude
 import Test.Hspec
 import NavPoint
+import Geo
 import Text.Parsec (parse)
 import Test.Hspec.QuickCheck (prop)
 import Text.Printf (printf)
 import Utils (within)
 -- import Data.Geo.Jord.Angle (Angle, decimalDegrees)
--- import Data.Geo.Jord.Length (Length, metres)
+-- import Data.Geo.Jord.Distance (Length, metres)
 -- import Data.Geo.Jord.Geodetic (Position, latLongHeightPos, HasCoordinates (decimalLatitude, decimalLongitude), height, readPosition)
 -- import Data.Geo.Jord.Models (WGS84 (WGS84))
 
@@ -53,7 +54,7 @@ spec = do
             within 1e-5 504 . metersElevation . elev <$> result `shouldBe` Right True
             style <$> result `shouldBe` Right AirfieldSolid
             fmap degreesDirection . rwdir <$> result `shouldBe` Right (Just 144)
-            fmap (within 1e-5 1130 . metersLength) . rwlen <$> result `shouldBe` Right (Just $ True)
+            fmap (within 1e-5 1130 . metersDistance) . rwlen <$> result `shouldBe` Right (Just $ True)
             freq <$> result `shouldBe` Right (Just "123.500")
             desc <$> result `shouldBe` Right "Home Airfield"
 
@@ -104,13 +105,13 @@ spec = do
 
     context "navPointRwlenParser" $ do
         it "parses in meters" $ do
-            parse navPointRwlenParser "" "123.456m" `shouldBe` Right (LengthMeters 123.456)
+            parse navPointRwlenParser "" "123.456m" `shouldBe` Right (DistanceMeters 123.456)
 
         it "parses in nautical miles" $ do
-            parse navPointRwlenParser "" "1.23nm" `shouldBe` Right (LengthMeters $ 1.23 * 1852)
+            parse navPointRwlenParser "" "1.23nm" `shouldBe` Right (DistanceMeters $ 1.23 * 1852)
 
         it "parses in statute miles" $ do
-            parse navPointRwlenParser "" "1.23ml" `shouldBe` Right (LengthMeters $ 1.23 * 1609.344)
+            parse navPointRwlenParser "" "1.23ml" `shouldBe` Right (DistanceMeters $ 1.23 * 1609.344)
 
         it "fails for invalid units" $ do
             isLeft (parse navPointRwlenParser "" "1.23x") `shouldBe` True

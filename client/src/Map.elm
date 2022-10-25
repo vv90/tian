@@ -4,7 +4,7 @@ module Map exposing (..)
 -- import Geo.GeoUtils exposing (..)
 -- import Nav.Units exposing (Deg(..), Meters(..), degToRad, getDeg, getRad)
 
-import Api.NavPoint exposing (Latitude(..), Length(..), Longitude(..))
+import Api.Geo exposing (Distance(..), Latitude(..), Longitude(..))
 import Browser.Events as BE
 import Canvas exposing (Point, Renderable, clear, group, rect, shapes, texture)
 import Canvas.Settings exposing (fill)
@@ -285,7 +285,7 @@ view mapItems model =
                 Line ps ->
                     "Line " ++ (ps |> List.map (\( LatitudeDegrees lat, LongitudeDegrees lon ) -> (lat |> String.fromFloat) ++ " " ++ (lon |> String.fromFloat)) |> String.join ", ")
 
-                Circle ( LatitudeDegrees lat, LongitudeDegrees lon ) (LengthMeters r) ->
+                Circle ( LatitudeDegrees lat, LongitudeDegrees lon ) (DistanceMeters r) ->
                     "Circle " ++ (lat |> String.fromFloat) ++ " " ++ (lon |> String.fromFloat) ++ " " ++ (r |> String.fromFloat)
 
         -- withOptPoint : Maybe GeoPoint -> List (Svg Msg) -> List (Svg Msg)
@@ -463,8 +463,8 @@ renderPoint mapView point =
         ]
 
 
-renderCircle : MapView -> GeoPoint -> Length -> Svg Msg
-renderCircle mapView point (LengthMeters radius) =
+renderCircle : MapView -> GeoPoint -> Distance -> Svg Msg
+renderCircle mapView point (DistanceMeters radius) =
     let
         ( x, y ) =
             geoPointToViewCoords mapView point
@@ -477,7 +477,7 @@ renderCircle mapView point (LengthMeters radius) =
 
         rPixels =
             metersPerPixel (floor mapView.zoom)
-                |> Maybe.map (\(LengthMeters m) -> radius / (cos (degrees lat) * m / scaleCoefficient))
+                |> Maybe.map (\(DistanceMeters m) -> radius / (cos (degrees lat) * m / scaleCoefficient))
                 |> MaybeX.unpack (always 5) identity
     in
     Svg.circle

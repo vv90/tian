@@ -31,3 +31,19 @@ CREATE TABLE IF NOT EXISTS task_turnpoints (
   "turnpoint_number" int not null,
   primary key ("task_id", "turnpoint_name")
 );
+
+CREATE TABLE IF NOT EXISTS tracks (
+  "id" int not null primary key generated always as identity,
+  "compId" text not null,
+  "date" date not null
+);
+
+CREATE TABLE IF NOT EXISTS track_points (
+  "track_id" int not null references tracks ("id"),
+  "time" time not null,
+  "lat" numeric not null,
+  "lon" numeric not null,
+  "fixValidity" text not null,
+  "altitudeBaro" numeric not null,
+  "altitudeGps" numeric not null
+);

@@ -247,13 +247,18 @@ view model =
         --     MaybeX.unwrap [] List.singleton trackPositionMarker
         mapItems =
             case model.pageModel of
-                Page.TaskList _ ->
-                    []
+                Page.TaskList pm ->
+                    FlightTaskList.selectedFlightTask model.appState.flightTasks pm
+                        |> Maybe.map (.entity >> taskToMapItems)
+                        |> Maybe.withDefault []
 
                 Page.TaskForm pm ->
                     FlightTaskForm.result pm
                         |> Result.map taskToMapItems
                         |> Result.withDefault []
+
+                Page.TrackUpload _ ->
+                    []
     in
     div []
         [ Map.view mapItems model.mapModel |> Html.map MapMsg

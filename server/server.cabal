@@ -28,12 +28,14 @@ library
       Codegen
       Entity
       FlightTask
+      FlightTrack
       Lib
       Magic.ElmDeriving
       NavPoint
       RwLenUnits
       Session
       Statement
+      TaskProgress
   other-modules:
       Paths_server
   hs-source-dirs:
@@ -191,7 +193,10 @@ test-suite server-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      FlightTrackSpec
       NavPointSpec
+      TaskProgressSpec
+      Utils
       Paths_server
   hs-source-dirs:
       test

@@ -8,13 +8,13 @@ import NavPoint
 import Text.Parsec (parse)
 import Test.Hspec.QuickCheck (prop)
 import Text.Printf (printf)
+import Utils (within)
 -- import Data.Geo.Jord.Angle (Angle, decimalDegrees)
 -- import Data.Geo.Jord.Length (Length, metres)
 -- import Data.Geo.Jord.Geodetic (Position, latLongHeightPos, HasCoordinates (decimalLatitude, decimalLongitude), height, readPosition)
 -- import Data.Geo.Jord.Models (WGS84 (WGS84))
 
-within :: (Num a, Show a, Ord a) => a -> a -> a -> Bool
-within eps x y = abs (x - y) <= eps
+
 
 spec :: Spec
 spec = do
@@ -149,10 +149,9 @@ spec = do
 
     context "doubleParser" $ do
         prop "works correctly" $
-            \x -> parse doubleParser "" (printf "%f" x) == Right x
-
-    -- context "test" $ do
-    --     it "tests" $ do
-    --         let pos = latLongHeightPos 46.356317 14.17445 (metres 504) WGS84
-
-    --         readPosition (show pos) WGS84 `shouldBe` Just pos
+            \x -> 
+                let 
+                    txt :: String
+                    txt = printf "%f" x 
+                in 
+                    parse doubleParser "" (toText txt) == Right x

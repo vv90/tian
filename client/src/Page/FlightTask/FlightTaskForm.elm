@@ -142,8 +142,8 @@ result model =
                 finishType
 
 
-init : () -> Model
-init () =
+init : Model
+init =
     { description = ""
     , searchSelectModel = SearchSelect.init
     , navPoints = []
@@ -461,7 +461,7 @@ view navPointsD model =
         Resolved (Ok nps) ->
             viewLoaded nps model
 
-        Resolved (Err e) ->
+        Resolved (Err _) ->
             text "Failed to load navpoints"
 
         _ ->

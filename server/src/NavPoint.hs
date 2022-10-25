@@ -25,6 +25,12 @@ roundN :: (RealFrac a, Integral b) => b -> a -> a
 roundN n x = (fromIntegral . round $ x * f) / f
     where f = 10^n
 
+-- Degrees Decimal Minutes (DDM) to Decimal Degrees (DD)
+ddmTodd :: (RealFrac b, Integral a) => a -> a -> a -> b
+ddmTodd deg min decMin =
+    -- since the maximum precision of the input is 0.001' ~ 0.000017° we round to 6 decimal places
+    roundN 6 $ fromIntegral deg + fromIntegral min / 60 + fromIntegral decMin / 60000
+
 data WaypointStyle
     = Unknown
     | Waypoint
@@ -114,11 +120,11 @@ data NavPoint = NavPoint
 --     where
 --         wgs84Position lat lon elev = latLongHeightPos lat lon (metres elev) WGS84
 
-navPointLinesParser :: Parsec String () [NavPoint]
+navPointLinesParser :: Parsec Text () [NavPoint]
 navPointLinesParser =
     sepEndBy1 navPointParser (many1 $ choice [char '\n', char '\r', char ' ']) <* eof
 
-navPointParser :: Parsec String () NavPoint
+navPointParser :: Parsec Text () NavPoint
 navPointParser =
     NavPoint
     <$> navPointNameParser
@@ -143,29 +149,29 @@ navPointParser =
     <* char ','
     <*> (toText <$> inQuotations (many1 $ noneOf ['"']))
 
-navPointNameParser :: Parsec String () Text
+navPointNameParser :: Parsec Text () Text
 navPointNameParser =
     toText <$> inQuotations (many1 $ noneOf ['"'])
 
-navPointCodeParser :: Parsec String () Text
+navPointCodeParser :: Parsec Text () Text
 navPointCodeParser =
     toText <$> choice
         [ inQuotations (many1 $ noneOf ['"'])
         , many1 $ noneOf [',']
         ]
 
-navPointCountryParser :: Parsec String () (Maybe Text)
+navPointCountryParser :: Parsec Text () (Maybe Text)
 navPointCountryParser =
     optionMaybe $ toText <$> many1 letter
 
-navPointStyleParser :: Parsec String () WaypointStyle
+navPointStyleParser :: Parsec Text () WaypointStyle
 navPointStyleParser =
     (<>) <$> digitAsString <*> option "" digitAsString >>= matchIdParser
     where
-        digitAsString :: Parsec String () String
+        digitAsString :: Parsec Text () String
         digitAsString = one <$> digit
 
-        matchIdParser :: String -> Parsec String () WaypointStyle
+        matchIdParser :: String -> Parsec Text () WaypointStyle
         matchIdParser "0" = pure Unknown
         matchIdParser "1" = pure Waypoint
         matchIdParser "2" = pure AirfieldGrass
@@ -187,7 +193,7 @@ navPointStyleParser =
         matchIdParser id = fail $ "Failed to parse waypoint style. Unknown style: " <> id
 
 
-navPointLatParser :: Parsec String () Latitude
+navPointLatParser :: Parsec Text () Latitude
 navPointLatParser = do
     deg <- readEither <$> count 2 digit
     min <- readEither <$> count 2 digit
@@ -199,16 +205,12 @@ navPointLatParser = do
             , negate <$ char 'S' -- need to negate the value for southern hemisphere
             ]
 
-    case toAngle <$> deg <*> min <*> decMin of
+    case ddmTodd <$> deg <*> min <*> decMin of
         Right x -> pure $ LatitudeDegrees $ adjustForHemisphereFn x
         Left e -> fail $ "Failed to parse latitude: " ++ toString e
 
-    where
-        toAngle deg min decMin =
-            -- since the maximum precision of the input is 0.001' ~ 0.000017° we round to 6 decimal places
-            roundN 6 $ fromIntegral deg + fromIntegral min / 60 + fromIntegral decMin / 60000
-
-navPointLonParser :: Parsec String () Longitude
+    
+navPointLonParser :: Parsec Text () Longitude
 navPointLonParser = do
     deg <- readEither <$> count 3 digit
     min <- readEither <$> count 2 digit
@@ -220,15 +222,11 @@ navPointLonParser = do
             , negate <$ char 'W' -- need to negate the value for western hemisphere
             ]
 
-    case toAngle <$> deg <*> min <*> decMin of
+    case ddmTodd <$> deg <*> min <*> decMin of
         Right x -> pure $ LongitudeDegrees $ adjustForHemisphereFn x
         Left e -> fail $ "Failed to parse longitude: " ++ toString e
-    where
-        toAngle deg min decMin =
-            -- since the maximum precision of the input is 0.001' ~ 0.000017° we round to 6 decimal places
-            roundN 6 $ fromIntegral deg + fromIntegral min / 60 + fromIntegral decMin / 60000
-
-navPointElevationParser :: Parsec String () Elevation
+    
+navPointElevationParser :: Parsec Text () Elevation
 navPointElevationParser = do
     elev <- doubleParser
     unitConversionFn <-
@@ -240,7 +238,7 @@ navPointElevationParser = do
     pure $ ElevationMeters $ unitConversionFn elev
 
 
-navPointRwdirParser :: Parsec String () Direction
+navPointRwdirParser :: Parsec Text () Direction
 navPointRwdirParser = do
     dir <- readEither <$> count 1 (oneOf ['0', '1', '2', '3']) <> count 2 digit
 
@@ -248,7 +246,7 @@ navPointRwdirParser = do
         Right x -> pure $ DirectionDegrees x
         Left e -> fail $ "Failed to parse rwdir: " ++ toString e
 
-navPointRwlenParser :: Parsec String () Length
+navPointRwlenParser :: Parsec Text () Length
 navPointRwlenParser = do
     len <- doubleParser
     unit <-
@@ -262,11 +260,11 @@ navPointRwlenParser = do
     where
         ml = (* 1609.344) <$ string "l" -- statute miles
 
-navPointFreqParser :: Parsec String () Text
+navPointFreqParser :: Parsec Text () Text
 navPointFreqParser =
     toText <$> choice [inQuotations freq, freq]
     where
-        freq :: Parsec String () String
+        freq :: Parsec Text () String
         freq =
             count 1 (char '1')
             <> count 1 (oneOf ['1', '2', '3'])
@@ -275,17 +273,17 @@ navPointFreqParser =
             <> count 2 digit
             <> count 1 (oneOf ['0', '5'])
 
-intParser :: Parsec String () Int
+intParser :: Parsec Text () Int
 intParser = do
     res <- readEither <$> many1 digit
     case res of
         Right i -> pure i
         Left e -> fail $ "Failed to parse int: " ++ toString e
 
-fractionParser :: Parsec String u String
+fractionParser :: Parsec Text u String
 fractionParser = count 1 (char '.') <> many1 digit
 
-doubleParser :: Parsec String () Double
+doubleParser :: Parsec Text () Double
 doubleParser = do
     sign <- optionMaybe $ string "-"
     integral <- Just <$> many1 digit
@@ -296,7 +294,7 @@ doubleParser = do
         Left e -> fail $ "Failed to parse double: " ++ toString e
 
 
-inQuotations :: Parsec String () a -> Parsec String () a
+inQuotations :: Parsec Text () a -> Parsec Text () a
 inQuotations =
     between (char '"') (char '"')
 

@@ -9,6 +9,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE InstanceSigs #-}
 module Lib
     ( startApp
     , app
@@ -42,12 +43,13 @@ import Network.Wai.Middleware.Cors (simpleCors, corsMethods, corsRequestHeaders,
 import Network.HTTP.Types.Method (methodDelete, methodGet, methodOptions, methodPost, methodPut)
 import Servant.Multipart (MultipartForm, Mem, MultipartData (files), FileData (fdFileName, fdFileCType, fdPayload), FromMultipart (fromMultipart))
 import Data.ByteString (unpack)
-import Text.Parsec (parse, ParseError)
+import Text.Parsec (parse, ParseError, Parsec)
 import Control.Arrow (ArrowChoice(left))
 import Control.Monad.Error.Class (liftEither)
 import Statement (saveNavPointsStatement)
 import FlightTask (FlightTask)
 import Entity (Entity)
+import FlightTrack (FlightInfo, flightInfoParser, buildFlightTrack, FlightTrack, date, compId, points)
 
 
 data TurnpointType
@@ -73,14 +75,20 @@ getConn
     $ Connection.acquire
     $ Connection.settings "localhost" 5433 "admin" "admin" "cvdb"
 
+-- detectAndDecode :: ByteString -> Either String String
+-- detectAndDecode bs =
+--     case detectEncodingName (toStrict bs) of
+--         Just "UTF-8" -> left show $ decodeUtf8Strict bs
+--         Just unsupported -> Left $ "Unsupported encoding: " <> unsupported
+--         Nothing -> Left "Failed to detect encoding"
 
 getNavPoints :: ExceptT LibError IO (Vector NavPoint)
-getNavPoints = 
+getNavPoints =
     getConn >>= withExceptT QueryError . ExceptT . Session.run getNavPointsSession
 
 saveNavPoints :: Vector NavPoint -> ExceptT LibError IO (Int64, Int64)
 saveNavPoints nps = do
-    conn <- getConn 
+    conn <- getConn
     deleted <- withExceptT QueryError . ExceptT $ Session.run (deleteDuplicateNavPointsSession $ toText . name <$> nps) conn
     added <- withExceptT QueryError . ExceptT $ Session.run (saveNavPointsSession nps) conn
     pure (deleted, added)
@@ -104,20 +112,52 @@ navPoints = do
         Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
         Right v -> pure v
 
+parseFile :: Parsec Text () a -> FileData Mem -> Either String a
+parseFile parser fileData =
+    let 
+        fileName = fdFileName fileData
+        parseContent = left show . parse parser (toString fileName)
+    in 
+        parseContent . decodeUtf8 . fdPayload $ fileData
+
 instance FromMultipart Mem [NavPoint] where
+    fromMultipart :: MultipartData Mem -> Either String [NavPoint]
     fromMultipart form =
         let
-            fls = left show . parseLines . decodeUtf8 . fdPayload <$> files form
-            parseLines = parse navPointLinesParser "Multipoart form data"
+            navPointResults = parseFile navPointLinesParser <$> files form
         in
-            concat <$> sequence fls
+            concat <$> sequence navPointResults
 
-upload :: [NavPoint] -> Handler (Int, Int64, Int64)
-upload navPoints = do
+instance FromMultipart Mem [FlightTrack] where
+    fromMultipart form =
+        let
+            flightTrackResults = (parseFile flightInfoParser >=> buildFlightTrack) <$> files form
+        in
+            sequence flightTrackResults
+
+
+uploadNavPoints :: [NavPoint] -> Handler (Int, Int64, Int64)
+uploadNavPoints navPoints = do
     result <- liftIO $ runExceptT $ saveNavPoints $ fromList navPoints
     case result of
         Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
         Right (d, a) -> pure (length navPoints, d, a)
+
+uploadFlightTrack :: [FlightTrack] -> Handler String
+uploadFlightTrack fts =
+    let
+        dt = (\ft ->
+                "------\n"
+                <> show (date ft)
+                <> "\n"
+                <> show (compId ft)
+                <> "\n"
+                <> show (length $ points ft)
+                <> "\n"
+            ) <$> fts
+    in
+        pure $ concat dt
+
 
 flightTasks :: Handler [Entity Int32 FlightTask]
 flightTasks = do
@@ -136,10 +176,11 @@ saveTask flightTask = do
 
 
 type API =
-    "upload" :> MultipartForm Mem [NavPoint] :> Post '[JSON] (Int, Int64, Int64)
+    "navpoints" :> MultipartForm Mem [NavPoint] :> Post '[JSON] (Int, Int64, Int64)
     :<|> "navpoints" :> Get '[JSON] (Vector NavPoint)
     :<|> "task" :> Get '[JSON] [Entity Int32 FlightTask]
     :<|> "task" :> ReqBody '[JSON] FlightTask :> Post '[JSON] Int64
+    :<|> "track" :> MultipartForm Mem [FlightTrack] :> Post '[JSON] String
 
 startApp :: IO ()
 startApp = run 8081 app
@@ -164,8 +205,9 @@ api = Proxy
 
 server :: Server API
 server =
-    upload
+    uploadNavPoints
     :<|> navPoints
     :<|> flightTasks
     :<|> saveTask
+    :<|> uploadFlightTrack
 

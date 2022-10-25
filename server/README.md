@@ -23,3 +23,34 @@ stack run codegen
 ```sh
 stack test --file-watch --fast
 ```
+
+## Deployment
+
+### prerequisities:
+
+- stack (https://docs.haskellstack.org/en/stable/)
+- postgress (specifically, libpq library)
+- elm compiler (https://github.com/elm/compiler)
+- elm-format (https://github.com/avh4/elm-format/)
+- npm
+
+### steps to build and deploy
+
+- initialize DB using `db/init.sql` script
+- run BE tests
+  ```sh
+  stack test
+  ```
+- generate FE api types
+  ```sh
+  stack run codegen
+  ```
+- build BE executables
+  ```sh
+  stack install
+  ```
+- build FE
+
+  ```sh
+  elm make
+  ```

@@ -50,14 +50,7 @@ metersDistance :: Distance -> Double
 metersDistance (DistanceMeters x) = x
 
 
-class HasCoordinates a where 
+class GeoPosition a where 
     latitude :: a -> Latitude
     longitude :: a -> Longitude
 
-s84position :: HasCoordinates a => a -> HorizontalPosition S84
-s84position pos = 
-    let 
-        (LatitudeDegrees lat) = latitude pos
-        (LongitudeDegrees lon) = longitude pos
-    in
-    Geodetic.s84Pos lat lon

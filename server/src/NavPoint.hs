@@ -20,7 +20,7 @@ import Text.Parsec.Prim (tokenPrim, token, tokens, (<?>))
 import qualified Generics.SOP as SOP
 import Language.Haskell.To.Elm (HasElmEncoder, HasElmDecoder, HasElmType)
 import Magic.ElmDeriving
-import Geo (Latitude (..), Longitude (..), Elevation (..), Direction (..), Distance (..), HasCoordinates(..))
+import Geo (Latitude (..), Longitude (..), Elevation (..), Direction (..), Distance (..), GeoPosition(..))
 
 roundN :: (RealFrac a, Integral b) => b -> a -> a
 roundN n x = (fromIntegral . round $ x * f) / f
@@ -73,7 +73,7 @@ data NavPoint = NavPoint
     deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
         via ElmType "Api.NavPoint.NavPoint" NavPoint
 
-instance HasCoordinates NavPoint where
+instance GeoPosition NavPoint where
     latitude = lat
     longitude = lon
 

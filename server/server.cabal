@@ -30,6 +30,7 @@ library
       FlightTask
       FlightTrack
       Geo
+      Geo.Utils
       Lib
       Magic.ElmDeriving
       NavPoint

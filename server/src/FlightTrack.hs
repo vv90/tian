@@ -15,7 +15,7 @@ import Text.Parsec
       alphaNum,
       char,
       oneOf, noneOf, many1, sepEndBy1, eof, try )
-import Geo (Latitude (..), Longitude (..), Elevation (..), HasCoordinates(..))
+import Geo (Latitude (..), Longitude (..), Elevation (..), GeoPosition(..))
 
 data FixValidity
     = Gps3D
@@ -31,7 +31,7 @@ data TrackPoint = TrackPoint
     , altitudeGps :: Elevation
     } deriving (Show, Eq)
 
-instance HasCoordinates TrackPoint where
+instance GeoPosition TrackPoint where
     latitude = lat
     longitude = lon
 

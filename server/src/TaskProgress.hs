@@ -16,7 +16,9 @@ import Data.Time (DiffTime)
 import FlightTask (FlightTask, TaskStart(..), Turnpoint(..), TaskFinish(..))
 import Data.Geo.Jord.Geodetic (HorizontalPosition)
 import Data.Geo.Jord.Models (S84)
-import Geo (Latitude (..), Longitude (..), Elevation, Distance (..), HasCoordinates (..), s84position)
+import Geo (Latitude (..), Longitude (..), Elevation, Distance (..), GeoPosition (..))
+import Geo.Utils (s84position, perpendicular)
+
 
 data ProgressPoint = ProgressPoint
     { time :: DiffTime
@@ -28,7 +30,7 @@ data ProgressPoint = ProgressPoint
     -- , distanceCovered :: NavPoint.Length
     }
 
-instance HasCoordinates ProgressPoint where
+instance GeoPosition ProgressPoint where
     latitude = lat
     longitude = lon
 
@@ -94,7 +96,7 @@ progressStart ft tp =
     -- , startNp
     -- )
 
-startLineCrossed :: FlightTask -> (TrackPoint, TrackPoint) -> Maybe ProgressPoint
+startLineCrossed :: FlightTask -> (TrackPoint, TrackPoint) -> Maybe ProgressPoint--(Latitude, Longitude)
 startLineCrossed ft (lastTp, currTp) =
     let
         (startNp, StartLine startRadius) = FlightTask.start ft
@@ -121,17 +123,7 @@ startLineCrossed ft (lastTp, currTp) =
                 targetPosition
 
         startLine sb = 
-            GreatCircle.minorArc
-                ( GreatCircle.destination 
-                    startPosition
-                    (Angle.subtract (Angle.decimalDegrees 90) sb)
-                    (Length.metres startRadius)
-                )
-                ( GreatCircle.destination
-                    startPosition
-                    (Angle.add (Angle.decimalDegrees 90) sb)
-                    (Length.metres startRadius)
-                )
+            perpendicular startPosition sb (Length.metres startRadius)
 
         trackLine = 
             GreatCircle.minorArc lastPosition currPosition
@@ -140,13 +132,22 @@ startLineCrossed ft (lastTp, currTp) =
             GreatCircle.side 
                 p (GreatCircle.minorArcStart line) (GreatCircle.minorArcEnd line)
 
-        isOnSameSideOfLine line p1 p2 =
-            GreatCircle.side p1 (GreatCircle.minorArcStart line) (GreatCircle.minorArcEnd line) == 
-            GreatCircle.side p2 (GreatCircle.minorArcStart line) (GreatCircle.minorArcEnd line)
+        checkCrossingDirection line target p1 p2 =
+            case 
+                ( GreatCircle.side target (GreatCircle.minorArcStart line) (GreatCircle.minorArcEnd line)
+                , GreatCircle.side p1 (GreatCircle.minorArcStart line) (GreatCircle.minorArcEnd line)
+                , GreatCircle.side p2 (GreatCircle.minorArcStart line) (GreatCircle.minorArcEnd line)
+                )
+            of
+                (GreatCircle.LeftOf, p, GreatCircle.LeftOf) | p /= GreatCircle.LeftOf -> True
+                (GreatCircle.RightOf, p, GreatCircle.RightOf) | p /= GreatCircle.RightOf -> True
+                _ -> False
+
+                
 
         startLineCrossing sl tl =
             mfilter 
-                (isOnSameSideOfLine sl targetPosition) 
+                (\_ -> checkCrossingDirection sl targetPosition (GreatCircle.minorArcStart tl) (GreatCircle.minorArcEnd tl)) 
                 (GreatCircle.intersection sl tl)
             
         toProgressPoint :: HorizontalPosition S84 -> ProgressPoint
@@ -158,7 +159,10 @@ startLineCrossed ft (lastTp, currTp) =
                 (FlightTrack.altitudeGps currTp)
                 (Just (targetNp, distanceToTurnpoint targetNp currTp))
                 
-                -- (distanceToTurnpoint startNp currTp)
+        toResult pos =
+            ( LatitudeDegrees $ Angle.toDecimalDegrees $ Geodetic.latitude pos
+            , LongitudeDegrees $ Angle.toDecimalDegrees $ Geodetic.longitude pos
+            )
     in
         startLineCrossing 
         <$> (startBearing >>= startLine)

@@ -113,7 +113,7 @@ spec = do
                         , altitudeGps = ElevationMeters 1000
                         }
             
-                result = startLineCrossed flightTask (trackPoint1, trackPoint2)
+                result = startLineCrossed flightTask trackPoint1 trackPoint2
             
             isJust result `shouldBe` True
 
@@ -137,6 +137,6 @@ spec = do
                         , altitudeGps = ElevationMeters 1000
                         } 
             
-                result = startLineCrossed flightTask (trackPoint1, trackPoint2)
+                result = startLineCrossed flightTask trackPoint1 trackPoint2
 
             isNothing result `shouldBe` True

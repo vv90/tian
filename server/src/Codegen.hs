@@ -21,6 +21,8 @@ import System.Process (readProcessWithExitCode)
 import FlightTask (Turnpoint, TaskStart, TaskFinish, FlightTask (FlightTask))
 import Entity (Entity(Entity))
 import Geo (Latitude, Elevation, Direction, Longitude, Distance)
+import Data.Time (DiffTime)
+import ProgressPoint (ProgressPoint(ProgressPoint))
 
 typeDefinitions :: [Definition]
 typeDefinitions =
@@ -37,6 +39,7 @@ typeDefinitions =
         , jsonDefinitions @TaskFinish
         , jsonDefinitions @FlightTask
         , jsonDefinitions @Entity
+        , jsonDefinitions @ProgressPoint
         ]
 
 elmSrcPath :: FilePath

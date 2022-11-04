@@ -396,8 +396,9 @@ view mapItems model =
                         ]
                     )
                 ]
-            , h5 []
-                (List.map (showMapItem >> text) mapItems)
+
+            -- , h5 []
+            --     (List.map (showMapItem >> text) mapItems)
             ]
         ]
 

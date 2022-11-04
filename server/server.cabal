@@ -34,6 +34,7 @@ library
       Lib
       Magic.ElmDeriving
       NavPoint
+      ProgressPoint
       RwLenUnits
       Session
       Statement

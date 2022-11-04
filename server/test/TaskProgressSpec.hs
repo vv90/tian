@@ -9,7 +9,8 @@ import NavPoint
 import FlightTrack
 import Geo
 import Geo.Utils (perpendicular)
-import TaskProgress (startLineCrossed)
+import TaskProgress ( progressInit, startLineCrossed, progressAdvance )
+import ProgressPoint ( target )
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import qualified Data.Geo.Jord.GreatCircle as GreatCircle
 import qualified Data.Geo.Jord.Length as Length
@@ -140,3 +141,79 @@ spec = do
                 result = startLineCrossed flightTask trackPoint1 trackPoint2
 
             isNothing result `shouldBe` True
+
+    context "progressInit" $ do
+        it "initializes task progress correctly" $ do
+            let trackPoint1 =
+                    TrackPoint
+                        { time = 0 
+                        , lat = LatitudeDegrees 0
+                        , lon = LongitudeDegrees (-0.0002)
+                        , fixValidity = Gps3D
+                        , altitudeBaro = ElevationMeters 1000
+                        , altitudeGps = ElevationMeters 1000
+                        }
+                pinit = progressInit flightTask trackPoint1
+
+            (fmap (name . fst) . target . head . snd) pinit `shouldBe` Just "Start"
+            (fmap (metersDistance . snd) . target . last . snd) pinit `shouldBe` Just 22.239016
+            0 `shouldBe` 0
+
+    context "progressAdvance" $ do
+        it "produces correct track point before start" $ do
+            let trackPoint1 =
+                    TrackPoint
+                        { time = 0 
+                        , lat = LatitudeDegrees 0
+                        , lon = LongitudeDegrees (-0.001)
+                        , fixValidity = Gps3D
+                        , altitudeBaro = ElevationMeters 1000
+                        , altitudeGps = ElevationMeters 1000
+                        }
+                trackPoint2 =
+                    TrackPoint
+                        { time = 3 
+                        , lat = LatitudeDegrees 0
+                        , lon = LongitudeDegrees (-0.0001)
+                        , fixValidity = Gps3D
+                        , altitudeBaro = ElevationMeters 1000
+                        , altitudeGps = ElevationMeters 1000
+                        }
+
+                pinit = 
+                    progressInit flightTask trackPoint1
+
+                result =
+                    progressAdvance flightTask pinit trackPoint2
+
+            (fmap (name . fst) . target . head . snd) result `shouldBe` Just "Start"
+            (fmap (metersDistance . snd) . target . head . snd) result `shouldBe` Just 11.119508
+
+        it "produces correct track point after start" $ do
+            let trackPoint1 =
+                    TrackPoint
+                        { time = 0 
+                        , lat = LatitudeDegrees 0
+                        , lon = LongitudeDegrees (-0.0001)
+                        , fixValidity = Gps3D
+                        , altitudeBaro = ElevationMeters 1000
+                        , altitudeGps = ElevationMeters 1000
+                        }
+                trackPoint2 =
+                    TrackPoint
+                        { time = 3 
+                        , lat = LatitudeDegrees 0
+                        , lon = LongitudeDegrees (0.0001)
+                        , fixValidity = Gps3D
+                        , altitudeBaro = ElevationMeters 1000
+                        , altitudeGps = ElevationMeters 1000
+                        } 
+
+                pinit = 
+                    progressInit flightTask trackPoint1
+
+                result =
+                    progressAdvance flightTask pinit trackPoint2
+
+            (fmap (name . fst) . target . head . snd) result `shouldBe` Just "Finish"
+            (fmap (metersDistance . snd) . target . head . snd) result `shouldBe` Just 1100.831289

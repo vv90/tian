@@ -1,4 +1,4 @@
-module Utils.JsonCodecs exposing (..)
+module Common.JsonCodecs exposing (..)
 
 import File exposing (File)
 import Json.Decode as D

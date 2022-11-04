@@ -44,7 +44,6 @@ decodeNavPoint (name, code, country, lat, lon, elev, style, rwdir, rwlen, freq, 
             freq
             descr
 
--- getNavPointsStatement :: Statement () (Either Text (Vector NavPoint))
 getNavPointsStatement :: Statement () (Vector NavPoint)
 getNavPointsStatement =
     refineResult
@@ -65,7 +64,26 @@ getNavPointsStatement =
             from nav_points
         |]
 
-
+getNpStatement :: Statement Text (Vector NavPoint)
+getNpStatement =
+    refineResult
+        (traverse decodeNavPoint)
+        [vectorStatement|
+            select 
+                name :: text, 
+                code :: text, 
+                country :: text?, 
+                lat :: float8,
+                lon :: float8,
+                elev :: float8,
+                style :: text,
+                rwdir :: int4?,
+                rwlen :: float8?,
+                freq :: text?,
+                descr :: text
+            from nav_points
+            where name = $1 :: Text
+        |]
 
 deleteDuplicateNavPointsStatement :: Statement (Vector Text) Int64
 deleteDuplicateNavPointsStatement =
@@ -81,13 +99,6 @@ saveNavPointsStatement =
             insert into nav_points (name, code, country, lat, lon, elev, style, rwdir, rwlen, freq, descr) 
             select * from unnest ( $1 :: text[], $2 :: text[], $3 :: text?[], $4 :: float8[], $5 :: float8[], $6 :: float8[], $7 :: text[], $8 :: int4?[], $9 :: float8?[], $10 :: text?[], $11 :: text[] )
         |]
-        -- lmap 
-        --     nest
-        --     [rowsAffectedStatement|
-        --         insert into nav_points (name, country, lat)
-        --         select * from unnest ($1 :: text[], $2 :: text?[], $3 :: float8[])
-        --     |]
-        --             values ($1 :: text, $2 :: text, $3 :: text?, $4 :: float8, $5 :: float8, $6 :: float8, $7 :: text, $8 :: int4?, $9 :: float8?, $10 :: text?, $11 :: text)
     where
         nest nps =
             let
@@ -104,22 +115,6 @@ saveNavPointsStatement =
                 descs = toText . desc <$> nps
             in
                 (names, codes, countries, latitudes, longitudes, elevations, styles, rwdirs, rwlens, freqs, descs)
-    -- where 
-    --     values = 
-    --         fmap (\x -> 
-    --             ( toText $ name x
-    --             , toText $ code x
-    --             , toText <$> country x
-    --             , degreesLatitude $ lat x
-    --             , degreesLongitude $ lon x
-    --             , metersElevation $ elev x
-    --             , show $ style x
-    --             , degreesDirection <$> rwdir x
-    --             , metersLength <$> rwlen x
-    --             , toText <$> freq x
-    --             , toText $ desc x
-    --             )
-    --         ) 
 
 encodeStartType :: TaskStart -> Text
 encodeStartType = \case
@@ -308,8 +303,68 @@ combineFlightTaskRows rows =
     in
     V.foldl combine [] rows
 
-getFlightTasksStatement :: Statement () [Entity Int32 FlightTask]
-getFlightTasksStatement =
+getFlightTaskStatement :: Statement Int32 (Maybe (Entity Int32 FlightTask))
+getFlightTaskStatement =
+    refineResult
+        (fmap (viaNonEmpty head . combineFlightTaskRows) . traverse decodeFlightTaskRow) 
+        -- (\x -> traverse decodeFlightTaskRow x)
+        [vectorStatement|
+            select 
+                id :: int4,
+                start_type :: text,
+                start_radius :: float8,
+                start_point_name :: text,
+                start_points.code :: text,
+                start_points.country :: text?,
+                start_points.lat :: float8,
+                start_points.lon :: float8,
+                start_points.elev :: float8,
+                start_points.style :: text,
+                start_points.rwdir :: int4?,
+                start_points.rwlen :: float8?,
+                start_points.freq :: text?,
+                start_points.descr :: text,
+
+                finish_type :: text,
+                finish_radius :: float8,
+                finish_point_name :: text,
+                finish_points.code :: text,
+                finish_points.country :: text?,
+                finish_points.lat :: float8,
+                finish_points.lon :: float8,
+                finish_points.elev :: float8,
+                finish_points.style :: text,
+                finish_points.rwdir :: int4?,
+                finish_points.rwlen :: float8?,
+                finish_points.freq :: text?,
+                finish_points.descr :: text,
+
+                turnpoint_type :: text,
+                turnpoint_radius :: float8,
+                turnpoint_number :: int4,
+                turnpoint_name :: text,
+                turn_points.code :: text,
+                turn_points.country :: text?,
+                turn_points.lat :: float8,
+                turn_points.lon :: float8,
+                turn_points.elev :: float8,
+                turn_points.style :: text,
+                turn_points.rwdir :: int4?,
+                turn_points.rwlen :: float8?,
+                turn_points.freq :: text?,
+                turn_points.descr :: text
+
+            from tasks
+            join task_turnpoints on tasks.id = task_turnpoints.task_id
+            join nav_points as start_points on tasks.start_point_name = start_points.name
+            join nav_points as finish_points on tasks.finish_point_name = finish_points.name
+            join nav_points as turn_points on task_turnpoints.turnpoint_name = turn_points.name
+            where id = $1 :: int4
+            order by id asc, turnpoint_number asc
+        |]
+
+getAllFlightTasksStatement :: Statement () [Entity Int32 FlightTask]
+getAllFlightTasksStatement =
     refineResult
         (fmap combineFlightTaskRows . traverse decodeFlightTaskRow)
         [vectorStatement|

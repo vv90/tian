@@ -5,7 +5,7 @@ import Relude
 import Data.Int (Int32)
 import Data.Text (Text)
 import Hasql.Session (Session, statement)
-import Statement (getNavPointsStatement, saveNavPointsStatement, deleteDuplicateNavPointsStatement, saveFlightTaskStatement, saveFlightTaskTurnpointsStatement, getFlightTasksStatement)
+import Statement (getNavPointsStatement, saveNavPointsStatement, deleteDuplicateNavPointsStatement, saveFlightTaskStatement, saveFlightTaskTurnpointsStatement, getAllFlightTasksStatement, getFlightTaskStatement)
 import NavPoint (NavPoint)
 import Data.Vector (Vector)
 import FlightTask (FlightTask)
@@ -31,6 +31,11 @@ saveFlightTaskSession ft =
         taskId <- Transaction.statement ft saveFlightTaskStatement
         Transaction.statement (Entity taskId ft) saveFlightTaskTurnpointsStatement
 
-getFlightTasksSession :: Session [Entity Int32 FlightTask]
-getFlightTasksSession = 
-    statement () getFlightTasksStatement
+getAllFlightTasksSession :: Session [Entity Int32 FlightTask]
+getAllFlightTasksSession = 
+    statement () getAllFlightTasksStatement
+
+getFlightTaskSession :: Int32 -> Session (Maybe (Entity Int32 FlightTask))
+getFlightTaskSession taskId = 
+    statement taskId getFlightTaskStatement 
+

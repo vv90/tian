@@ -1,4 +1,4 @@
-module Utils.Deferred exposing (..)
+module Common.Deferred exposing (..)
 
 
 type Deferred a

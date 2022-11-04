@@ -1,4 +1,4 @@
-module Utils.Date exposing (..)
+module Common.Date exposing (..)
 
 import List exposing (..)
 import Time exposing (..)

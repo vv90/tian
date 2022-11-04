@@ -1,4 +1,4 @@
-module Utils.FormField exposing
+module Common.FormField exposing
     ( FormField
     , getRaw
     , getVal
@@ -8,7 +8,7 @@ module Utils.FormField exposing
     , updateFormField
     )
 
-import Utils.Validation exposing (Codec, CodecError)
+import Common.Validation exposing (Codec, CodecError)
 
 
 type FormField r v

@@ -69,7 +69,8 @@ data NavPoint = NavPoint
     , rwlen :: Maybe Distance
     , freq :: Maybe Text
     , desc :: Text
-    } deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+    } 
+    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
     deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
         via ElmType "Api.NavPoint.NavPoint" NavPoint
 

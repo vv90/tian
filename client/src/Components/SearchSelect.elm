@@ -1,10 +1,10 @@
 module Components.SearchSelect exposing (..)
 
+import Common.Palette
 import Element exposing (Element, below, clipY, column, el, fill, height, maximum, mouseOver, scrollbarY, spacing, text, width)
 import Element.Background as Background
 import Element.Events exposing (onClick)
 import Element.Input as Input
-import Utils.Palette
 
 
 type alias Model =
@@ -79,7 +79,7 @@ view { suggestions, toLabel, matchFn } model =
                 el
                     [ width fill
                     , height <| maximum 300 fill
-                    , Background.color Utils.Palette.white
+                    , Background.color Common.Palette.white
                     , clipY
                     ]
                     (column
@@ -100,7 +100,7 @@ view { suggestions, toLabel, matchFn } model =
             \item ->
                 el
                     [ onClick (ItemSelected item)
-                    , mouseOver [ Background.color Utils.Palette.gray ]
+                    , mouseOver [ Background.color Common.Palette.gray ]
                     , width fill
                     ]
                     (text <| toLabel item)

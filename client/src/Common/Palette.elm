@@ -1,4 +1,4 @@
-module Utils.Palette exposing (..)
+module Common.Palette exposing (..)
 
 import Element exposing (rgb255, rgba255)
 

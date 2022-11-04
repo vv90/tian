@@ -1,34 +1,42 @@
 module Page.FlightTrack.FlightTrackUpload exposing (..)
 
-import Element exposing (Element, html)
+import Api.TaskProgress exposing (ProgressPoint)
+import Common.ApiResult exposing (ApiResult)
+import Common.Deferred exposing (Deferred(..))
+import Common.JsonCodecs exposing (filesDecoder)
+import Element exposing (Element, html, row, spacing, text)
+import Element.Input as Input
 import File exposing (File)
 import Html exposing (input)
 import Html.Attributes exposing (multiple, type_)
 import Html.Events exposing (on)
 import Http
 import Json.Decode as D
-import Utils.JsonCodecs exposing (filesDecoder)
 
 
 type alias Model =
-    String
+    { taskId : Int
+    , taskProgress : Deferred (ApiResult (List ProgressPoint))
+    }
 
 
-init : Model
-init =
-    ""
+init : Int -> Model
+init taskId =
+    { taskId = taskId
+    , taskProgress = NotStarted
+    }
 
 
 type Msg
-    = GotFiles (List File)
+    = GotFiles Int (List File)
     | Uploaded (Result Http.Error String)
 
 
-uploadedFileCmd : List File -> Cmd Msg
-uploadedFileCmd files =
+uploadedFileCmd : Int -> List File -> Cmd Msg
+uploadedFileCmd taskId files =
     Http.request
         { method = "POST"
-        , url = "http://0.0.0.0:8081/track"
+        , url = "http://0.0.0.0:8081/track?taskId=" ++ String.fromInt taskId
         , headers = []
         , body = Http.multipartBody (List.map (Http.filePart "file") files)
         , expect = Http.expectString Uploaded
@@ -40,25 +48,35 @@ uploadedFileCmd files =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        GotFiles files ->
-            ( model, uploadedFileCmd files )
+        GotFiles taskId files ->
+            ( model, uploadedFileCmd taskId files )
 
-        Uploaded (Ok s) ->
-            ( s, Cmd.none )
+        Uploaded (Ok _) ->
+            ( model, Cmd.none )
 
         Uploaded (Err _) ->
-            ( "Error", Cmd.none )
+            ( model, Cmd.none )
 
 
-view : Model -> Element Msg
-view model =
+type alias Props msg =
+    { onBackTriggered : msg
+    }
+
+
+view : (Msg -> msg) -> Props msg -> Model -> Element msg
+view mapMsg { onBackTriggered } model =
     Element.column []
-        [ Element.text model
+        [ row [ spacing 10 ]
+            [ Input.button []
+                { onPress = Just onBackTriggered
+                , label = text "Back"
+                }
+            ]
         , html
             (input
                 [ type_ "file"
                 , multiple True
-                , on "change" (D.map GotFiles filesDecoder)
+                , on "change" (D.map (mapMsg << GotFiles model.taskId) filesDecoder)
                 ]
                 []
             )

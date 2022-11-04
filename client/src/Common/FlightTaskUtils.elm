@@ -1,4 +1,4 @@
-module Utils.FlightTaskUtils exposing (..)
+module Common.FlightTaskUtils exposing (..)
 
 import Api.FlightTask exposing (FlightTask, TaskFinish(..), TaskStart(..), Turnpoint(..))
 import Api.Geo exposing (Distance(..))

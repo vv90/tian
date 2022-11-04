@@ -1,4 +1,4 @@
-module Utils.Validation exposing
+module Common.Validation exposing
     ( Codec
     , CodecError
     , Positive

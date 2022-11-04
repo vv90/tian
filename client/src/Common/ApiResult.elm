@@ -1,4 +1,4 @@
-module Utils.ApiResult exposing (..)
+module Common.ApiResult exposing (..)
 
 import Http exposing (Error)
 

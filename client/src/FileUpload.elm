@@ -1,5 +1,6 @@
 module FileUpload exposing (..)
 
+import Common.JsonCodecs exposing (filesDecoder)
 import File exposing (File)
 import Html exposing (Html, div, h2, input, text)
 import Html.Attributes exposing (type_)
@@ -7,7 +8,6 @@ import Html.Events exposing (on)
 import Http
 import Json.Decode as D
 import Task exposing (perform)
-import Utils.JsonCodecs exposing (filesDecoder)
 
 
 type alias Model =

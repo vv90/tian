@@ -1,5 +1,7 @@
 module ParsingDemo exposing (..)
 
+import Common.Date exposing (formatDate)
+import Common.ParserUtils exposing (..)
 import Geo.GeoUtils exposing (Latitude(..))
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -10,8 +12,6 @@ import Nav.NavPoint exposing (..)
 import Nav.Units exposing (Deg(..))
 import Parser exposing (..)
 import Utils exposing (showParseResult)
-import Utils.Date exposing (formatDate)
-import Utils.ParserUtils exposing (..)
 
 
 

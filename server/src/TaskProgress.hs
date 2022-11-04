@@ -6,105 +6,55 @@ import NavPoint (NavPoint)
 import qualified NavPoint
 import qualified FlightTrack
 import qualified FlightTask
-import FlightTrack (TrackPoint)
+import FlightTrack (TrackPoint, FlightTrack (FlightTrack))
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import qualified Data.Geo.Jord.Length as Length
 import qualified Data.Geo.Jord.GreatCircle as GreatCircle
 import qualified Data.Geo.Jord.Polygon as Polygon
 import qualified Data.Geo.Jord.Angle as Angle
-import Data.Time (DiffTime)
+import Data.Time (DiffTime, diffTimeToPicoseconds, picosecondsToDiffTime)
 import FlightTask (FlightTask, TaskStart(..), Turnpoint(..), TaskFinish(..))
 import Data.Geo.Jord.Geodetic (HorizontalPosition)
 import Data.Geo.Jord.Models (S84)
 import Geo (Latitude (..), Longitude (..), Elevation, Distance (..), GeoPosition (..))
 import Geo.Utils (s84position, perpendicular)
+import ProgressPoint (ProgressPoint (..))
 
-
-data ProgressPoint = ProgressPoint
-    { time :: DiffTime
-    , lat :: Latitude
-    , lon :: Longitude
-    , altitude :: Elevation
-    , target :: Maybe (NavPoint, Distance)
-    -- , distanceToTarget :: NavPoint.Length
-    -- , distanceCovered :: NavPoint.Length
-    }
-
-instance GeoPosition ProgressPoint where
-    latitude = lat
-    longitude = lon
 
 distanceToTarget :: NavPoint -> TrackPoint -> Distance
 distanceToTarget np tp =
-    let
-        (LongitudeDegrees xLon) = NavPoint.lon np
-        (LatitudeDegrees xLat) = NavPoint.lat np
-        xPos = Geodetic.s84Pos xLat xLon
-
-        (LongitudeDegrees yLon) = FlightTrack.lon tp
-        (LatitudeDegrees yLat) = FlightTrack.lat tp
-        yPos = Geodetic.s84Pos yLat yLon
-
-        dis = GreatCircle.distance xPos yPos
+    let 
+        dis = 
+            GreatCircle.distance 
+                (s84position np)
+                (s84position tp)
     in
         DistanceMeters $ Length.toMetres dis
+
+diffTimeToMillis :: DiffTime -> Int
+diffTimeToMillis t =
+    let
+        picos = diffTimeToPicoseconds t
+        millis = picos `div` 1000000000
+    in
+        fromIntegral millis
+
+millisToDiffTime :: Int -> DiffTime
+millisToDiffTime t =
+    let
+        picos = fromIntegral t * 1000000000
+    in
+        picosecondsToDiffTime picos
 
 toProgressPoint :: Maybe NavPoint -> TrackPoint -> ProgressPoint
 toProgressPoint target tp =
     ProgressPoint
-        { time = FlightTrack.time tp
+        { time =  diffTimeToMillis $ FlightTrack.time tp
         , lat = FlightTrack.lat tp
         , lon = FlightTrack.lon tp
         , altitude = FlightTrack.altitudeGps tp
         , target = (\t -> (t, distanceToTarget t tp)) <$> target
         }
-
--- data TaskProgress = TaskProgress ProgressPoint [TrackPoint -> ProgressPoint]
-
--- type Milestone = (NavPoint, (TrackPoint, TrackPoint) -> Maybe ProgressPoint)
-
--- milestones :: FlightTask -> [Milestone]
--- milestones ft =
---     let 
---         start@(startNp, _) = FlightTask.start ft
---         finish@(finishNp, _) = FlightTask.finish ft
-    
---         lastNp = 
---             fromMaybe
---                 startNp
---                 (fst <$> viaNonEmpty last (FlightTask.turnpoints ft))
-
---         startMilestone = 
---             startLineCrossed ft
-
---         finishMilestone = 
---             finishCrossed finish lastNp
-               
---         turnpointMilestones res tps =
---             case tps of
---                 [] -> 
---                     res ++ [(finishNp, finishMilestone)]
---                 [curr@(currNp, _)] -> 
---                     turnpointMilestones (res ++ [(currNp, turnpointCrossed curr finishNp)]) []
---                 curr@(currNp, _) : next@(nextNp, _) : rest -> 
---                     turnpointMilestones (res ++ [(currNp, turnpointCrossed curr nextNp)]) (next : rest)      
---     in
---     turnpointMilestones [(startNp, startLineCrossed ft)] (FlightTask.turnpoints ft)
-
-progressStart :: FlightTask -> TrackPoint -> ProgressPoint
-progressStart ft tp =
-    let
-        (startNp, _) = FlightTask.start ft
-    in
-     ProgressPoint
-        (FlightTrack.time tp)
-        (FlightTrack.lat tp)
-        (FlightTrack.lon tp)
-        (FlightTrack.altitudeGps tp)
-        (Just (startNp, distanceToTarget startNp tp))
-        -- (distanceToTurnpoint startNp tp)
-    -- , startNp
-    -- )
 
 targetNavPoint :: (NavPoint, TaskFinish) -> [(NavPoint, Turnpoint)] -> NavPoint
 targetNavPoint finish tps =
@@ -118,9 +68,6 @@ startLineCrossed ft lastPos currTp =
         (startNp, StartLine startRadius) = FlightTask.start ft
 
         targetNp = targetNavPoint (FlightTask.finish ft) (FlightTask.turnpoints ft)
-            -- fromMaybe
-            --     (fst $ FlightTask.finish ft)  
-            --     (fst <$> viaNonEmpty head (FlightTask.turnpoints ft))
 
         targetPosition =
             s84position targetNp
@@ -166,15 +113,6 @@ startLineCrossed ft lastPos currTp =
                 (\_ -> checkCrossingDirection sl targetPosition (GreatCircle.minorArcStart tl) (GreatCircle.minorArcEnd tl)) 
                 (GreatCircle.intersection sl tl)
             
-        -- toProgressPoint :: HorizontalPosition S84 -> ProgressPoint
-        -- toProgressPoint _ = 
-        --     ProgressPoint 
-        --         (FlightTrack.time currTp)
-        --         (FlightTrack.lat currTp)
-        --         (FlightTrack.lon currTp)
-        --         (FlightTrack.altitudeGps currTp)
-        --         (Just (targetNp, distanceToTarget targetNp currTp))
-                
         toResult pos =
             ( LatitudeDegrees $ Angle.toDecimalDegrees $ Geodetic.latitude pos
             , LongitudeDegrees $ Angle.toDecimalDegrees $ Geodetic.longitude pos
@@ -191,13 +129,8 @@ turnpointCrossed targetNp currTp (np, Cylinder radius) =
         (DistanceMeters npDistance) = distanceToTarget np currTp
     in
         if npDistance <= radius
-        then 
-            Just $ ProgressPoint
-                (FlightTrack.time currTp)
-                (FlightTrack.lat currTp)
-                (FlightTrack.lon currTp)
-                (FlightTrack.altitudeGps currTp)
-                (Just (targetNp, distanceToTarget targetNp currTp))
+        then
+            Just $ toProgressPoint (Just targetNp) currTp
         else
             Nothing
 
@@ -207,13 +140,8 @@ finishCrossed (np, FinishCylinder radius) prevNp lastPos currTp =
         (DistanceMeters npDistance) = distanceToTarget np currTp
     in
         if npDistance <= radius
-        then 
-            Just $ ProgressPoint
-                (FlightTrack.time currTp)
-                (FlightTrack.lat currTp)
-                (FlightTrack.lon currTp)
-                (FlightTrack.altitudeGps currTp)
-                Nothing
+        then
+            Just $ toProgressPoint Nothing currTp
         else
             Nothing
 
@@ -248,14 +176,6 @@ finishCrossed (np, FinishLine radius) prevNp lastPos currTp =
                     (Length.metres radius)
                 ) 
         
-        -- toProgressPoint _ =
-        --     ProgressPoint 
-        --         (FlightTrack.time currTp)
-        --         (FlightTrack.lat currTp)
-        --         (FlightTrack.lon currTp)
-        --         (FlightTrack.altitudeGps currTp)
-        --         Nothing
-
         finishCrossed = 
             GreatCircle.intersection 
                 <$> (reversedFinishBearing >>= finishLine)
@@ -264,18 +184,22 @@ finishCrossed (np, FinishLine radius) prevNp lastPos currTp =
     in
     Nothing
 
--- advance :: FlightTask -> [(NavPoint, Turnpoint)] -> TrackPoint -> [ProgressPoint]
--- advance ft tps pts@(currTp, prevTp) =
---     let
---         taskStart = startLineCrossed ft pts
---     in
---     case taskStart of
---         Just s -> advance ft (turnpoints ft) 
-
 type TaskProgress = ([(NavPoint, Turnpoint)], NonEmpty ProgressPoint)
 
-progress :: FlightTask -> TaskProgress -> TrackPoint -> TaskProgress
-progress ft (unfinishedTurnpoints, progressPoints) tp =
+progressInit :: FlightTask -> TrackPoint -> TaskProgress
+progressInit ft tp =
+    let
+        (startNp, _) = FlightTask.start ft
+        progressPoint = 
+            toProgressPoint (Just startNp) tp
+            
+    in
+    ( FlightTask.turnpoints ft
+    , progressPoint :| []
+    )
+
+progressAdvance :: FlightTask -> TaskProgress -> TrackPoint -> TaskProgress
+progressAdvance ft (unfinishedTurnpoints, progressPoints) tp =
     let
         lastPos = head progressPoints
         started = startLineCrossed ft lastPos tp
@@ -291,6 +215,8 @@ progress ft (unfinishedTurnpoints, progressPoints) tp =
         tpCrossed = 
             uncons unfinishedTurnpoints 
             >>= checkTurnpoint
+        
+        
     in
     case (started, tpCrossed) of
         (Just p, _) -> 
@@ -302,8 +228,14 @@ progress ft (unfinishedTurnpoints, progressPoints) tp =
         (Nothing, Nothing) ->
             ( unfinishedTurnpoints
             , toProgressPoint 
-                (Just $ targetNavPoint (FlightTask.finish ft) unfinishedTurnpoints) 
+                (fmap fst $ target $ head progressPoints)
                 tp 
               :| toList progressPoints
             )
             
+progress :: FlightTask -> FlightTrack -> TaskProgress
+progress ft track = 
+    let 
+        p :| ps = FlightTrack.points track
+    in
+    foldl' (progressAdvance ft) (progressInit ft p) ps

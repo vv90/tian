@@ -1,18 +1,22 @@
 module Page.FlightTask.FlightTaskForm exposing (..)
 
+import Api.Entity exposing (Entity)
 import Api.FlightTask exposing (FlightTask, TaskFinish(..), TaskStart(..), Turnpoint(..), flightTaskEncoder)
 import Api.NavPoint exposing (NavPoint)
+import AppState
+import Common.ApiResult exposing (ApiResult)
+import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..))
+import Common.Effect as Effect exposing (EffectSet, effect)
+import Common.FormField exposing (FormField, getRaw, getVal, initFormFieldRaw, updateFormField)
+import Common.Validation as V
 import Components.SearchSelect as SearchSelect
 import Components.Select as Select
-import Element exposing (Element, column, fill, none, table, text)
+import Element exposing (Element, column, fill, none, spacing, table, text)
 import Element.Input as Input
 import Http
+import Json.Decode as D
 import Parser
 import Result.Extra as ResultX
-import Utils.ApiResult exposing (ApiResult)
-import Utils.Deferred exposing (Deferred(..))
-import Utils.FormField exposing (FormField, getRaw, getVal, initFormFieldRaw, updateFormField)
-import Utils.Validation as V
 
 
 type alias StartModel =
@@ -174,14 +178,14 @@ withFinishSelectModel finishSelectModel model =
             model
 
 
-withSelectedItem : Maybe NavPoint -> Model -> Model
+withSelectedItem : Maybe (Entity Int NavPoint) -> Model -> Model
 withSelectedItem selectedItem model =
     case ( selectedItem, model.taskSelection ) of
         ( Just item, NothingSelected ) ->
-            { model | taskSelection = StartSelected (initStartModel item) }
+            { model | taskSelection = StartSelected (initStartModel item.entity) }
 
         ( Just item, StartSelected start ) ->
-            { model | taskSelection = Complete start [] (initFinishModel item) }
+            { model | taskSelection = Complete start [] (initFinishModel item.entity) }
 
         ( Just item, Complete start turnpoints finish ) ->
             { model
@@ -196,7 +200,7 @@ withSelectedItem selectedItem model =
                                  }
                                ]
                         )
-                        (initFinishModel item)
+                        (initFinishModel item.entity)
             }
 
         ( Nothing, _ ) ->
@@ -262,13 +266,12 @@ withFinishRadius str model =
 
 type Msg
     = DescriptionChanged String
-    | SearchSelectMsg (SearchSelect.Msg NavPoint)
+    | SearchSelectMsg (SearchSelect.Msg (Entity Int NavPoint))
     | StartRadiusChanged String
     | TurnpointRadiusChanged Int String
     | FinishSelectMsg (Select.Msg ( String, Float -> TaskFinish ))
     | FinishRadiusChanged String
-    | FlightTaskSaveRequested FlightTask
-    | FlightTaskSaved (Result Http.Error ())
+    | SaveFlightTask FlightTask (AsyncOperationStatus (ApiResult Int))
 
 
 saveFlightTaskCmd : FlightTask -> Cmd Msg
@@ -278,17 +281,21 @@ saveFlightTaskCmd flightTask =
         , url = "http://0.0.0.0:8081/task"
         , headers = []
         , body = Http.jsonBody <| flightTaskEncoder flightTask
-        , expect = Http.expectWhatever FlightTaskSaved
+        , expect = Http.expectJson (SaveFlightTask flightTask << Finished) D.int
         , timeout = Nothing
         , tracker = Nothing
         }
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+type Effect
+    = FlightTaskSaved Int
+
+
+update : Msg -> Model -> ( Model, Cmd Msg, EffectSet Effect )
 update msg model =
     case msg of
         DescriptionChanged description ->
-            ( { model | description = description }, Cmd.none )
+            ( { model | description = description }, Cmd.none, Effect.none )
 
         SearchSelectMsg searchSelectMsg ->
             let
@@ -299,6 +306,7 @@ update msg model =
                 |> withSearchSelectModel searchSelectModel
                 |> withSelectedItem selectedItem
             , Cmd.map SearchSelectMsg searchSelectCmd
+            , Effect.none
             )
 
         FinishSelectMsg finishSelectMsg ->
@@ -310,33 +318,46 @@ update msg model =
                     in
                     ( model |> withFinishSelectModel finishSelectModel
                     , Cmd.map FinishSelectMsg finishSelectCmd
+                    , Effect.none
                     )
 
                 _ ->
-                    ( model, Cmd.none )
+                    ( model, Cmd.none, Effect.none )
 
         StartRadiusChanged str ->
             ( model |> withStartRadius str
             , Cmd.none
+            , Effect.none
             )
 
         TurnpointRadiusChanged id str ->
             ( model |> withTurnpointRadius id str
             , Cmd.none
+            , Effect.none
             )
 
         FinishRadiusChanged str ->
             ( model |> withFinishRadius str
             , Cmd.none
+            , Effect.none
             )
 
-        FlightTaskSaveRequested flightTask ->
-            ( model, saveFlightTaskCmd flightTask )
+        SaveFlightTask flightTask operation ->
+            case operation of
+                Started ->
+                    ( model
+                    , saveFlightTaskCmd flightTask
+                    , Effect.none
+                    )
 
-        FlightTaskSaved res ->
-            Debug.log
-                (Debug.toString res)
-                ( model, Cmd.none )
+                Finished res ->
+                    ( model
+                    , Cmd.none
+                    , ResultX.unwrap
+                        Effect.none
+                        (FlightTaskSaved >> effect)
+                        res
+                    )
 
 
 taskSelectionTable : FlightTaskSelection -> Element Msg
@@ -426,14 +447,14 @@ taskSelectionTable ftSelection =
         }
 
 
-viewLoaded : List NavPoint -> Model -> Element Msg
+viewLoaded : List (Entity Int NavPoint) -> Model -> Element Msg
 viewLoaded navPoints model =
     let
         searchSelect =
             SearchSelect.view
                 { suggestions = navPoints
-                , toLabel = .name
-                , matchFn = \s np -> String.contains (String.toLower s) (String.toLower np.name)
+                , toLabel = .entity >> .name
+                , matchFn = \s np -> String.contains (String.toLower s) (String.toLower np.entity.name)
                 }
                 model.searchSelectModel
 
@@ -443,7 +464,7 @@ viewLoaded navPoints model =
                     (\ft ->
                         Input.button []
                             { label = text "Save task"
-                            , onPress = Just <| FlightTaskSaveRequested ft
+                            , onPress = Just <| SaveFlightTask ft <| Started
                             }
                     )
                 |> Result.withDefault none
@@ -455,14 +476,34 @@ viewLoaded navPoints model =
         ]
 
 
-view : Deferred (ApiResult (List NavPoint)) -> Model -> Element Msg
-view navPointsD model =
-    case navPointsD of
+type alias Props msg =
+    { navPoints : Deferred (ApiResult (List (Entity Int NavPoint)))
+    , backTriggered : msg
+    }
+
+
+view : (Msg -> msg) -> Props msg -> Model -> Element msg
+view mapMsg { navPoints, backTriggered } model =
+    let
+        backBtn =
+            Input.button []
+                { label = text "Back"
+                , onPress = Just backTriggered
+                }
+    in
+    case navPoints of
         Resolved (Ok nps) ->
-            viewLoaded nps model
+            column [ spacing 10 ]
+                [ Element.map mapMsg <|
+                    viewLoaded nps model
+                , backBtn
+                ]
 
         Resolved (Err _) ->
-            text "Failed to load navpoints"
+            column [ spacing 10 ]
+                [ text "Error loading navpoints"
+                , backBtn
+                ]
 
         _ ->
             text "Loading..."

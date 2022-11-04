@@ -34,7 +34,7 @@ import GHC.Generics (Generic)
 import NavPoint (NavPoint, navPointLinesParser, name)
 import qualified Hasql.Connection as Connection
 import qualified Hasql.Session as Session
-import Session (getNavPointsSession, saveNavPointsSession, deleteDuplicateNavPointsSession, saveFlightTaskSession, getFlightTasksSession)
+import Session (getNavPointsSession, saveNavPointsSession, deleteDuplicateNavPointsSession, saveFlightTaskSession, getAllFlightTasksSession, getFlightTaskSession)
 import Data.Vector (Vector)
 import Control.Monad.Except (withExceptT, catchError, mapExcept, mapExceptT)
 import Data.Text.Lazy (pack)
@@ -48,8 +48,10 @@ import Control.Arrow (ArrowChoice(left))
 import Control.Monad.Error.Class (liftEither)
 import Statement (saveNavPointsStatement)
 import FlightTask (FlightTask)
-import Entity (Entity)
+import Entity (Entity (..))
 import FlightTrack (FlightInfo, flightInfoParser, buildFlightTrack, FlightTrack, date, compId, points)
+import TaskProgress (progress)
+import ProgressPoint (ProgressPoint)
 
 
 data TurnpointType
@@ -93,11 +95,15 @@ saveNavPoints nps = do
     added <- withExceptT QueryError . ExceptT $ Session.run (saveNavPointsSession nps) conn
     pure (deleted, added)
 
-getFlightTasks :: ExceptT LibError IO [Entity Int32 FlightTask]
-getFlightTasks = do
+getAllFlightTasks :: ExceptT LibError IO [Entity Int32 FlightTask]
+getAllFlightTasks = do
     conn <- getConn
-    withExceptT QueryError . ExceptT $ Session.run getFlightTasksSession conn
+    withExceptT QueryError . ExceptT $ Session.run getAllFlightTasksSession conn
 
+getFlightTask :: Int32 -> ExceptT LibError IO (Maybe (Entity Int32 FlightTask))
+getFlightTask taskId = do
+    conn <- getConn
+    withExceptT QueryError . ExceptT $ Session.run (getFlightTaskSession taskId) conn
 
 saveFlightTask :: FlightTask -> ExceptT LibError IO Int64
 saveFlightTask ft = do
@@ -143,9 +149,10 @@ uploadNavPoints navPoints = do
         Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
         Right (d, a) -> pure (length navPoints, d, a)
 
-uploadFlightTrack :: [FlightTrack] -> Handler String
-uploadFlightTrack fts =
+uploadFlightTrack :: Int32 -> [FlightTrack] -> Handler [[ProgressPoint]]
+uploadFlightTrack taskId tracks =
     let
+        unpackEntity (Entity _ ft) = ft
         dt = (\ft ->
                 "------\n"
                 <> show (date ft)
@@ -154,14 +161,22 @@ uploadFlightTrack fts =
                 <> "\n"
                 <> show (length $ points ft)
                 <> "\n"
-            ) <$> fts
-    in
-        pure $ concat dt
+            ) <$> tracks
+    in 
+        do
+            flightTask <- liftIO $ runExceptT $ getFlightTask taskId
+            let res = progress . unpackEntity <<$>> flightTask
+            -- pure $ concat dt
+            case flightTask of
+                Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
+                Right Nothing -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) "Task not found"  }
+                Right (Just (Entity _ ft)) -> 
+                    pure $ toList . snd . progress ft <$> tracks
 
 
 flightTasks :: Handler [Entity Int32 FlightTask]
 flightTasks = do
-    result <- liftIO $ runExceptT getFlightTasks
+    result <- liftIO $ runExceptT getAllFlightTasks
     case result of
         Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
         Right v -> pure v
@@ -180,7 +195,7 @@ type API =
     :<|> "navpoints" :> Get '[JSON] (Vector NavPoint)
     :<|> "task" :> Get '[JSON] [Entity Int32 FlightTask]
     :<|> "task" :> ReqBody '[JSON] FlightTask :> Post '[JSON] Int64
-    :<|> "track" :> MultipartForm Mem [FlightTrack] :> Post '[JSON] String
+    :<|> "track" :> Capture "taskId" Int32 :> MultipartForm Mem [FlightTrack] :> Post '[JSON] [[ProgressPoint]]
 
 startApp :: IO ()
 startApp = run 8081 app

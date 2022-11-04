@@ -2,94 +2,105 @@ module Page.FlightTask.FlightTaskList exposing (..)
 
 import Api.Entity exposing (Entity)
 import Api.FlightTask exposing (FlightTask)
-import Element exposing (Element, el, fill, mouseOver, none, table, text)
+import Common.ApiResult exposing (ApiResult)
+import Common.Deferred exposing (Deferred(..))
+import Common.Palette as Palette
+import Element exposing (Element, column, el, fill, mouseOver, none, shrink, spacing, table, text)
 import Element.Background as Background
 import Element.Input as Input
 import List.Extra
-import Utils.ApiResult exposing (ApiResult)
-import Utils.Deferred exposing (Deferred(..))
-import Utils.Palette as Palette
+import List.Nonempty exposing (Nonempty, toList)
+import Page.FlightTask.FlightTaskPreview as FlightTaskPreview
 
 
-type alias Model =
-    { selectedFlightTaskId : Maybe Int
-    }
+
+-- type alias Model =
+--     { selectedFlightTaskId : Maybe Int
+--     }
+-- init : Model
+-- init =
+--     { selectedFlightTaskId = Nothing
+--     }
+-- type Msg
+--     = FlightTaskSelected Int
+-- type Effect
+--     = DummyEffect
+-- update : Msg -> Model -> ( Model, Cmd Msg, Effect )
+-- update msg model =
+--     case msg of
+--         FlightTaskSelected flightTaskId ->
+--             ( { model | selectedFlightTaskId = Just flightTaskId }
+--             , Cmd.none
+--             , DummyEffect
+--             )
 
 
-init : Model
-init =
-    { selectedFlightTaskId = Nothing
-    }
-
-
-type Msg
-    = FlightTaskSelected Int
-
-
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case msg of
-        FlightTaskSelected flightTaskId ->
-            ( { model | selectedFlightTaskId = Just flightTaskId }
-            , Cmd.none
-            )
-
-
-selectedFlightTask : Deferred (ApiResult (List (Entity Int FlightTask))) -> Model -> Maybe (Entity Int FlightTask)
-selectedFlightTask flightTasksD model =
-    case ( flightTasksD, model.selectedFlightTaskId ) of
-        ( Resolved (Ok items), Just id ) ->
-            List.Extra.find (\{ key } -> key == id) items
-
-        _ ->
-            Nothing
-
-
-viewLoaded : List (Entity Int FlightTask) -> Model -> Element Msg
-viewLoaded flightTasks model =
+viewLoaded : List (Entity Int FlightTask) -> (Int -> msg) -> Element msg
+viewLoaded flightTasks onTaskSelected =
     let
-        selectedBackground key =
-            if model.selectedFlightTaskId == Just key then
-                Background.color Palette.primaryLight
-
-            else
-                Background.color Palette.tarnsparent
-
-        labelText : FlightTask -> String
-        labelText ft =
-            String.join
-                " - "
-                ((Tuple.first >> .name) ft.start
-                    :: List.map (Tuple.first >> .name) ft.turnpoints
-                    ++ [ (Tuple.first >> .name) ft.finish ]
-                )
-
-        descriptionView : Entity Int FlightTask -> Element Msg
+        descriptionView : Entity Int FlightTask -> Element msg
         descriptionView { key, entity } =
             Input.button
-                [ selectedBackground key
-                , mouseOver [ Background.color Palette.lightGray ]
+                -- [ selectedBackground key
+                [ mouseOver [ Background.color Palette.lightGray ]
                 ]
-                { onPress = Just <| FlightTaskSelected key
-                , label = text <| labelText entity
+                { onPress = Just <| onTaskSelected key
+                , label = FlightTaskPreview.view entity
                 }
+
+        -- actionsView : Entity Int FlightTask -> Element Msg
+        -- actionsView { key } =
+        --     Input.button
+        --         [ mouseOver [ Background.color Palette.lightGray ] ]
+        --         { onPress = Nothing
+        --         , label = text "Upload"
+        --         }
     in
-    table []
+    table [ spacing 10 ]
         { data = flightTasks
         , columns =
             [ { header = none
-              , width = fill
+              , width = shrink
               , view = descriptionView
               }
+
+            -- , { header = none
+            --   , width = fill
+            --   , view = actionsView
+            --   }
             ]
         }
 
 
-view : Deferred (ApiResult (List (Entity Int FlightTask))) -> Model -> Element Msg
-view flightTasksD model =
-    case flightTasksD of
-        Resolved (Ok flightTasks) ->
-            viewLoaded flightTasks model
+type alias Props msg =
+    { flightTasks : Deferred (ApiResult (List (Entity Int FlightTask)))
+    , onTaskSelected : Int -> msg
+    , onCreateTaskTriggered : msg
+    }
+
+
+view : Props msg -> Element msg
+view { flightTasks, onTaskSelected, onCreateTaskTriggered } =
+    let
+        backBtn =
+            Input.button
+                [ mouseOver [ Background.color Palette.lightGray ] ]
+                { onPress = Just onCreateTaskTriggered
+                , label = text "Create Task"
+                }
+    in
+    case flightTasks of
+        Resolved (Ok []) ->
+            column [ spacing 10 ]
+                [ text "No flight tasks"
+                , backBtn
+                ]
+
+        Resolved (Ok fts) ->
+            column [ spacing 10 ]
+                [ viewLoaded fts onTaskSelected
+                , backBtn
+                ]
 
         Resolved (Err _) ->
             text "Failed to load flight tasks"

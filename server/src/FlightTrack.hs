@@ -37,14 +37,14 @@ instance GeoPosition TrackPoint where
 
 data FlightInfo
     = FlightDate UTCTime
-    | CompId String
+    | CompId Text
     | Fix TrackPoint
     | UnknownRecord
     deriving (Show, Eq)
 
 data FlightTrack = FlightTrack
     { date :: UTCTime
-    , compId :: String
+    , compId :: Text
     , points :: NonEmpty TrackPoint
     } deriving (Show, Eq)
 
@@ -70,7 +70,7 @@ buildFlightTrack flightInfoItems = do
                 _:rest -> flightDate rest
                 [] -> Left "Missing or invalid location for Flight Date info"
             
-        compId :: [FlightInfo] -> Either String (String, [FlightInfo])
+        compId :: [FlightInfo] -> Either String (Text, [FlightInfo])
         compId infoItems = 
             case infoItems of
                 (CompId id):rest -> Right (id, rest)
@@ -109,7 +109,7 @@ compIdIdentifier =
 
 compIdParser :: Parsec Text () FlightInfo
 compIdParser =
-    CompId <$> many1 alphaNum
+    CompId . toText <$> many1 alphaNum
 
 readInt :: String -> Either Text Int
 readInt = readEither

@@ -1,7 +1,5 @@
 module Common.ParserUtils exposing (..)
 
-import Geo.GeoUtils exposing (Latitude(..), Longitude(..), toDecimalDegrees)
-import Nav.Units exposing (Deg(..))
 import Parser exposing (..)
 import Set
 import Time exposing (Posix, millisToPosix)
@@ -86,29 +84,6 @@ maybeParser p =
         [ succeed Just |= p
         , succeed Nothing
         ]
-
-
-latParser : Parser Latitude
-latParser =
-    succeed (\d m f -> toDecimalDegrees d m 0 |> f |> Deg |> LatDeg)
-        |= (digits 2 |> andThen digitsToInt)
-        |= plainFloatParser
-        |= oneOf
-            [ succeed identity |. symbol "N"
-            , succeed negate |. symbol "S"
-            ]
-
-
-lonParser : Parser Longitude
-lonParser =
-    succeed
-        (\d m f -> toDecimalDegrees d m 0 |> f |> Deg |> LonDeg)
-        |= (digits 3 |> andThen digitsToInt)
-        |= plainFloatParser
-        |= oneOf
-            [ succeed identity |. symbol "E"
-            , succeed negate |. symbol "W"
-            ]
 
 
 timeOfDayParser : Parser Posix

@@ -23,7 +23,6 @@ import List.Extra as ListX
 import Map as Map exposing (..)
 import MapUtils exposing (..)
 import Maybe.Extra as MaybeX
-import Nav.Units exposing (Deg(..))
 import Page.FlightTask.FlightTaskForm as FlightTaskForm
 import Page.FlightTask.FlightTaskList as FlightTaskList
 import Page.FlightTaskPage as FlightTaskPage

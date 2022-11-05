@@ -9,7 +9,7 @@ import NavPoint
 import FlightTrack
 import Geo
 import Geo.Utils (perpendicular)
-import TaskProgress ( progressInit, startLineCrossed, progressAdvance )
+import TaskProgressUtils ( progressInit, startLineCrossed, progressAdvance )
 import ProgressPoint ( target )
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import qualified Data.Geo.Jord.GreatCircle as GreatCircle

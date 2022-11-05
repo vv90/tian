@@ -50,8 +50,9 @@ import Statement (saveNavPointsStatement)
 import FlightTask (FlightTask)
 import Entity (Entity (..))
 import FlightTrack (FlightInfo, flightInfoParser, buildFlightTrack, FlightTrack, date, compId, points)
-import TaskProgress (progress)
+import TaskProgressUtils (progress)
 import ProgressPoint (ProgressPoint)
+import TaskProgress (TaskProgress)
 
 
 data TurnpointType
@@ -149,29 +150,16 @@ uploadNavPoints navPoints = do
         Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
         Right (d, a) -> pure (length navPoints, d, a)
 
-uploadFlightTrack :: Int32 -> [FlightTrack] -> Handler [[ProgressPoint]]
-uploadFlightTrack taskId tracks =
-    let
-        unpackEntity (Entity _ ft) = ft
-        dt = (\ft ->
-                "------\n"
-                <> show (date ft)
-                <> "\n"
-                <> show (compId ft)
-                <> "\n"
-                <> show (length $ points ft)
-                <> "\n"
-            ) <$> tracks
-    in 
-        do
-            flightTask <- liftIO $ runExceptT $ getFlightTask taskId
-            let res = progress . unpackEntity <<$>> flightTask
-            -- pure $ concat dt
-            case flightTask of
-                Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
-                Right Nothing -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) "Task not found"  }
-                Right (Just (Entity _ ft)) -> 
-                    pure $ toList . snd . progress ft <$> tracks
+uploadFlightTrack :: Int32 -> [FlightTrack] -> Handler [TaskProgress]
+uploadFlightTrack taskId tracks = do
+    flightTask <- liftIO $ runExceptT $ getFlightTask taskId
+    let res = progress <<$>> flightTask
+
+    case flightTask of
+        Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
+        Right Nothing -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) "Task not found"  }
+        Right (Just ft) -> 
+            pure $ progress ft <$> tracks
 
 
 flightTasks :: Handler [Entity Int32 FlightTask]
@@ -195,7 +183,7 @@ type API =
     :<|> "navpoints" :> Get '[JSON] (Vector NavPoint)
     :<|> "task" :> Get '[JSON] [Entity Int32 FlightTask]
     :<|> "task" :> ReqBody '[JSON] FlightTask :> Post '[JSON] Int64
-    :<|> "track" :> Capture "taskId" Int32 :> MultipartForm Mem [FlightTrack] :> Post '[JSON] [[ProgressPoint]]
+    :<|> "track" :> Capture "taskId" Int32 :> MultipartForm Mem [FlightTrack] :> Post '[JSON] [TaskProgress]
 
 startApp :: IO ()
 startApp = run 8081 app

@@ -276,18 +276,15 @@ view mapItems model =
             List.map (renderVectorItem model.mapView)
                 mapItems
 
-        showMapItem : MapItem -> String
-        showMapItem item =
-            case item of
-                Point ( LatitudeDegrees lat, LongitudeDegrees lon ) ->
-                    "Point " ++ (lat |> String.fromFloat) ++ " " ++ (lon |> String.fromFloat)
-
-                Line ps ->
-                    "Line " ++ (ps |> List.map (\( LatitudeDegrees lat, LongitudeDegrees lon ) -> (lat |> String.fromFloat) ++ " " ++ (lon |> String.fromFloat)) |> String.join ", ")
-
-                Circle ( LatitudeDegrees lat, LongitudeDegrees lon ) (DistanceMeters r) ->
-                    "Circle " ++ (lat |> String.fromFloat) ++ " " ++ (lon |> String.fromFloat) ++ " " ++ (r |> String.fromFloat)
-
+        -- showMapItem : MapItem -> String
+        -- showMapItem item =
+        --     case item of
+        --         Point ( LatitudeDegrees lat, LongitudeDegrees lon ) ->
+        --             "Point " ++ (lat |> String.fromFloat) ++ " " ++ (lon |> String.fromFloat)
+        --         Line ps ->
+        --             "Line " ++ (ps |> List.map (\( LatitudeDegrees lat, LongitudeDegrees lon ) -> (lat |> String.fromFloat) ++ " " ++ (lon |> String.fromFloat)) |> String.join ", ")
+        --         Circle ( LatitudeDegrees lat, LongitudeDegrees lon ) (DistanceMeters r) ->
+        --             "Circle " ++ (lat |> String.fromFloat) ++ " " ++ (lon |> String.fromFloat) ++ " " ++ (r |> String.fromFloat)
         -- withOptPoint : Maybe GeoPoint -> List (Svg Msg) -> List (Svg Msg)
         -- withOptPoint optPoint mapItems =
         --   optPoint
@@ -421,14 +418,14 @@ renderTile ( ( x, y, _ ), t ) =
 renderVectorItem : MapView -> MapItem -> Svg.Svg Msg
 renderVectorItem mapView item =
     case item of
-        Point point ->
-            renderPoint mapView point
+        Point style point ->
+            renderPoint mapView style point
 
         Circle point radius ->
             renderCircle mapView point radius
 
-        Line points ->
-            renderLine mapView points
+        Line style points ->
+            renderLine mapView style points
 
 
 
@@ -436,22 +433,36 @@ renderVectorItem mapView item =
 --     renderPolygon mapView points
 
 
-renderPoint : MapView -> GeoPoint -> Svg.Svg Msg
-renderPoint mapView point =
+renderPoint : MapView -> PointStyle -> GeoPoint -> Svg.Svg Msg
+renderPoint mapView style point =
     let
         ( x, y ) =
             geoPointToViewCoords mapView point
+
+        pointStyleAttrs =
+            case style of
+                TrackPoint ->
+                    [ SvgAttr.r "1"
+                    , SvgAttr.strokeWidth "1"
+                    , SvgAttr.stroke "gray"
+                    , SvgAttr.fill "gray"
+                    ]
+
+                TaskPoint ->
+                    [ SvgAttr.r "5"
+                    , SvgAttr.strokeWidth "2"
+                    , SvgAttr.stroke "black"
+                    , SvgAttr.fill "transparent"
+                    ]
     in
     Svg.g
         []
         [ Svg.circle
-            [ SvgAttr.cx (String.fromFloat x)
-            , SvgAttr.cy (String.fromFloat y)
-            , SvgAttr.r "5"
-            , SvgAttr.strokeWidth "2"
-            , SvgAttr.stroke "black"
-            , SvgAttr.fill "transparent"
-            ]
+            ([ SvgAttr.cx (String.fromFloat x)
+             , SvgAttr.cy (String.fromFloat y)
+             ]
+                ++ pointStyleAttrs
+            )
             []
 
         -- , Svg.text_
@@ -492,19 +503,30 @@ renderCircle mapView point (DistanceMeters radius) =
         []
 
 
-renderLine : MapView -> List GeoPoint -> Svg Msg
-renderLine mapView points =
+renderLine : MapView -> LineStyle -> List GeoPoint -> Svg Msg
+renderLine mapView style points =
     let
         xys =
             List.map
                 (geoPointToViewCoords mapView >> (\( x, y ) -> String.join "," [ String.fromFloat x, String.fromFloat y ]))
                 points
+
+        lineStyleAttrs =
+            case style of
+                TrackLine ->
+                    [ SvgAttr.strokeWidth "1"
+                    , SvgAttr.stroke "gray"
+                    ]
+
+                TaskLine ->
+                    [ SvgAttr.strokeWidth "2"
+                    , SvgAttr.stroke "black"
+                    ]
     in
     Svg.polyline
-        [ SvgAttr.points (String.join " " xys)
-        , SvgAttr.strokeWidth "2"
-        , SvgAttr.stroke "black"
-        ]
+        (SvgAttr.points (String.join " " xys)
+            :: lineStyleAttrs
+        )
         []
 
 

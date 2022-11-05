@@ -39,6 +39,7 @@ library
       Session
       Statement
       TaskProgress
+      TaskProgressUtils
   other-modules:
       Paths_server
   hs-source-dirs:

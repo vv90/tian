@@ -4,32 +4,7 @@ import Api.FlightTask exposing (FlightTask, TaskFinish(..), TaskStart(..), Turnp
 import Api.Geo exposing (Distance(..))
 import Api.NavPoint exposing (NavPoint)
 import List.Extra as ListX
-import MapUtils exposing (MapItem(..))
-import Nav.Units exposing (Meters(..))
-
-
-
--- makeLegLines : NavPoint -> NavPoint -> List ( NavPoint, Turnpoint ) -> List MapItem
--- makeLegLines startPoint finishPoint turnpoints =
---     List.foldr
---         (\( np, tp ) ( prev, lines ) -> ( np, turnpointToMapItem ( np, tp ) :: Line [ ( prev.lat, prev.lon ), ( np.lat, np.lon ) ] :: lines ))
---         ( finishPoint, [] )
---         -- (List.reverse turnpoints)
---         turnpoints
---         |> (\( prev, lines ) -> Line [ ( prev.lat, prev.lon ), ( startPoint.lat, startPoint.lon ) ] :: lines)
--- makePerpendicularLine : Length -> NavPoint -> NavPoint -> MapItem
--- makePerpendicularLine lineLength origin target =
---     let
---         originGeo =
---             (origin.lat, origin.lon)
---         targetGeo =
---             (target.lat, origin.lon)
---         nextPointBearing =
---             bearing originGeo targetGeo
---         ( lp1, lp2 ) =
---             linePerpendicularToBearing lineLength originGeo nextPointBearing
---     in
---     Line [ lp1, lp2 ]
+import MapUtils exposing (LineStyle(..), MapItem(..))
 
 
 startToMapItem : NavPoint -> ( NavPoint, TaskStart ) -> MapItem
@@ -38,11 +13,6 @@ startToMapItem nextPoint ( np, start ) =
         StartLine r ->
             -- makePerpendicularLine r np nextPoint
             Circle ( np.lat, np.lon ) (DistanceMeters r)
-
-
-
--- StartCylinder r ->
---     Circle np.geoPoint r
 
 
 finishToMapItem : NavPoint -> ( NavPoint, TaskFinish ) -> MapItem
@@ -86,7 +56,7 @@ taskToMapItems task =
         (\( np, tp ) ( prev, lines ) ->
             ( np
             , turnpointToMapItem ( np, tp )
-                :: Line [ ( prev.lat, prev.lon ), ( np.lat, np.lon ) ]
+                :: Line TaskLine [ ( prev.lat, prev.lon ), ( np.lat, np.lon ) ]
                 :: lines
             )
         )
@@ -99,6 +69,7 @@ taskToMapItems task =
         |> (\( prev, lines ) ->
                 finishToMapItem (lastNavPointBeforeFinish task) task.finish
                     :: Line
+                        TaskLine
                         [ ( prev.lat, prev.lon )
                         , (Tuple.first >> (\x -> ( x.lat, x.lon ))) task.finish
                         ]

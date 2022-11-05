@@ -36,7 +36,7 @@ uploadedFileCmd : Int -> List File -> Cmd Msg
 uploadedFileCmd taskId files =
     Http.request
         { method = "POST"
-        , url = "http://0.0.0.0:8081/track?taskId=" ++ String.fromInt taskId
+        , url = "http://0.0.0.0:8081/track/" ++ String.fromInt taskId
         , headers = []
         , body = Http.multipartBody (List.map (Http.filePart "file") files)
         , expect = Http.expectString Uploaded

@@ -1,15 +1,20 @@
 module Api.TaskProgress exposing
     ( ProgressPoint
+    , TaskProgress
     , progressPointDecoder
     , progressPointEncoder
+    , taskProgressDecoder
+    , taskProgressEncoder
     )
 
 import Api.Geo
 import Api.NavPoint
+import Iso8601
 import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
 import Maybe.Extra
+import Time
 
 
 type alias ProgressPoint =
@@ -51,3 +56,30 @@ progressPointDecoder =
         |> Json.Decode.Pipeline.required "lon" Api.Geo.longitudeDecoder
         |> Json.Decode.Pipeline.required "altitude" Api.Geo.elevationDecoder
         |> Json.Decode.Pipeline.required "target" (Json.Decode.nullable (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 Api.NavPoint.navPointDecoder) (Json.Decode.index 1 Api.Geo.distanceDecoder)))
+
+
+type alias TaskProgress =
+    { taskId : Int
+    , date : Time.Posix
+    , compId : String
+    , points : List ProgressPoint
+    }
+
+
+taskProgressEncoder : TaskProgress -> Json.Encode.Value
+taskProgressEncoder a =
+    Json.Encode.object
+        [ ( "taskId", Json.Encode.int a.taskId )
+        , ( "date", Iso8601.encode a.date )
+        , ( "compId", Json.Encode.string a.compId )
+        , ( "points", Json.Encode.list progressPointEncoder a.points )
+        ]
+
+
+taskProgressDecoder : Json.Decode.Decoder TaskProgress
+taskProgressDecoder =
+    Json.Decode.succeed TaskProgress
+        |> Json.Decode.Pipeline.required "taskId" Json.Decode.int
+        |> Json.Decode.Pipeline.required "date" Iso8601.decoder
+        |> Json.Decode.Pipeline.required "compId" Json.Decode.string
+        |> Json.Decode.Pipeline.required "points" (Json.Decode.list progressPointDecoder)

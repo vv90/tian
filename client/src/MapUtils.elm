@@ -52,10 +52,20 @@ type alias GeoPoint =
     ( Latitude, Longitude )
 
 
+type PointStyle
+    = TaskPoint
+    | TrackPoint
+
+
+type LineStyle
+    = TaskLine
+    | TrackLine
+
+
 type MapItem
-    = Point GeoPoint
+    = Point PointStyle GeoPoint
     | Circle GeoPoint Distance
-    | Line (List GeoPoint)
+    | Line LineStyle (List GeoPoint)
 
 
 

@@ -1,8 +1,8 @@
 module Page.FlightTrack.FlightTrackUpload exposing (..)
 
-import Api.TaskProgress exposing (ProgressPoint)
+import Api.TaskProgress exposing (ProgressPoint, TaskProgress, taskProgressDecoder)
 import Common.ApiResult exposing (ApiResult)
-import Common.Deferred exposing (Deferred(..))
+import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPending)
 import Common.JsonCodecs exposing (filesDecoder)
 import Element exposing (Element, html, row, spacing, text)
 import Element.Input as Input
@@ -16,8 +16,13 @@ import Json.Decode as D
 
 type alias Model =
     { taskId : Int
-    , taskProgress : Deferred (ApiResult (List ProgressPoint))
+    , taskProgress : Deferred (ApiResult (List TaskProgress))
     }
+
+
+withPendingTaskProgress : Model -> Model
+withPendingTaskProgress model =
+    { model | taskProgress = setPending model.taskProgress }
 
 
 init : Int -> Model
@@ -28,18 +33,17 @@ init taskId =
 
 
 type Msg
-    = GotFiles Int (List File)
-    | Uploaded (Result Http.Error String)
+    = UploadTrack Int (List File) (AsyncOperationStatus (ApiResult (List TaskProgress)))
 
 
-uploadedFileCmd : Int -> List File -> Cmd Msg
-uploadedFileCmd taskId files =
+uploadTrackCmd : Int -> List File -> Cmd Msg
+uploadTrackCmd taskId files =
     Http.request
         { method = "POST"
         , url = "http://0.0.0.0:8081/track/" ++ String.fromInt taskId
         , headers = []
         , body = Http.multipartBody (List.map (Http.filePart "file") files)
-        , expect = Http.expectString Uploaded
+        , expect = Http.expectJson (Finished >> UploadTrack taskId files) (D.list taskProgressDecoder)
         , timeout = Nothing
         , tracker = Just "upload"
         }
@@ -48,14 +52,15 @@ uploadedFileCmd taskId files =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        GotFiles taskId files ->
-            ( model, uploadedFileCmd taskId files )
+        UploadTrack taskId files Started ->
+            ( model |> withPendingTaskProgress
+            , uploadTrackCmd taskId files
+            )
 
-        Uploaded (Ok _) ->
-            ( model, Cmd.none )
-
-        Uploaded (Err _) ->
-            ( model, Cmd.none )
+        UploadTrack _ _ (Finished result) ->
+            ( { model | taskProgress = Resolved result }
+            , Cmd.none
+            )
 
 
 type alias Props msg =
@@ -76,7 +81,7 @@ view mapMsg { onBackTriggered } model =
             (input
                 [ type_ "file"
                 , multiple True
-                , on "change" (D.map (mapMsg << GotFiles model.taskId) filesDecoder)
+                , on "change" (D.map (\x -> UploadTrack model.taskId x Started |> mapMsg) filesDecoder)
                 ]
                 []
             )

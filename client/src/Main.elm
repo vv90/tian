@@ -10,9 +10,10 @@ import Api.NavPoint exposing (NavPoint, navPointDecoder)
 import AppState
 import Browser
 import Common.ApiResult exposing (ApiResult)
-import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..))
+import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe)
 import Common.Effect as Effect
 import Common.FlightTaskUtils exposing (taskToMapItems)
+import Common.TaskProgressUtils exposing (progressPointsToMapItems)
 import Element exposing (Element, layout, text)
 import Element.Font as Font
 import Flags exposing (..)
@@ -204,20 +205,20 @@ view model =
     let
         mapItems =
             case model.flightTaskPage.page of
-                -- FlightTaskPage.SelectTask pm ->
-                --     pm.selectedFlightTaskId
-                --         |> Maybe.andThen (selectedFlightTask model.appState.flightTasks)
-                --         |> Maybe.map (.entity >> taskToMapItems)
-                --         |> Maybe.withDefault []
                 FlightTaskPage.AddTask pm ->
                     FlightTaskForm.result pm
                         |> Result.map taskToMapItems
                         |> Result.withDefault []
 
                 FlightTaskPage.UploadTrack pm ->
-                    selectedFlightTask model.appState.flightTasks pm.taskId
+                    (selectedFlightTask model.appState.flightTasks pm.taskId
                         |> Maybe.map (.entity >> taskToMapItems)
                         |> Maybe.withDefault []
+                    )
+                        ++ ((deferredToMaybe >> Maybe.andThen Result.toMaybe) pm.taskProgress
+                                |> Maybe.map (List.concatMap (.points >> progressPointsToMapItems))
+                                |> Maybe.withDefault []
+                           )
 
                 FlightTaskPage.SelectTask ->
                     []

@@ -21,6 +21,19 @@ setPending d =
             d
 
 
+deferredToMaybe : Deferred a -> Maybe a
+deferredToMaybe d =
+    case d of
+        Resolved x ->
+            Just x
+
+        Updating x ->
+            Just x
+
+        _ ->
+            Nothing
+
+
 type AsyncOperationStatus a
     = Started
     | Finished a

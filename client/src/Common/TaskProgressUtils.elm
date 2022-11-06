@@ -22,10 +22,10 @@ progressPointsToMapItems progressPoints =
         combineMapItems prev pmi lmi =
             case lmi of
                 Just x ->
-                    pmi :: x :: prev
+                    x :: prev
 
                 Nothing ->
-                    pmi :: prev
+                    prev
 
         buildMapItemsStep : List MapItem -> Maybe ProgressPoint -> List ProgressPoint -> List MapItem
         buildMapItemsStep prev lastPoint points =

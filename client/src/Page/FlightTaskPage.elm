@@ -161,6 +161,16 @@ update msg model =
             ( model, Cmd.none, Effect.none )
 
 
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    case model.page of
+        UploadTrack pm ->
+            Sub.map FlightTrackUploadMsg (FlightTrackUpload.subscriptions pm)
+
+        _ ->
+            Sub.none
+
+
 type alias Props =
     { navPoints : Deferred (ApiResult (List (Entity Int NavPoint)))
     , flightTasks : Deferred (ApiResult (List (Entity Int FlightTask)))

@@ -66,17 +66,16 @@ type MapItem
     = Point PointStyle GeoPoint
     | Circle GeoPoint Distance
     | Line LineStyle (List GeoPoint)
+    | Marker GeoPoint String
 
 
 
 -- | Polygon (List GeoPoint)
-
-
-type alias Marker =
-    { position : GeoPoint
-    , markerType : MarkerType
-    , caption : String
-    }
+-- type alias Marker =
+--     { position : GeoPoint
+--     , markerType : MarkerType
+--     , caption : String
+--     }
 
 
 type alias MapView =

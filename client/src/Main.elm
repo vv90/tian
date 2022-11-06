@@ -146,6 +146,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Sub.map MapMsg (Map.subscriptions model.mapModel)
+        , Sub.map FlightTaskPageMsg (FlightTaskPage.subscriptions model.flightTaskPage)
         ]
 
 
@@ -211,14 +212,31 @@ view model =
                         |> Result.withDefault []
 
                 FlightTaskPage.UploadTrack pm ->
-                    (selectedFlightTask model.appState.flightTasks pm.taskId
-                        |> Maybe.map (.entity >> taskToMapItems)
-                        |> Maybe.withDefault []
-                    )
-                        ++ ((deferredToMaybe >> Maybe.andThen Result.toMaybe) pm.taskProgress
+                    let
+                        taskItems =
+                            selectedFlightTask model.appState.flightTasks pm.taskId
+                                |> Maybe.map (.entity >> taskToMapItems)
+                                |> Maybe.withDefault []
+
+                        trackItems =
+                            (deferredToMaybe >> Maybe.andThen Result.toMaybe) pm.taskProgress
                                 |> Maybe.map (List.concatMap (.points >> progressPointsToMapItems))
                                 |> Maybe.withDefault []
-                           )
+
+                        compId =
+                            (deferredToMaybe >> Maybe.andThen Result.toMaybe >> Maybe.andThen List.head >> Maybe.map .compId) pm.taskProgress
+
+                        point =
+                            pm.playerModel |> Maybe.andThen .currentPoint
+
+                        pointItems =
+                            Maybe.map2
+                                (\cid p -> [ Marker ( p.lat, p.lon ) cid ])
+                                compId
+                                point
+                                |> Maybe.withDefault []
+                    in
+                    taskItems ++ trackItems ++ pointItems
 
                 FlightTaskPage.SelectTask ->
                     []

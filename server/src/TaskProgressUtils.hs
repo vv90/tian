@@ -245,4 +245,4 @@ progress (Entity taskId ft) (FlightTrack date compId points) =
         taskId
         date
         compId
-        (toList progressPoints)
+        (reverse $ toList progressPoints)

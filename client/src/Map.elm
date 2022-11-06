@@ -427,6 +427,9 @@ renderVectorItem mapView item =
         Line style points ->
             renderLine mapView style points
 
+        Marker point label ->
+            renderMarker mapView point label
+
 
 
 -- Polygon points ->
@@ -546,27 +549,26 @@ renderPolygon mapView points =
         []
 
 
-renderMarkerSvg : MapView -> Marker -> Svg Msg
-renderMarkerSvg mapView marker =
-    let
-        ( x, y ) =
-            geoPointToViewCoords mapView marker.position
-    in
-    case marker.markerType of
-        Glider ->
-            Svg.svg
-                [ width 40
-                , height 40
-                , style "position" "absolute"
-                , style "top" (String.fromFloat (y - 20) ++ "px")
-                , style "left" (String.fromFloat (x - 20) ++ "px")
-                , attribute "data-src" "assets/glider.svg"
-                ]
-                []
+
+-- renderMarkerSvg : MapView -> GeoPoint -> String -> Svg Msg
+-- renderMarkerSvg mapView point label =
+--     let
+--         ( x, y ) =
+--             geoPointToViewCoords mapView point
+--     in
+--         Svg.svg
+--             [ width 40
+--             , height 40
+--             , style "position" "absolute"
+--             , style "top" (String.fromFloat (y - 20) ++ "px")
+--             , style "left" (String.fromFloat (x - 20) ++ "px")
+--             , attribute "data-src" "assets/glider.svg"
+--             ]
+--             []
 
 
-renderMarker : MapView -> Marker -> Svg Msg
-renderMarker mapView marker =
+renderMarker : MapView -> GeoPoint -> String -> Svg Msg
+renderMarker mapView point label =
     let
         w =
             40
@@ -578,7 +580,7 @@ renderMarker mapView marker =
         --   case marker.markerType of
         --     Glider -> "assets/glider.svg"
         ( x, y ) =
-            geoPointToViewCoords mapView marker.position
+            geoPointToViewCoords mapView point
     in
     Svg.g
         []
@@ -597,7 +599,7 @@ renderMarker mapView marker =
             , SvgAttr.dy "-10"
             , SvgAttr.textAnchor "middle"
             ]
-            [ Svg.text marker.caption ]
+            [ Svg.text label ]
         ]
 
 

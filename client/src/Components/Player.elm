@@ -66,11 +66,13 @@ withCurrentPoint currentPoint model =
     { model | currentPoint = currentPoint }
 
 
-advancePlayback : Model -> Model
-advancePlayback model =
+advancePlayback : Int -> Model -> Model
+advancePlayback millis model =
     let
         newTimeMillis =
-            posixToMillis model.currentTime + 100 * playbackCoefficient model.speed
+            posixToMillis model.currentTime + millis
+
+        -- 100 * playbackCoefficient model.speed
     in
     case model.trackPoints of
         [] ->
@@ -79,6 +81,7 @@ advancePlayback model =
         p :: ps ->
             if newTimeMillis >= p.time then
                 advancePlayback
+                    0
                     { model
                         | trackPoints = ps
                         , currentTime = millisToPosix newTimeMillis
@@ -93,7 +96,7 @@ type Msg
     = Started
     | Paused
     | SpeedChanged PlaybackSpeed
-    | PlaybackAdvanced
+    | PlaybackAdvanced Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -108,14 +111,14 @@ update msg model =
         SpeedChanged speed ->
             ( withSpeed speed model, Cmd.none )
 
-        PlaybackAdvanced ->
-            ( advancePlayback model, Cmd.none )
+        PlaybackAdvanced millis ->
+            ( advancePlayback millis model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
     if model.playing then
-        Time.every 100 (always PlaybackAdvanced)
+        Time.every 100 (always <| PlaybackAdvanced (100 * playbackCoefficient model.speed))
 
     else
         Sub.none

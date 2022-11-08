@@ -21,13 +21,14 @@ import Geo.Utils (s84position, perpendicular)
 import ProgressPoint (ProgressPoint (..))
 import TaskProgress (TaskProgress (..))
 import Entity (Entity (..))
+import Data.List.NonEmpty (cons)
 
 
 distanceToTarget :: NavPoint -> TrackPoint -> Distance
 distanceToTarget np tp =
-    let 
-        dis = 
-            GreatCircle.distance 
+    let
+        dis =
+            GreatCircle.distance
                 (s84position np)
                 (s84position tp)
     in
@@ -60,7 +61,7 @@ toProgressPoint target tp =
 
 targetNavPoint :: (NavPoint, TaskFinish) -> [(NavPoint, Turnpoint)] -> NavPoint
 targetNavPoint finish tps =
-    fromMaybe 
+    fromMaybe
         (fst finish)
         (fst <$> viaNonEmpty head tps)
 
@@ -74,31 +75,31 @@ startLineCrossed ft lastPos currTp =
         targetPosition =
             s84position targetNp
 
-        startPosition = 
+        startPosition =
             s84position startNp
 
-        lastPosition = 
+        lastPosition =
             s84position lastPos
         currPosition =
             s84position currTp
 
-        startBearing = 
-            GreatCircle.initialBearing 
+        startBearing =
+            GreatCircle.initialBearing
                 startPosition
                 targetPosition
 
-        startLine sb = 
+        startLine sb =
             perpendicular startPosition sb (Length.metres startRadius)
 
-        trackLine = 
+        trackLine =
             GreatCircle.minorArc lastPosition currPosition
-                
-        startLineSide line p = 
-            GreatCircle.side 
+
+        startLineSide line p =
+            GreatCircle.side
                 p (GreatCircle.minorArcStart line) (GreatCircle.minorArcEnd line)
 
         checkCrossingDirection line target p1 p2 =
-            case 
+            case
                 ( GreatCircle.side target (GreatCircle.minorArcStart line) (GreatCircle.minorArcEnd line)
                 , GreatCircle.side p1 (GreatCircle.minorArcStart line) (GreatCircle.minorArcEnd line)
                 , GreatCircle.side p2 (GreatCircle.minorArcStart line) (GreatCircle.minorArcEnd line)
@@ -108,21 +109,21 @@ startLineCrossed ft lastPos currTp =
                 (GreatCircle.RightOf, p, GreatCircle.RightOf) | p /= GreatCircle.RightOf -> True
                 _ -> False
 
-                
+
 
         startLineCrossing sl tl =
-            mfilter 
-                (\_ -> checkCrossingDirection sl targetPosition (GreatCircle.minorArcStart tl) (GreatCircle.minorArcEnd tl)) 
+            mfilter
+                (\_ -> checkCrossingDirection sl targetPosition (GreatCircle.minorArcStart tl) (GreatCircle.minorArcEnd tl))
                 (GreatCircle.intersection sl tl)
-            
+
         toResult pos =
             ( LatitudeDegrees $ Angle.toDecimalDegrees $ Geodetic.latitude pos
             , LongitudeDegrees $ Angle.toDecimalDegrees $ Geodetic.longitude pos
             )
     in
-        startLineCrossing 
+        startLineCrossing
         <$> (startBearing >>= startLine)
-        <*> trackLine 
+        <*> trackLine
         >>= fmap (\_ -> toProgressPoint (Just targetNp) currTp)
 
 turnpointCrossed :: NavPoint -> TrackPoint -> (NavPoint, Turnpoint) -> Maybe ProgressPoint
@@ -148,26 +149,26 @@ finishCrossed (np, FinishCylinder radius) prevNp lastPos currTp =
             Nothing
 
 finishCrossed (np, FinishLine radius) prevNp lastPos currTp =
-    let 
+    let
         reversedFinishBearing =
-            GreatCircle.initialBearing 
+            GreatCircle.initialBearing
                 (s84position np)
                 (s84position prevNp)
-        finishPosition = 
+        finishPosition =
             s84position np
 
-        lastPosition = 
+        lastPosition =
             s84position lastPos
 
         currPosition =
             s84position currTp
 
-        trackLine = 
+        trackLine =
             GreatCircle.minorArc lastPosition currPosition
 
         finishLine fb =
            GreatCircle.minorArc
-                ( GreatCircle.destination 
+                ( GreatCircle.destination
                     finishPosition
                     (Angle.subtract (Angle.decimalDegrees 90) fb)
                     (Length.metres radius)
@@ -176,10 +177,10 @@ finishCrossed (np, FinishLine radius) prevNp lastPos currTp =
                     finishPosition
                     (Angle.add (Angle.decimalDegrees 90) fb)
                     (Length.metres radius)
-                ) 
-        
-        finishCrossed = 
-            GreatCircle.intersection 
+                )
+
+        finishCrossed =
+            GreatCircle.intersection
                 <$> (reversedFinishBearing >>= finishLine)
                 <*> trackLine
                 >>= fmap (\_ -> toProgressPoint Nothing currTp)
@@ -192,9 +193,9 @@ progressInit :: FlightTask -> TrackPoint -> TaskState
 progressInit ft tp =
     let
         (startNp, _) = FlightTask.start ft
-        progressPoint = 
+        progressPoint =
             toProgressPoint (Just startNp) tp
-            
+
     in
     ( FlightTask.turnpoints ft
     , progressPoint :| []
@@ -207,42 +208,62 @@ progressAdvance ft (unfinishedTurnpoints, progressPoints) tp =
         started = startLineCrossed ft lastPos tp
 
         checkTurnpoint :: ((NavPoint, Turnpoint), [(NavPoint, Turnpoint)]) -> Maybe (ProgressPoint, [(NavPoint, Turnpoint)])
-        checkTurnpoint (currTurnpoint, remainingTurnpoints) = 
+        checkTurnpoint (currTurnpoint, remainingTurnpoints) =
             (, remainingTurnpoints)
-            <$> turnpointCrossed 
-                    (targetNavPoint (FlightTask.finish ft) remainingTurnpoints) 
-                    tp 
+            <$> turnpointCrossed
+                    (targetNavPoint (FlightTask.finish ft) remainingTurnpoints)
+                    tp
                     currTurnpoint
 
-        tpCrossed = 
-            uncons unfinishedTurnpoints 
+        tpCrossed =
+            uncons unfinishedTurnpoints
             >>= checkTurnpoint
-        
-        
+
+
     in
     case (started, tpCrossed) of
-        (Just p, _) -> 
-            (FlightTask.turnpoints ft, p :| [])
-            
+        (Just p, _) ->
+            (FlightTask.turnpoints ft, cons p progressPoints)
+
         (Nothing, Just (p, restTps)) ->
-            (restTps, p :| toList progressPoints)
+            (restTps, cons p progressPoints)
 
         (Nothing, Nothing) ->
             ( unfinishedTurnpoints
-            , toProgressPoint 
+            , toProgressPoint
                 (fmap fst $ target $ head progressPoints)
-                tp 
-              :| toList progressPoints
+                tp
+              `cons` progressPoints
             )
-            
+
 progress :: Entity Int32 FlightTask -> FlightTrack -> TaskProgress
-progress (Entity taskId ft) (FlightTrack date compId points) = 
-    let 
+progress (Entity taskId ft) (FlightTrack date compId points) =
+    let
         p :| ps = points
         (_, progressPoints) = foldl' (progressAdvance ft) (progressInit ft p) ps
     in
-    TaskProgress 
+    TaskProgress
         taskId
         date
         compId
         (reverse $ toList progressPoints)
+
+progress' :: FlightTask -> FlightTrack -> NonEmpty (NonEmpty ProgressPoint)
+progress' ft (FlightTrack date compId points) =
+    let
+        p :| ps = points
+        initialState = progressInit ft p :| []
+
+        adv :: [TrackPoint] -> NonEmpty TaskState -> NonEmpty TaskState
+        adv pts s =
+            case pts of
+                x : xs ->
+                    let r = progressAdvance ft (head s) x
+                    in
+                    adv xs (cons r s)
+                [] ->
+                    s
+
+        res = snd <$> adv ps initialState
+    in
+    res

@@ -9,6 +9,8 @@ import Text.Parsec (parse)
 import Test.Hspec.QuickCheck (prop)
 import Text.Printf (printf)
 import Data.Time
+import Control.Arrow (ArrowChoice(..))
+import Entity (Entity(..))
 
 spec :: Spec
 spec = do

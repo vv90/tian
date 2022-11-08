@@ -9,12 +9,15 @@ import NavPoint
 import FlightTrack
 import Geo
 import Geo.Utils (perpendicular)
-import TaskProgressUtils ( progressInit, startLineCrossed, progressAdvance )
+import TaskProgressUtils ( progressInit, startLineCrossed, progressAdvance, progress )
 import ProgressPoint ( target )
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import qualified Data.Geo.Jord.GreatCircle as GreatCircle
 import qualified Data.Geo.Jord.Length as Length
 import Utils (within)
+import Text.Parsec (parse)
+import Control.Arrow (ArrowChoice(..))
+import Entity (Entity(..))
 
 startNavPoint = 
     NavPoint
@@ -217,3 +220,27 @@ spec = do
 
             (fmap (name . fst) . target . head . snd) result `shouldBe` Just "Finish"
             (fmap (metersDistance . snd) . target . head . snd) result `shouldBe` Just 1100.831289
+
+    context "progress" $ do
+        it "produces correct progress results" $ do
+            let input = 
+                    "HFDTEDATE:050521,01\n\
+                    \HFCIDCOMPETITIONID:VB\n\
+                    \B0721565201562N03940404EA0008700160000024\n\
+                    \B0722025201562N03940404EA0008700160000054\n\
+                    \B0722045201562N03940403EA0008700160100106\n\
+                    \B0722085201562N03940404EV0008700000500164\n\
+                    \B0722125201562N03940404EV0008700000500118\n\
+                    \B0722165201562N03940404EA0008700160066060\n\
+                    \B0722205201562N03940404EA0008700160000046\n\
+                    \B0722245201562N03940404EA0008700160000048"
+            let result = parse flightInfoParser "" input
+            let flightTrack = left show result >>= buildFlightTrack 
+            let taskProgress = progress (Entity 0 flightTask) <$> flightTrack
+
+            length <$> result `shouldBe` Right 10
+            compId <$> flightTrack `shouldBe` Right "VB"
+            length . points <$> flightTrack `shouldBe` Right 8
+            length . TaskProgress.points <$> taskProgress `shouldBe` Right 8
+
+            

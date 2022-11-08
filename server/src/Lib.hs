@@ -50,9 +50,11 @@ import Statement (saveNavPointsStatement)
 import FlightTask (FlightTask)
 import Entity (Entity (..))
 import FlightTrack (FlightInfo, flightInfoParser, buildFlightTrack, FlightTrack, date, compId, points)
-import TaskProgressUtils (progress)
+import TaskProgressUtils (progress, progressInit, progressAdvance, progress')
 import ProgressPoint (ProgressPoint)
 import TaskProgress (TaskProgress)
+import qualified TaskProgress
+import Debug.Trace as Debug
 
 
 data TurnpointType
@@ -121,10 +123,10 @@ navPoints = do
 
 parseFile :: Parsec Text () a -> FileData Mem -> Either String a
 parseFile parser fileData =
-    let 
+    let
         fileName = fdFileName fileData
         parseContent = left show . parse parser (toString fileName)
-    in 
+    in
         parseContent . decodeUtf8 . fdPayload $ fileData
 
 instance FromMultipart Mem [NavPoint] where
@@ -153,12 +155,11 @@ uploadNavPoints navPoints = do
 uploadFlightTrack :: Int32 -> [FlightTrack] -> Handler [TaskProgress]
 uploadFlightTrack taskId tracks = do
     flightTask <- liftIO $ runExceptT $ getFlightTask taskId
-    let res = progress <<$>> flightTask
 
     case flightTask of
         Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
         Right Nothing -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) "Task not found"  }
-        Right (Just ft) -> 
+        Right (Just ft) -> do
             pure $ progress ft <$> tracks
 
 

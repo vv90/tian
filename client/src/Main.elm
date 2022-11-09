@@ -12,7 +12,7 @@ import Browser
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe)
 import Common.Effect as Effect
-import Common.FlightTaskUtils exposing (taskToMapItems)
+import Common.FlightTaskUtils exposing (navPoints, taskToMapItems)
 import Common.TaskProgressUtils exposing (progressPointsToMapItems)
 import Element exposing (Element, layout, text)
 import Element.Font as Font
@@ -213,21 +213,33 @@ view model =
 
                 FlightTaskPage.UploadTrack pm ->
                     let
+                        task =
+                            Maybe.map .entity <| selectedFlightTask model.appState.flightTasks pm.taskId
+
                         taskItems =
-                            selectedFlightTask model.appState.flightTasks pm.taskId
-                                |> Maybe.map (.entity >> taskToMapItems)
+                            task
+                                |> Maybe.map taskToMapItems
                                 |> Maybe.withDefault []
 
-                        trackItems =
-                            (deferredToMaybe >> Maybe.andThen Result.toMaybe) pm.taskProgress
-                                |> Maybe.map (List.concatMap (.points >> progressPointsToMapItems))
-                                |> Maybe.withDefault []
-
+                        -- trackItems =
+                        --     (deferredToMaybe >> Maybe.andThen Result.toMaybe) pm.taskProgress
+                        --         |> Maybe.map (List.concatMap (.points >> progressPointsToMapItems))
+                        --         |> Maybe.withDefault []
                         compId =
                             (deferredToMaybe >> Maybe.andThen Result.toMaybe >> Maybe.andThen List.head >> Maybe.map .compId) pm.taskProgress
 
                         point =
                             pm.playerModel |> Maybe.andThen .currentPoint
+
+                        findTargetNavPoint : FlightTask -> String -> Maybe NavPoint
+                        findTargetNavPoint t name =
+                            navPoints t |> ListX.find (\np -> np.name == name)
+
+                        target =
+                            point
+                                |> Maybe.andThen .target
+                                |> Maybe.map Tuple.first
+                                |> MaybeX.andThen2 findTargetNavPoint task
 
                         pointItems =
                             Maybe.map2
@@ -236,7 +248,7 @@ view model =
                                 point
                                 |> Maybe.withDefault []
                     in
-                    taskItems ++ trackItems ++ pointItems
+                    taskItems ++ pointItems
 
                 FlightTaskPage.SelectTask ->
                     []

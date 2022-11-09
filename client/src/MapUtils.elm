@@ -3,6 +3,7 @@ module MapUtils exposing (..)
 -- import Geo.GeoUtils exposing (..)
 
 import Api.Geo exposing (Distance(..), Latitude(..), Longitude(..))
+import Common.GeoUtils exposing (GeoPoint)
 import Dict exposing (Dict)
 import List.Extra as ListX
 
@@ -46,10 +47,6 @@ type alias TileKey =
 
 type MarkerType
     = Glider
-
-
-type alias GeoPoint =
-    ( Latitude, Longitude )
 
 
 type PointStyle
@@ -421,8 +418,3 @@ metersPerPixel zoom =
                     Nothing
     in
     Maybe.map DistanceMeters mpp
-
-
-earthRadius : Distance
-earthRadius =
-    DistanceMeters 6372798.2

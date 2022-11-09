@@ -8,7 +8,6 @@ module Api.TaskProgress exposing
     )
 
 import Api.Geo
-import Api.NavPoint
 import Iso8601
 import Json.Decode
 import Json.Decode.Pipeline
@@ -22,7 +21,7 @@ type alias ProgressPoint =
     , lat : Api.Geo.Latitude
     , lon : Api.Geo.Longitude
     , altitude : Api.Geo.Elevation
-    , target : Maybe ( Api.NavPoint.NavPoint, Api.Geo.Distance )
+    , target : Maybe ( String, Api.Geo.Distance )
     }
 
 
@@ -39,7 +38,7 @@ progressPointEncoder a =
                     case b of
                         ( c, d ) ->
                             Json.Encode.list identity
-                                [ Api.NavPoint.navPointEncoder c
+                                [ Json.Encode.string c
                                 , Api.Geo.distanceEncoder d
                                 ]
                 )
@@ -55,7 +54,7 @@ progressPointDecoder =
         |> Json.Decode.Pipeline.required "lat" Api.Geo.latitudeDecoder
         |> Json.Decode.Pipeline.required "lon" Api.Geo.longitudeDecoder
         |> Json.Decode.Pipeline.required "altitude" Api.Geo.elevationDecoder
-        |> Json.Decode.Pipeline.required "target" (Json.Decode.nullable (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 Api.NavPoint.navPointDecoder) (Json.Decode.index 1 Api.Geo.distanceDecoder)))
+        |> Json.Decode.Pipeline.required "target" (Json.Decode.nullable (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 Json.Decode.string) (Json.Decode.index 1 Api.Geo.distanceDecoder)))
 
 
 type alias TaskProgress =

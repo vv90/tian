@@ -75,3 +75,18 @@ taskToMapItems task =
                         ]
                     :: lines
            )
+
+
+navPoints : FlightTask -> List NavPoint
+navPoints task =
+    let
+        start =
+            Tuple.first task.start
+
+        finish =
+            Tuple.first task.finish
+
+        turnpoints =
+            List.map Tuple.first task.turnpoints
+    in
+    start :: turnpoints ++ [ finish ]

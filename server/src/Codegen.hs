@@ -22,8 +22,8 @@ import FlightTask (Turnpoint, TaskStart, TaskFinish, FlightTask (FlightTask))
 import Entity (Entity(Entity))
 import Geo (Latitude, Elevation, Direction, Longitude, Distance)
 import Data.Time (DiffTime)
-import ProgressPoint (ProgressPoint(ProgressPoint))
-import TaskProgress (TaskProgress(TaskProgress))
+import ProgressPoint (ProgressPointDto)
+import TaskProgress (TaskProgressDto)
 
 typeDefinitions :: [Definition]
 typeDefinitions =
@@ -40,8 +40,8 @@ typeDefinitions =
         , jsonDefinitions @TaskFinish
         , jsonDefinitions @FlightTask
         , jsonDefinitions @Entity
-        , jsonDefinitions @ProgressPoint
-        , jsonDefinitions @TaskProgress
+        , jsonDefinitions @ProgressPointDto
+        , jsonDefinitions @TaskProgressDto
         ]
 
 elmSrcPath :: FilePath

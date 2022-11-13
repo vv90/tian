@@ -3,7 +3,7 @@ module Page.FlightTrack.FlightTrackUpload exposing (..)
 import Api.TaskProgress exposing (ProgressPoint, TaskProgress, taskProgressDecoder)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPending)
-import Common.JsonCodecs exposing (filesDecoder)
+import Common.JsonCodecsExtra exposing (filesDecoder)
 import Components.Player as Player
 import Element exposing (Element, html, row, spacing, text)
 import Element.Input as Input

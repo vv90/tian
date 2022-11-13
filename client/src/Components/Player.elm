@@ -1,9 +1,9 @@
 module Components.Player exposing (..)
 
 import Api.TaskProgress exposing (ProgressPoint, TaskProgress)
-import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
+import Common.GeoUtils exposing (degreesLatitude, degreesLongitude, metersDistance)
 import Components.PlaybackSpeed exposing (PlaybackSpeed(..), increaseSpeed, lowerSpeed, playbackCoefficient)
-import Element exposing (Element, column, padding, row, spacing, text)
+import Element exposing (Element, column, none, padding, row, spacing, text)
 import Element.Input as Input
 import List.Extra as ListX
 import Maybe.Extra as MaybeX
@@ -174,6 +174,7 @@ view model =
                     "Paused"
             , text <| (String.fromInt >> (++) "X") <| playbackCoefficient model.speed
             , text <| formatTime model.currentTime
+            , text <| Maybe.withDefault "" <| Maybe.map (.time >> String.fromInt) model.currentPoint
             ]
 
         -- , row
@@ -197,4 +198,11 @@ view model =
         , row
             [ spacing 10 ]
             [ lowerSpeedButton, playbackButton, increaseSpeedButton ]
+        , row
+            [ spacing 10 ]
+            [ MaybeX.unwrap
+                none
+                (\p -> text <| (Tuple.first p ++ " " ++ (Tuple.second >> metersDistance >> round >> (\m -> toFloat m / 1000) >> String.fromFloat) p ++ "km"))
+                (Maybe.andThen (\p -> p.target) model.currentPoint)
+            ]
         ]

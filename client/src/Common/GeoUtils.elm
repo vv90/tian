@@ -11,6 +11,7 @@ module Common.GeoUtils exposing
     , earthRadius
     , linePerpendicularToBearing
     , metersDistance
+    , metersElevation
     , normalizedBearing
     )
 

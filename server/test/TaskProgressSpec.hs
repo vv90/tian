@@ -3,14 +3,14 @@ module TaskProgressSpec where
 import Relude
 import Test.Hspec ( context, it, shouldBe, Spec )
 import qualified FlightTask
-import qualified TaskProgress
+import qualified TaskProgress (TaskProgress(points))
 import FlightTask
 import NavPoint 
 import FlightTrack
 import Geo
 import Geo.Utils (perpendicular)
 import TaskProgressUtils ( progressInit, startLineCrossed, progressAdvance, progress )
-import ProgressPoint ( target )
+import ProgressPoint ( ProgressPoint(target, altitude) )
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import qualified Data.Geo.Jord.GreatCircle as GreatCircle
 import qualified Data.Geo.Jord.Length as Length
@@ -226,21 +226,24 @@ spec = do
             let input = 
                     "HFDTEDATE:050521,01\n\
                     \HFCIDCOMPETITIONID:VB\n\
-                    \B0721565201562N03940404EA0008700160000024\n\
-                    \B0722025201562N03940404EA0008700160000054\n\
-                    \B0722045201562N03940403EA0008700160100106\n\
-                    \B0722085201562N03940404EV0008700000500164\n\
-                    \B0722125201562N03940404EV0008700000500118\n\
-                    \B0722165201562N03940404EA0008700160066060\n\
-                    \B0722205201562N03940404EA0008700160000046\n\
-                    \B0722245201562N03940404EA0008700160000048"
-            let result = parse flightInfoParser "" input
-            let flightTrack = left show result >>= buildFlightTrack 
-            let taskProgress = progress (Entity 0 flightTask) <$> flightTrack
+                    \B0721565201562N03940404EA0008700161000024\n\
+                    \B0722025201562N03940404EA0008700162000054\n\
+                    \B0722045201562N03940403EA0008700163100106\n\
+                    \B0722085201562N03940404EV0008700164500164\n\
+                    \B0722125201562N03940404EV0008700165500118\n\
+                    \B0722165201562N03940404EA0008700166066060\n\
+                    \B0722205201562N03940404EA0008700167000046\n\
+                    \B0722245201562N03940404EA0008700168000048"
+                result = parse flightInfoParser "" input
+                flightTrack = left show result >>= buildFlightTrack 
+                taskProgress = progress (Entity 0 flightTask) <$> flightTrack
+
+                elevationPoints :: Either String [Double]
+                elevationPoints = fmap (metersElevation . altitude) . TaskProgress.points <$> taskProgress
 
             length <$> result `shouldBe` Right 10
             compId <$> flightTrack `shouldBe` Right "VB"
             length . points <$> flightTrack `shouldBe` Right 8
             length . TaskProgress.points <$> taskProgress `shouldBe` Right 8
-
             
+            elevationPoints `shouldBe` Right [161, 162, 163, 164, 165, 166, 167, 168] 

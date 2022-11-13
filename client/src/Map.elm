@@ -92,18 +92,18 @@ type Msg
     | TileLoaded TileKey (Maybe Texture)
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, Maybe GeoPoint )
 update msg model =
     case msg of
         None ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
         -- Clicked ->
         --   ( { model | selectedPoint = model.mousePosition |> Tuple.mapBoth toFloat toFloat |> viewCoordsToGeoPoint model.mapView |> Just}
         --   , Cmd.none
         --   )
         Clicked ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
         Resized w h ->
             let
@@ -112,21 +112,25 @@ update msg model =
             in
             ( model |> setMapView { mapView | width = w, height = h }
             , Cmd.none
+            , Nothing
             )
 
         MouseMoved xy ->
             ( { model | mousePosition = xy }
             , Cmd.none
+            , Nothing
             )
 
         ZoomedIn ->
             ( setMapView (changeZoom 2 model.mapView) model
             , Cmd.none
+            , Nothing
             )
 
         ZoomedOut ->
             ( setMapView (changeZoom 0.5 model.mapView) model
             , Cmd.none
+            , Nothing
             )
 
         ZoomChanged e ->
@@ -160,10 +164,11 @@ update msg model =
             in
             ( setMapView newMapView model
             , Cmd.none
+            , Nothing
             )
 
         DragStart xy ->
-            ( { model | dragState = MovingFrom xy }, Cmd.none )
+            ( { model | dragState = MovingFrom xy }, Cmd.none, Nothing )
 
         DragMove isDown ( x, y ) ->
             let
@@ -197,16 +202,31 @@ update msg model =
               }
                 |> setMapView newMapView
             , Cmd.none
+            , Nothing
             )
 
-        DragStop _ ->
-            ( { model | dragState = Static }, Cmd.none )
+        DragStop coords ->
+            let
+                clickedPoint =
+                    case model.dragState of
+                        MovingFrom oldCoords ->
+                            if oldCoords == coords then
+                                Just <| MapUtils.viewCoordsToGeoPoint model.mapView coords
+
+                            else
+                                Nothing
+
+                        Static ->
+                            Nothing
+            in
+            ( { model | dragState = Static }, Cmd.none, clickedPoint )
 
         TileLoaded tileKey t ->
             ( { model
                 | tiles = Dict.update tileKey (\_ -> Just t) model.tiles
               }
             , Cmd.none
+            , Nothing
             )
 
 

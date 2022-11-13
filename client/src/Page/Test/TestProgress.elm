@@ -1,0 +1,134 @@
+module Page.Test.TestProgress exposing (..)
+
+import Api.Geo exposing (latitudeEncoder, longitudeEncoder)
+import Api.TaskProgress exposing (ProgressPoint, TaskProgress, taskProgressDecoder)
+import Common.ApiExtra exposing (geoPointDecoder, geoPointEncoder)
+import Common.ApiResult exposing (ApiResult)
+import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
+import Common.GeoUtils exposing (GeoPoint, degreesLatitude, degreesLongitude)
+import Common.JsonCodecsExtra exposing (tupleDecoder, tupleEncoder)
+import Element exposing (Element, column, spacing, text)
+import Element.Input as Input
+import Http
+import Json.Decode as D
+import Json.Encode as E
+import List.Nonempty as NE exposing (Nonempty)
+import MapUtils exposing (LineStyle(..), MapItem(..))
+import Maybe.Extra as MaybeX
+
+
+type alias Model =
+    { progress : Deferred (ApiResult TaskProgress)
+    , startLine : Deferred (ApiResult ( GeoPoint, GeoPoint ))
+    }
+
+
+type Msg
+    = UpdateProgress Int (Nonempty GeoPoint) (AsyncOperationStatus (ApiResult TaskProgress))
+    | GotStartLine (ApiResult ( GeoPoint, GeoPoint ))
+    | Reset
+
+
+init : Model
+init =
+    { progress = NotStarted
+    , startLine = NotStarted
+    }
+
+
+toMapItems : Model -> List MapItem
+toMapItems model =
+    let
+        progressPointItem : ProgressPoint -> Maybe MapItem
+        progressPointItem p =
+            Maybe.map
+                (Tuple.first >> Marker ( p.lat, p.lon ))
+                p.target
+
+        taskProgressItems =
+            deferredToMaybe model.progress
+                |> Maybe.andThen Result.toMaybe
+                |> Maybe.andThen (.points >> List.map progressPointItem >> MaybeX.combine)
+                |> Maybe.withDefault []
+
+        startLineItems =
+            deferredToMaybe model.startLine
+                |> Maybe.andThen Result.toMaybe
+                |> Maybe.map (\( p1, p2 ) -> [ Line TaskLine [ p1, p2 ] ])
+                |> Maybe.withDefault []
+    in
+    taskProgressItems ++ startLineItems
+
+
+updateProgressCmd : Int -> Nonempty GeoPoint -> Cmd Msg
+updateProgressCmd taskId points =
+    Http.request
+        { method = "POST"
+        , url = "http://0.0.0.0:8081/test/taskProgress/" ++ String.fromInt taskId
+        , headers = []
+        , body = Http.jsonBody <| E.list geoPointEncoder (NE.toList points)
+        , expect = Http.expectJson (UpdateProgress taskId points << Finished) taskProgressDecoder
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+getTaskStartLine : Int -> Cmd Msg
+getTaskStartLine taskId =
+    Http.request
+        { method = "GET"
+        , url = "http://0.0.0.0:8081/test/startLine/" ++ String.fromInt taskId
+        , headers = []
+        , body = Http.emptyBody
+        , expect = Http.expectJson GotStartLine (tupleDecoder ( geoPointDecoder, geoPointDecoder ))
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        UpdateProgress taskId pts status ->
+            case status of
+                Started ->
+                    ( { model | progress = setPending model.progress }, updateProgressCmd taskId pts )
+
+                Finished res ->
+                    ( { model | progress = Resolved res }, getTaskStartLine taskId )
+
+        Reset ->
+            ( init, Cmd.none )
+
+        GotStartLine res ->
+            ( { model | startLine = Resolved res }, Cmd.none )
+
+
+view : Model -> Element Msg
+view model =
+    let
+        viewPoint : ProgressPoint -> Element Msg
+        viewPoint p =
+            text <|
+                (degreesLatitude >> String.fromFloat) p.lat
+                    ++ " "
+                    ++ (degreesLongitude >> String.fromFloat) p.lon
+                    ++ " "
+                    ++ Maybe.withDefault " - " (Maybe.map Tuple.first p.target)
+
+        points =
+            deferredToMaybe model.progress
+                |> Maybe.andThen Result.toMaybe
+                |> Maybe.map (.points >> List.map viewPoint)
+                |> Maybe.withDefault []
+
+        resetBtn =
+            Input.button
+                []
+                { onPress = Just Reset
+                , label = text "Reset"
+                }
+    in
+    column
+        [ spacing 10 ]
+        (points ++ [ resetBtn ])

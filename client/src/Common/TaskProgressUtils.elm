@@ -1,6 +1,7 @@
 module Common.TaskProgressUtils exposing (..)
 
 import Api.Geo exposing (Latitude(..))
+import Api.NavPoint exposing (NavPoint)
 import Api.TaskProgress exposing (ProgressPoint)
 import MapUtils exposing (LineStyle(..), MapItem(..), PointStyle(..))
 
@@ -41,3 +42,8 @@ progressPointsToMapItems progressPoints =
     in
     buildMapItemsStep [] Nothing progressPoints
         |> List.reverse
+
+
+targetToMapItem : ProgressPoint -> NavPoint -> MapItem
+targetToMapItem pp np =
+    Line TaskLine [ ( pp.lat, pp.lon ), ( np.lat, np.lon ) ]

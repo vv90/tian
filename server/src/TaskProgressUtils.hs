@@ -65,6 +65,46 @@ targetNavPoint finish tps =
         (fst finish)
         (fst <$> viaNonEmpty head tps)
 
+taskStartLine :: FlightTask -> ((Latitude, Longitude), (Latitude, Longitude))
+taskStartLine ft =
+    let
+        (startNp, StartLine startRadius) = FlightTask.start ft
+        targetNp = targetNavPoint (FlightTask.finish ft) (FlightTask.turnpoints ft)
+
+        targetPosition =
+            s84position targetNp
+
+        startPosition =
+            s84position startNp
+        
+        startBearing =
+            GreatCircle.initialBearing
+                startPosition
+                targetPosition
+
+        startLine sb =
+            perpendicular startPosition sb (Length.metres startRadius)
+
+        arc = startBearing >>= startLine
+    
+        toCoords pos = 
+            ( LatitudeDegrees $ Geodetic.decimalLatitude pos
+            , LongitudeDegrees $ Geodetic.decimalLongitude pos
+            ) 
+        res = 
+            (\p -> 
+                ( (toCoords . GreatCircle.minorArcStart) p
+                , (toCoords . GreatCircle.minorArcEnd) p
+                ) 
+            ) <$> arc 
+
+        fallback = 
+            ( ( LatitudeDegrees 0, LongitudeDegrees 0)
+            , ( LatitudeDegrees 0, LongitudeDegrees 0)
+            )
+    in 
+        fromMaybe fallback res
+
 startLineCrossed :: GeoPosition a => FlightTask -> a -> TrackPoint -> Maybe ProgressPoint--(Latitude, Longitude)
 startLineCrossed ft lastPos currTp =
     let

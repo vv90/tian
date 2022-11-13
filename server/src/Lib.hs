@@ -49,29 +49,23 @@ import Control.Monad.Error.Class (liftEither)
 import Statement (saveNavPointsStatement)
 import FlightTask (FlightTask)
 import Entity (Entity (..))
-import FlightTrack (FlightInfo, flightInfoParser, buildFlightTrack, FlightTrack, date, compId, points)
-import TaskProgressUtils (progress, progressInit, progressAdvance, progress')
+import FlightTrack (FlightInfo, flightInfoParser, buildFlightTrack, FlightTrack (..), date, compId, points, TrackPoint (..), FixValidity(..))
+import TaskProgressUtils (progress, progressInit, progressAdvance, progress', taskStartLine)
 import ProgressPoint (ProgressPoint)
 import TaskProgress (TaskProgress, TaskProgressDto)
 import qualified TaskProgress
 import Debug.Trace as Debug
 import TaskProgress (toDto)
-
-
-data TurnpointType
-    = Cylinder
-    | Quadrant
-    | Line
-    deriving (Eq, Show, Read)
-
-data FixValidity
-    = Gps3D
-    | Baro2D
-    deriving (Eq, Show, Read)
+import Geo.Utils (perpendicular, s84position)
+import Geo (Longitude, Latitude, Elevation (ElevationMeters))
+import Data.Sequence (mapWithIndex)
+import qualified Data.List.NonEmpty as NE (cons, reverse)
+import Data.Time.Calendar (fromGregorian)
 
 data LibError
     = ConnectionError Connection.ConnectionError
     | QueryError Session.QueryError
+    | FormatError Text
     deriving (Show)
 
 getConn :: ExceptT LibError IO Connection.Connection
@@ -163,6 +157,15 @@ uploadFlightTrack taskId tracks = do
         Right (Just ft) -> do
             pure $ toDto .progress ft <$> tracks
 
+testStartLine :: Int32 -> Handler ((Latitude, Longitude), (Latitude, Longitude))
+testStartLine taskId = do
+    flightTask <- 
+        fmap (\a -> a >>= maybeToRight (FormatError "Task not found")) 
+        $ liftIO $ runExceptT $ getFlightTask taskId
+    case flightTask of
+        Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
+        Right (Entity _ ft) -> pure $ taskStartLine ft
+
 
 flightTasks :: Handler [Entity Int32 FlightTask]
 flightTasks = do
@@ -178,7 +181,45 @@ saveTask flightTask = do
         Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
         Right x -> pure x
 
+testTaskProgress :: Int32 -> NonEmpty (Latitude, Longitude) -> Handler TaskProgressDto
+testTaskProgress taskId (first :| points) =
+    let toTrackPoint t (lat, lon) = 
+            TrackPoint
+                { time = t 
+                , lat = lat 
+                , lon = lon 
+                , fixValidity = Gps3D
+                , altitudeBaro = ElevationMeters 1000 
+                , altitudeGps = ElevationMeters 1000
+                }
+      
+        date = UTCTime (fromGregorian 2020 1 1) 0
+        pts = 
+            fst $
+            foldl' 
+                (\(b, i) a -> (NE.cons (toTrackPoint (i+1) a) b, i+1) ) 
+                (toTrackPoint 1 first :| [], 1) 
+                points 
+        track = 
+            FlightTrack
+                { date = UTCTime (fromGregorian 2020 1 1) 0
+                , compId = "test"
+                , points = NE.reverse pts   
+                }
+        
+        unwrapTaskMaybe = 
+            maybeToRight (FormatError "Task not found")
+    in do
+    
+    flightTask <- 
+        fmap (\a -> a >>= maybeToRight (FormatError "Task not found")) 
+        $ liftIO $ runExceptT $ getFlightTask taskId
 
+    let res = progress <$> flightTask <*> pure track
+
+    case res of
+        Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
+        Right x -> pure $ toDto x
 
 type API =
     "navpoints" :> MultipartForm Mem [NavPoint] :> Post '[JSON] (Int, Int64, Int64)
@@ -186,6 +227,9 @@ type API =
     :<|> "task" :> Get '[JSON] [Entity Int32 FlightTask]
     :<|> "task" :> ReqBody '[JSON] FlightTask :> Post '[JSON] Int64
     :<|> "track" :> Capture "taskId" Int32 :> MultipartForm Mem [FlightTrack] :> Post '[JSON] [TaskProgressDto]
+    :<|> "test" :> "taskProgress" :> Capture "taskId" Int32 :> ReqBody '[JSON] (NonEmpty (Latitude, Longitude)) :> Post '[JSON] TaskProgressDto
+    :<|> "test" :> "startLine" :> Capture "taskId" Int32 :> Get '[JSON] ((Latitude, Longitude), (Latitude, Longitude))
+        
 
 startApp :: IO ()
 startApp = run 8081 app
@@ -215,4 +259,6 @@ server =
     :<|> flightTasks
     :<|> saveTask
     :<|> uploadFlightTrack
+    :<|> testTaskProgress
+    :<|> testStartLine
 

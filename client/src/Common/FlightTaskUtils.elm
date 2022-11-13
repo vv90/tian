@@ -3,6 +3,7 @@ module Common.FlightTaskUtils exposing (..)
 import Api.FlightTask exposing (FlightTask, TaskFinish(..), TaskStart(..), Turnpoint(..))
 import Api.Geo exposing (Distance(..))
 import Api.NavPoint exposing (NavPoint)
+import Common.GeoUtils exposing (bearing, linePerpendicularToBearing)
 import List.Extra as ListX
 import MapUtils exposing (LineStyle(..), MapItem(..))
 
@@ -11,8 +12,16 @@ startToMapItem : NavPoint -> ( NavPoint, TaskStart ) -> MapItem
 startToMapItem nextPoint ( np, start ) =
     case start of
         StartLine r ->
+            let
+                startBearing =
+                    bearing ( np.lat, np.lon ) ( nextPoint.lat, nextPoint.lon )
+
+                ( lp1, lp2 ) =
+                    linePerpendicularToBearing (DistanceMeters r) ( np.lat, np.lon ) startBearing
+            in
             -- makePerpendicularLine r np nextPoint
-            Circle ( np.lat, np.lon ) (DistanceMeters r)
+            -- Circle ( np.lat, np.lon ) (DistanceMeters r)
+            Line TaskLine [ lp1, lp2 ]
 
 
 finishToMapItem : NavPoint -> ( NavPoint, TaskFinish ) -> MapItem

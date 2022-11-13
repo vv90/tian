@@ -34,7 +34,7 @@ packages:
     hackage: elm-syntax-0.3.2.0
 snapshots:
 - completed:
-    size: 619173
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/20.yaml
-    sha256: be747117bed6d462806c883352c3206325b23480825103f5c87884e97e52819a
-  original: lts-19.20
+    size: 619204
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/33.yaml
+    sha256: 6d1532d40621957a25bad5195bfca7938e8a06d923c91bc52aa0f3c41181f2d4
+  original: lts-19.33

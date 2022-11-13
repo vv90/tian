@@ -13,7 +13,8 @@ import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe)
 import Common.Effect as Effect
 import Common.FlightTaskUtils exposing (navPoints, taskToMapItems)
-import Common.TaskProgressUtils exposing (progressPointsToMapItems)
+import Common.GeoUtils exposing (metersElevation)
+import Common.TaskProgressUtils exposing (progressPointsToMapItems, targetToMapItem)
 import Element exposing (Element, layout, text)
 import Element.Font as Font
 import Flags exposing (..)
@@ -21,6 +22,7 @@ import Html exposing (Html, button, div)
 import Html.Attributes exposing (style)
 import Http
 import List.Extra as ListX
+import List.Nonempty as NE exposing (Nonempty(..))
 import Map as Map exposing (..)
 import MapUtils exposing (..)
 import Maybe.Extra as MaybeX
@@ -29,6 +31,7 @@ import Page.FlightTask.FlightTaskList as FlightTaskList
 import Page.FlightTaskPage as FlightTaskPage
 import Page.FlightTrack.FlightTrackUpload as FlightTrackUpload
 import Page.Page as Page
+import Page.Test.TestProgress as TestProgress
 import Result.Extra as ResultX
 
 
@@ -46,6 +49,7 @@ type alias Model =
     { mapModel : Map.Model
     , flightTaskPage : FlightTaskPage.Model
     , flightTrackPage : Maybe FlightTrackUpload.Model
+    , testProgressModel : TestProgress.Model
     , appState : AppState.Model
     }
 
@@ -72,6 +76,7 @@ init flags =
     ( { mapModel = mapModel
       , flightTaskPage = FlightTaskPage.init
       , flightTrackPage = Nothing
+      , testProgressModel = TestProgress.init
       , appState =
             AppState.init
                 |> AppState.withPendingNavPoints
@@ -88,6 +93,7 @@ type Msg
     = MapMsg Map.Msg
     | FlightTaskPageMsg FlightTaskPage.Msg
     | FlightTrackPageMsg FlightTrackUpload.Msg
+    | TestProgressMsg TestProgress.Msg
     | AppStateMsg AppState.Msg
     | NoMsg
 
@@ -97,10 +103,58 @@ update msg model =
     case msg of
         MapMsg m ->
             let
-                ( nextModel, cmd ) =
+                ( nextModel, cmd, point ) =
                     Map.update m model.mapModel
+
+                selectedTaskId =
+                    case model.flightTaskPage.page of
+                        FlightTaskPage.UploadTrack utm ->
+                            Just utm.taskId
+
+                        _ ->
+                            Nothing
+
+                -- for debugging
+                selectedPoints =
+                    case model.testProgressModel.progress of
+                        NotStarted ->
+                            Just []
+
+                        InProgress ->
+                            Nothing
+
+                        Updating _ ->
+                            Nothing
+
+                        Resolved pts ->
+                            Result.toMaybe pts
+                                |> Maybe.map (.points >> List.map (\p -> ( p.lat, p.lon )))
+
+                -- for debugging
+                appendPoint ps p =
+                    MaybeX.unwrap
+                        (NE.fromElement p)
+                        (\xs -> NE.append xs (NE.fromElement p))
+                        (NE.fromList ps)
             in
-            ( { model | mapModel = nextModel }, Cmd.map MapMsg cmd )
+            ( { model | mapModel = nextModel }
+            , Cmd.batch
+                [ Cmd.map MapMsg cmd
+
+                -- for debugging
+                -- , Maybe.map3
+                --     (\p ps tid ->
+                --         Cmd.map TestProgressMsg <|
+                --             TestProgress.updateProgressCmd
+                --                 tid
+                --                 (appendPoint ps p)
+                --     )
+                --     point
+                --     selectedPoints
+                --     selectedTaskId
+                --     |> Maybe.withDefault Cmd.none
+                ]
+            )
 
         FlightTaskPageMsg ftPageMsg ->
             let
@@ -130,6 +184,13 @@ update msg model =
 
                 Nothing ->
                     ( model, Cmd.none )
+
+        TestProgressMsg tpMsg ->
+            let
+                ( nextModel, cmd ) =
+                    TestProgress.update tpMsg model.testProgressModel
+            in
+            ( { model | testProgressModel = nextModel }, Cmd.map TestProgressMsg cmd )
 
         AppStateMsg m ->
             let
@@ -241,14 +302,18 @@ view model =
                                 |> Maybe.map Tuple.first
                                 |> MaybeX.andThen2 findTargetNavPoint task
 
+                        targetMapItem =
+                            Maybe.map2 targetToMapItem point target
+                                |> MaybeX.unwrap [] List.singleton
+
                         pointItems =
                             Maybe.map2
-                                (\cid p -> [ Marker ( p.lat, p.lon ) cid ])
+                                (\cid p -> [ Marker ( p.lat, p.lon ) (cid ++ " " ++ (metersElevation >> String.fromFloat) p.altitude ++ "m") ])
                                 compId
                                 point
                                 |> Maybe.withDefault []
                     in
-                    taskItems ++ pointItems
+                    taskItems ++ pointItems ++ targetMapItem ++ TestProgress.toMapItems model.testProgressModel
 
                 FlightTaskPage.SelectTask ->
                     []
@@ -274,6 +339,10 @@ view model =
                     }
                     model.flightTaskPage
 
+        -- for debugging
+        -- , detachedView TopRight <|
+        --     Element.map TestProgressMsg <|
+        --         TestProgress.view model.testProgressModel
         -- , MaybeX.unwrap
         --     (div [] [])
         --     (\(taskId, ftpModel) ->

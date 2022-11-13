@@ -18,14 +18,17 @@ s84position pos =
 
 perpendicular :: Geodetic.HorizontalPosition S84 -> Angle.Angle -> Length.Length -> Maybe (GreatCircle.MinorArc S84)
 perpendicular point bearing radius = 
+    let 
+        norm x = Angle.normalise x (Angle.decimalDegrees 360) 
+    in
     GreatCircle.minorArc
         ( GreatCircle.destination 
             point
-            (Angle.subtract (Angle.decimalDegrees 90) bearing)
+            (norm $ Angle.subtract bearing (Angle.decimalDegrees 90) )
             radius
         )
         ( GreatCircle.destination 
             point
-            (Angle.add (Angle.decimalDegrees 90) bearing)
+            (norm $ Angle.add bearing (Angle.decimalDegrees 90))
             radius
         )

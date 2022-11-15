@@ -330,6 +330,9 @@ progressAdvance ft prevState tp =
                 tps
         sumFinishedLegsDistance [] =
             Length.zero
+        
+        calcSpeed dist time =
+            (\st -> dist / diffTimeToSeconds (time - st) ) <$> startTime prevState
         -- currentLegDistance lastTp nextTp = 
         --     GreatCircle.minorArc (lastTpPos prevState) (s84position $ target lastPos)
     in
@@ -370,7 +373,7 @@ progressAdvance ft prevState tp =
                         , altitude = altitude p
                         , target = Just $ targetNavPoint (FlightTask.finish ft) restTps
                         , distance = DistanceMeters flDistMeters
-                        , speed = (\t -> flDistMeters / diffTimeToSeconds t) <$> startTime prevState--Just (flDist / diffTimeToHours (startTime prevState))
+                        , speed = calcSpeed flDistMeters (time p) --Just (flDist / diffTimeToHours (startTime prevState))
                         } `cons` progressPoints prevState
                     --cons p (progressPoints prevState)
                 , unfinishedTps = restTps
@@ -412,7 +415,7 @@ progressAdvance ft prevState tp =
                         , altitude = TrackPoint.altitudeGps tp
                         , target = tgt
                         , distance = DistanceMeters currDist
-                        , speed = (\t -> currDist / diffTimeToSeconds t) <$> startTime prevState 
+                        , speed = calcSpeed currDist (TrackPoint.time tp)
                         } `cons` progressPoints prevState
                     -- toProgressPoint tgt tp
                     -- `cons` progressPoints prevState

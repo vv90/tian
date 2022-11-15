@@ -1,6 +1,6 @@
 module FileUpload exposing (..)
 
-import Common.JsonCodecs exposing (filesDecoder)
+import Common.JsonCodecsExtra exposing (filesDecoder)
 import File exposing (File)
 import Html exposing (Html, div, h2, input, text)
 import Html.Attributes exposing (type_)
@@ -22,7 +22,6 @@ init () =
 type Msg
     = GotFiles (List File)
     | Uploaded (Result Http.Error ())
-    | Print String
 
 
 uploadFileCmd : List File -> Cmd Msg
@@ -38,11 +37,6 @@ uploadFileCmd files =
         }
 
 
-showFilesCmd : List File -> Cmd Msg
-showFilesCmd files =
-    List.map (File.toString >> perform Print) files |> Cmd.batch
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -54,10 +48,7 @@ update msg model =
             ( "Success", Cmd.none )
 
         Uploaded (Err e) ->
-            ( "Error: " ++ Debug.toString e, Cmd.none )
-
-        Print s ->
-            Debug.log s ( model, Cmd.none )
+            ( "HttpError", Cmd.none )
 
 
 view : Model -> Html Msg
@@ -73,5 +64,5 @@ view model =
             -- , onChange (\r -> GotFiles r)
             ]
             []
-        , div [] [ text (Debug.toString model) ]
+        , div [] []
         ]

@@ -2,6 +2,7 @@ module Components.Player exposing (..)
 
 import Api.TaskProgress exposing (ProgressPoint, TaskProgress)
 import Common.GeoUtils exposing (degreesLatitude, degreesLongitude, metersDistance)
+import Common.Utils exposing (roundN)
 import Components.PlaybackSpeed exposing (PlaybackSpeed(..), increaseSpeed, lowerSpeed, playbackCoefficient)
 import Element exposing (Element, column, none, padding, row, spacing, text)
 import Element.Input as Input
@@ -161,6 +162,17 @@ view model =
                 { onPress = increaseSpeedMsg
                 , label = text ">"
                 }
+
+        stats =
+            MaybeX.unwrap
+                []
+                (\p ->
+                    [ p.distance |> (\d -> roundN 2 (d / 1000)) |> String.fromFloat |> text
+                    , p.speed |> MaybeX.unwrap none ((\s -> roundN 2 (s * 3.6)) >> String.fromFloat >> text)
+                    , p.target |> MaybeX.unwrap none text
+                    ]
+                )
+                model.currentPoint
     in
     column
         [ spacing 10, padding 10 ]
@@ -200,9 +212,5 @@ view model =
             [ lowerSpeedButton, playbackButton, increaseSpeedButton ]
         , row
             [ spacing 10 ]
-            [ MaybeX.unwrap
-                none
-                text
-                (Maybe.andThen .target model.currentPoint)
-            ]
+            stats
         ]

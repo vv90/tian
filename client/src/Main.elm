@@ -286,6 +286,11 @@ view model =
                         --     (deferredToMaybe >> Maybe.andThen Result.toMaybe) pm.taskProgress
                         --         |> Maybe.map (List.concatMap (.points >> progressPointsToMapItems))
                         --         |> Maybe.withDefault []
+                        taskLegs =
+                            (deferredToMaybe >> Maybe.andThen Result.toMaybe) pm.taskProgress
+                                |> Maybe.map (List.map (.legs >> Line TrackLine))
+                                |> Maybe.withDefault []
+
                         compId =
                             (deferredToMaybe >> Maybe.andThen Result.toMaybe >> Maybe.andThen List.head >> Maybe.map .compId) pm.taskProgress
 
@@ -299,7 +304,6 @@ view model =
                         target =
                             point
                                 |> Maybe.andThen .target
-                                |> Maybe.map Tuple.first
                                 |> MaybeX.andThen2 findTargetNavPoint task
 
                         targetMapItem =
@@ -313,7 +317,7 @@ view model =
                                 point
                                 |> Maybe.withDefault []
                     in
-                    taskItems ++ pointItems ++ targetMapItem ++ TestProgress.toMapItems model.testProgressModel
+                    taskItems ++ taskLegs ++ pointItems ++ targetMapItem ++ TestProgress.toMapItems model.testProgressModel
 
                 FlightTaskPage.SelectTask ->
                     []

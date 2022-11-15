@@ -540,11 +540,13 @@ renderLine mapView style points =
                 TrackLine ->
                     [ SvgAttr.strokeWidth "1"
                     , SvgAttr.stroke "gray"
+                    , SvgAttr.fill "transparent"
                     ]
 
                 TaskLine ->
                     [ SvgAttr.strokeWidth "2"
                     , SvgAttr.stroke "black"
+                    , SvgAttr.fill "transparent"
                     ]
     in
     Svg.polyline

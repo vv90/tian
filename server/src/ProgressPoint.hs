@@ -4,7 +4,7 @@ module ProgressPoint where
 
 import Relude
 import Data.Time (DiffTime)
-import Geo (Latitude, Longitude, Elevation, Distance, GeoPosition (..))
+import Geo (Latitude, Longitude, Elevation, Distance, GeoPosition (..), metersDistance)
 import NavPoint (NavPoint, name)
 
 import qualified Data.Aeson as Aeson
@@ -13,6 +13,7 @@ import Language.Haskell.To.Elm (HasElmEncoder (elmEncoder), HasElmDecoder (elmDe
 import Magic.ElmDeriving
 import qualified Language.Elm.Expression as Expression
 import Relude.Extra (bimapF)
+import TimeUtils (diffTimeToMillis)
 
 -- instance HasElmType DiffTime where
 --     elmType = "Time.Posix"
@@ -24,11 +25,14 @@ import Relude.Extra (bimapF)
 --     elmDecoder = Expression.apps "Json.Decode.map" ["Time.millisToPosix", "Json.Decode.int"]
 
 data ProgressPoint = ProgressPoint
-    { time :: Int
+    { time :: DiffTime
     , lat :: Latitude
     , lon :: Longitude
     , altitude :: Elevation
-    , target :: Maybe (NavPoint, Distance)
+    -- , target :: Maybe (NavPoint, Distance)
+    , target :: Maybe NavPoint
+    , distance :: Distance
+    , speed :: Maybe Double
     }
 
 instance GeoPosition ProgressPoint where
@@ -40,17 +44,23 @@ data ProgressPointDto = ProgressPointDto
     , lat :: Latitude
     , lon :: Longitude
     , altitude :: Elevation
-    , target :: Maybe (Text, Distance)
+    -- , target :: Maybe (Text, Distance)
+    , target :: Maybe Text
+    , distance :: Double
+    , speed :: Maybe Double
     }
     deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
     deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
         via ElmType "Api.TaskProgress.ProgressPoint" ProgressPointDto
 
 toDto :: ProgressPoint -> ProgressPointDto
-toDto (ProgressPoint time' lat' lon' altitude' target') = ProgressPointDto
-    { time = time'
+toDto (ProgressPoint time' lat' lon' altitude' target' distance' speed') = ProgressPointDto
+    { time = diffTimeToMillis time'
     , lat = lat'
     , lon = lon'
     , altitude = altitude'
-    , target = bimapF name id target'
+    , target = name <$> target'
+    -- , target = bimapF name id target'
+    , distance = metersDistance distance'
+    , speed = speed'
     }

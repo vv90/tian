@@ -49,8 +49,8 @@ import Control.Monad.Error.Class (liftEither)
 import Statement (saveNavPointsStatement)
 import FlightTask (FlightTask)
 import Entity (Entity (..))
-import FlightTrack (FlightInfo, flightInfoParser, buildFlightTrack, FlightTrack (..), date, compId, points, TrackPoint (..), FixValidity(..))
-import TaskProgressUtils (progress, progressInit, progressAdvance, progress', taskStartLine)
+import FlightTrack (FlightInfo, flightInfoParser, buildFlightTrack, FlightTrack (..), date, compId, points)
+import TaskProgressUtils (progress, progressInit, progressAdvance, taskStartLine)
 import ProgressPoint (ProgressPoint)
 import TaskProgress (TaskProgress, TaskProgressDto)
 import qualified TaskProgress
@@ -61,6 +61,7 @@ import Geo (Longitude, Latitude, Elevation (ElevationMeters))
 import Data.Sequence (mapWithIndex)
 import qualified Data.List.NonEmpty as NE (cons, reverse)
 import Data.Time.Calendar (fromGregorian)
+import TrackPoint (TrackPoint(..), FixValidity (..))
 
 data LibError
     = ConnectionError Connection.ConnectionError

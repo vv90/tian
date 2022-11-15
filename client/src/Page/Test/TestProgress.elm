@@ -42,7 +42,7 @@ toMapItems model =
         progressPointItem : ProgressPoint -> Maybe MapItem
         progressPointItem p =
             Maybe.map
-                (Tuple.first >> Marker ( p.lat, p.lon ))
+                (Marker ( p.lat, p.lon ))
                 p.target
 
         taskProgressItems =
@@ -114,7 +114,7 @@ view model =
                     ++ " "
                     ++ (degreesLongitude >> String.fromFloat) p.lon
                     ++ " "
-                    ++ Maybe.withDefault " - " (Maybe.map Tuple.first p.target)
+                    ++ Maybe.withDefault " - " p.target
 
         points =
             deferredToMaybe model.progress

@@ -9,7 +9,7 @@ import NavPoint
 import FlightTrack
 import Geo
 import Geo.Utils (perpendicular)
-import TaskProgressUtils ( progressInit, startLineCrossed, progressAdvance, progress )
+import TaskProgressUtils ( progressInit, startLineCrossed, progressAdvance, progress, progressPoints )
 import ProgressPoint ( ProgressPoint(target, altitude) )
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import qualified Data.Geo.Jord.GreatCircle as GreatCircle
@@ -158,8 +158,8 @@ spec = do
                         }
                 pinit = progressInit flightTask trackPoint1
 
-            (fmap (name . fst) . target . head . snd) pinit `shouldBe` Just "Start"
-            (fmap (metersDistance . snd) . target . last . snd) pinit `shouldBe` Just 22.239016
+            (fmap (name . fst) . target . head . progressPoints) pinit `shouldBe` Just "Start"
+            (fmap (metersDistance . snd) . target . last . progressPoints) pinit `shouldBe` Just 22.239016
             0 `shouldBe` 0
 
     context "progressAdvance" $ do
@@ -189,8 +189,8 @@ spec = do
                 result =
                     progressAdvance flightTask pinit trackPoint2
 
-            (fmap (name . fst) . target . head . snd) result `shouldBe` Just "Start"
-            (fmap (metersDistance . snd) . target . head . snd) result `shouldBe` Just 11.119508
+            (fmap (name . fst) . target . head . progressPoints) result `shouldBe` Just "Start"
+            (fmap (metersDistance . snd) . target . head . progressPoints) result `shouldBe` Just 11.119508
 
         it "produces correct track point after start" $ do
             let trackPoint1 =
@@ -218,8 +218,8 @@ spec = do
                 result =
                     progressAdvance flightTask pinit trackPoint2
 
-            (fmap (name . fst) . target . head . snd) result `shouldBe` Just "Finish"
-            (fmap (metersDistance . snd) . target . head . snd) result `shouldBe` Just 1100.831289
+            (fmap (name . fst) . target . head . progressPoints) result `shouldBe` Just "Finish"
+            (fmap (metersDistance . snd) . target . head . progressPoints) result `shouldBe` Just 1100.831289
 
     context "progress" $ do
         it "produces correct progress results" $ do

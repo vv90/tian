@@ -40,6 +40,8 @@ library
       Statement
       TaskProgress
       TaskProgressUtils
+      TimeUtils
+      TrackPoint
   other-modules:
       Paths_server
   hs-source-dirs:

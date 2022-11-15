@@ -21,7 +21,9 @@ type alias ProgressPoint =
     , lat : Api.Geo.Latitude
     , lon : Api.Geo.Longitude
     , altitude : Api.Geo.Elevation
-    , target : Maybe ( String, Api.Geo.Distance )
+    , target : Maybe String
+    , distance : Float
+    , speed : Maybe Float
     }
 
 
@@ -32,18 +34,9 @@ progressPointEncoder a =
         , ( "lat", Api.Geo.latitudeEncoder a.lat )
         , ( "lon", Api.Geo.longitudeEncoder a.lon )
         , ( "altitude", Api.Geo.elevationEncoder a.altitude )
-        , ( "target"
-          , Maybe.Extra.unwrap Json.Encode.null
-                (\b ->
-                    case b of
-                        ( c, d ) ->
-                            Json.Encode.list identity
-                                [ Json.Encode.string c
-                                , Api.Geo.distanceEncoder d
-                                ]
-                )
-                a.target
-          )
+        , ( "target", Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.target )
+        , ( "distance", Json.Encode.float a.distance )
+        , ( "speed", Maybe.Extra.unwrap Json.Encode.null Json.Encode.float a.speed )
         ]
 
 
@@ -54,7 +47,9 @@ progressPointDecoder =
         |> Json.Decode.Pipeline.required "lat" Api.Geo.latitudeDecoder
         |> Json.Decode.Pipeline.required "lon" Api.Geo.longitudeDecoder
         |> Json.Decode.Pipeline.required "altitude" Api.Geo.elevationDecoder
-        |> Json.Decode.Pipeline.required "target" (Json.Decode.nullable (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 Json.Decode.string) (Json.Decode.index 1 Api.Geo.distanceDecoder)))
+        |> Json.Decode.Pipeline.required "target" (Json.Decode.nullable Json.Decode.string)
+        |> Json.Decode.Pipeline.required "distance" Json.Decode.float
+        |> Json.Decode.Pipeline.required "speed" (Json.Decode.nullable Json.Decode.float)
 
 
 type alias TaskProgress =
@@ -62,6 +57,7 @@ type alias TaskProgress =
     , date : Time.Posix
     , compId : String
     , points : List ProgressPoint
+    , legs : List ( Api.Geo.Latitude, Api.Geo.Longitude )
     }
 
 
@@ -72,6 +68,18 @@ taskProgressEncoder a =
         , ( "date", Iso8601.encode a.date )
         , ( "compId", Json.Encode.string a.compId )
         , ( "points", Json.Encode.list progressPointEncoder a.points )
+        , ( "legs"
+          , Json.Encode.list
+                (\b ->
+                    case b of
+                        ( c, d ) ->
+                            Json.Encode.list identity
+                                [ Api.Geo.latitudeEncoder c
+                                , Api.Geo.longitudeEncoder d
+                                ]
+                )
+                a.legs
+          )
         ]
 
 
@@ -82,3 +90,4 @@ taskProgressDecoder =
         |> Json.Decode.Pipeline.required "date" Iso8601.decoder
         |> Json.Decode.Pipeline.required "compId" Json.Decode.string
         |> Json.Decode.Pipeline.required "points" (Json.Decode.list progressPointDecoder)
+        |> Json.Decode.Pipeline.required "legs" (Json.Decode.list (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 Api.Geo.latitudeDecoder) (Json.Decode.index 1 Api.Geo.longitudeDecoder)))

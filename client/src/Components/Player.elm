@@ -202,7 +202,7 @@ view model =
             [ spacing 10 ]
             [ MaybeX.unwrap
                 none
-                (\p -> text <| (Tuple.first p ++ " " ++ (Tuple.second >> metersDistance >> round >> (\m -> toFloat m / 1000) >> String.fromFloat) p ++ "km"))
-                (Maybe.andThen (\p -> p.target) model.currentPoint)
+                text
+                (Maybe.andThen .target model.currentPoint)
             ]
         ]

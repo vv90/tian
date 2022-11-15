@@ -16,24 +16,8 @@ import Text.Parsec
       char,
       oneOf, noneOf, many1, sepEndBy1, eof, try )
 import Geo (Latitude (..), Longitude (..), Elevation (..), GeoPosition(..))
+import TrackPoint ( TrackPoint(TrackPoint), FixValidity(..) )
 
-data FixValidity
-    = Gps3D
-    | Baro2D
-    deriving (Show, Eq)
-
-data TrackPoint = TrackPoint
-    { time :: DiffTime
-    , lat :: Latitude
-    , lon :: Longitude
-    , fixValidity :: FixValidity
-    , altitudeBaro :: Elevation
-    , altitudeGps :: Elevation
-    } deriving (Show, Eq)
-
-instance GeoPosition TrackPoint where
-    latitude = lat
-    longitude = lon
 
 data FlightInfo
     = FlightDate UTCTime

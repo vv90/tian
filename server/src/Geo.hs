@@ -54,3 +54,6 @@ class GeoPosition a where
     latitude :: a -> Latitude
     longitude :: a -> Longitude
 
+instance GeoPosition (HorizontalPosition a) where
+    latitude = LatitudeDegrees . Geodetic.decimalLatitude
+    longitude = LongitudeDegrees . Geodetic.decimalLongitude

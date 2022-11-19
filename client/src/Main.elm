@@ -15,6 +15,7 @@ import Common.Effect as Effect
 import Common.FlightTaskUtils exposing (navPoints, taskToMapItems)
 import Common.GeoUtils exposing (metersElevation)
 import Common.TaskProgressUtils exposing (progressPointsToMapItems, targetToMapItem)
+import Components.Player as Player
 import Element exposing (Element, layout, text)
 import Element.Font as Font
 import Flags exposing (..)
@@ -286,38 +287,25 @@ view model =
                         --     (deferredToMaybe >> Maybe.andThen Result.toMaybe) pm.taskProgress
                         --         |> Maybe.map (List.concatMap (.points >> progressPointsToMapItems))
                         --         |> Maybe.withDefault []
-                        taskLegs =
-                            (deferredToMaybe >> Maybe.andThen Result.toMaybe) pm.taskProgress
-                                |> Maybe.map (List.map (.legs >> Line TrackLine))
-                                |> Maybe.withDefault []
-
-                        compId =
-                            (deferredToMaybe >> Maybe.andThen Result.toMaybe >> Maybe.andThen List.head >> Maybe.map .compId) pm.taskProgress
-
-                        point =
-                            pm.playerModel |> Maybe.andThen .currentPoint
+                        -- taskLegs =
+                        --     (deferredToMaybe >> Maybe.andThen Result.toMaybe) pm.taskProgress
+                        --         |> Maybe.map (List.map (.legs >> Line TrackLine))
+                        --         |> Maybe.withDefault []
+                        points =
+                            pm.playerModel |> Maybe.map Player.currPoints
 
                         findTargetNavPoint : FlightTask -> String -> Maybe NavPoint
                         findTargetNavPoint t name =
                             navPoints t |> ListX.find (\np -> np.name == name)
 
-                        target =
-                            point
-                                |> Maybe.andThen .target
-                                |> MaybeX.andThen2 findTargetNavPoint task
-
-                        targetMapItem =
-                            Maybe.map2 targetToMapItem point target
-                                |> MaybeX.unwrap [] List.singleton
-
                         pointItems =
-                            Maybe.map2
-                                (\cid p -> [ Marker ( p.lat, p.lon ) (cid ++ " " ++ (metersElevation >> String.fromFloat) p.altitude ++ "m") ])
-                                compId
-                                point
+                            Maybe.map
+                                -- (\cid p -> [ Marker ( p.lat, p.lon ) (cid ++ " " ++ (metersElevation >> String.fromFloat) p.altitude ++ "m") ])
+                                (List.map (\( id, alt, pos ) -> Marker pos (id ++ " " ++ String.fromFloat alt ++ "m")))
+                                points
                                 |> Maybe.withDefault []
                     in
-                    taskItems ++ taskLegs ++ pointItems ++ targetMapItem ++ TestProgress.toMapItems model.testProgressModel
+                    taskItems ++ pointItems ++ TestProgress.toMapItems model.testProgressModel
 
                 FlightTaskPage.SelectTask ->
                     []

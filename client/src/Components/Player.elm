@@ -1,50 +1,89 @@
 module Components.Player exposing (..)
 
 import Api.TaskProgress exposing (ProgressPoint, TaskProgress)
-import Common.GeoUtils exposing (degreesLatitude, degreesLongitude, metersDistance)
+import Common.GeoUtils exposing (GeoPoint, degreesLatitude, degreesLongitude, metersDistance, metersElevation)
 import Common.Utils exposing (roundN)
 import Components.PlaybackSpeed exposing (PlaybackSpeed(..), increaseSpeed, lowerSpeed, playbackCoefficient)
 import Element exposing (Element, column, none, padding, row, spacing, text)
 import Element.Input as Input
+import Element.Lazy exposing (lazy)
 import List.Extra as ListX
 import Maybe.Extra as MaybeX
 import Time exposing (Posix, millisToPosix, posixToMillis)
 import TimeUtils exposing (formatTime)
 
 
-type alias Model =
-    { speed : PlaybackSpeed
-    , playing : Bool
-    , startTime : Posix
-    , endTime : Posix
-    , currentTime : Posix
-    , trackPoints : List ProgressPoint
-    , currentPoint : Maybe ProgressPoint
+type alias PlaybackState =
+    { compId : String
+    , past : List ProgressPoint
+    , future : List ProgressPoint
     }
 
 
-init : TaskProgress -> Maybe Model
-init { points } =
-    let
-        firstPoint =
-            List.head points
+updatePlaybackState : Int -> PlaybackState -> PlaybackState
+updatePlaybackState time state =
+    case state.future of
+        [] ->
+            state
 
-        lastPoint =
-            ListX.last points
+        p :: ps ->
+            if time < p.time then
+                state
+
+            else
+                updatePlaybackState
+                    time
+                    { state | past = p :: state.past, future = ps }
+
+
+type alias Model =
+    { speed : PlaybackSpeed
+    , playing : Bool
+    , startTime : Int
+    , currentTime : Int
+    , states : List PlaybackState
+    }
+
+
+init : List TaskProgress -> Maybe Model
+init progressList =
+    let
+        initTime =
+            progressList
+                |> List.filterMap (.points >> List.head >> Maybe.map .time)
+                |> List.minimum
+
+        initState : TaskProgress -> PlaybackState
+        initState p =
+            { compId = p.compId
+            , past = []
+            , future = p.points
+            }
     in
-    Maybe.map2
-        (\first last ->
+    Maybe.map
+        (\t ->
             { speed = X1
             , playing = False
-            , startTime = millisToPosix first.time
-            , endTime = millisToPosix last.time
-            , currentTime = millisToPosix first.time
-            , trackPoints = points
-            , currentPoint = firstPoint
+            , startTime = t
+            , currentTime = t
+            , states =
+                progressList
+                    |> List.map initState
             }
         )
-        firstPoint
-        lastPoint
+        initTime
+
+
+currPoints : Model -> List ( String, Float, GeoPoint )
+currPoints model =
+    let
+        position : ProgressPoint -> GeoPoint
+        position point =
+            ( point.lat, point.lon )
+    in
+    model.states
+        -- |> List.filterMap (\s -> List.head s.past |> Maybe.map (\p -> (s.compId, p.)) )
+        |> List.filterMap (\s -> s.past |> List.head |> Maybe.map (\p -> ( s.compId, metersElevation p.altitude, position p )))
 
 
 paused : Model -> Model
@@ -62,35 +101,16 @@ withSpeed speed model =
     { model | speed = speed }
 
 
-withCurrentPoint : Maybe ProgressPoint -> Model -> Model
-withCurrentPoint currentPoint model =
-    { model | currentPoint = currentPoint }
-
-
 advancePlayback : Int -> Model -> Model
 advancePlayback millis model =
     let
         newTimeMillis =
-            posixToMillis model.currentTime + millis
-
-        -- 100 * playbackCoefficient model.speed
+            model.currentTime + millis
     in
-    case model.trackPoints of
-        [] ->
-            { model | trackPoints = [], currentTime = millisToPosix newTimeMillis }
-
-        p :: ps ->
-            if newTimeMillis >= p.time then
-                advancePlayback
-                    0
-                    { model
-                        | trackPoints = ps
-                        , currentTime = millisToPosix newTimeMillis
-                        , currentPoint = Just p
-                    }
-
-            else
-                { model | currentTime = millisToPosix newTimeMillis }
+    { model
+        | currentTime = newTimeMillis
+        , states = List.map (updatePlaybackState newTimeMillis) model.states
+    }
 
 
 type Msg
@@ -163,16 +183,48 @@ view model =
                 , label = text ">"
                 }
 
-        stats =
-            MaybeX.unwrap
-                []
-                (\p ->
-                    [ p.distance |> (\d -> roundN 2 (d / 1000)) |> String.fromFloat |> text
-                    , p.speed |> MaybeX.unwrap none ((\s -> roundN 2 (s * 3.6)) >> String.fromFloat >> text)
-                    , p.target |> MaybeX.unwrap none text
-                    ]
-                )
-                model.currentPoint
+        -- playbackStateView : PlaybackState -> List (Element Msg)
+        toStats : PlaybackState -> Maybe ( Float, Float, String )
+        toStats state =
+            List.head state.past
+                |> Maybe.andThen
+                    (\p ->
+                        Maybe.map2
+                            (\s t ->
+                                ( roundN 2 (s * 3.6)
+                                , roundN 2 (p.distance / 1000)
+                                , t
+                                )
+                            )
+                            p.speed
+                            p.target
+                    )
+
+        leaderboard states =
+            states
+                |> List.filterMap toStats
+                |> List.sortBy (\( speed, _, _ ) -> speed)
+                |> List.reverse
+                |> List.map
+                    (\( speed, distance, target ) ->
+                        row
+                            [ spacing 10 ]
+                            [ text <| String.fromFloat speed ++ " km/h"
+                            , text <| String.fromFloat distance ++ " km"
+                            , text target
+                            ]
+                    )
+                |> column [ spacing 10 ]
+
+        -- MaybeX.unwrap
+        --     []
+        --     (\p ->
+        --         [ p.distance |> (\d -> roundN 2 (d / 1000)) |> String.fromFloat |> text
+        --         , p.speed |> MaybeX.unwrap none ((\s -> roundN 2 (s * 3.6)) >> String.fromFloat >> text)
+        --         , p.target |> MaybeX.unwrap none text
+        --         ]
+        --     )
+        --     model.currentPoint
     in
     column
         [ spacing 10, padding 10 ]
@@ -185,8 +237,7 @@ view model =
                 else
                     "Paused"
             , text <| (String.fromInt >> (++) "X") <| playbackCoefficient model.speed
-            , text <| formatTime model.currentTime
-            , text <| Maybe.withDefault "" <| Maybe.map (.time >> String.fromInt) model.currentPoint
+            , text <| formatTime <| millisToPosix model.currentTime
             ]
 
         -- , row
@@ -210,7 +261,5 @@ view model =
         , row
             [ spacing 10 ]
             [ lowerSpeedButton, playbackButton, increaseSpeedButton ]
-        , row
-            [ spacing 10 ]
-            stats
+        , lazy leaderboard model.states
         ]

@@ -72,7 +72,6 @@ update msg model =
                 | taskProgress = Resolved result
                 , playerModel =
                     Result.toMaybe result
-                        |> Maybe.andThen List.head
                         |> Maybe.andThen Player.init
               }
             , Cmd.none

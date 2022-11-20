@@ -20,7 +20,7 @@ import Data.Aeson ( defaultOptions, ToJSON, FromJSON )
 import Data.Aeson.TH ( deriveJSON )
 import Network.Wai ( Application, Middleware )
 
-import Network.Wai.Handler.Warp ( run )
+import Network.Wai.Handler.Warp ( run, Port )
 import Servant
 -- import Servant.Multipart
 import Control.Monad.IO.Class
@@ -62,6 +62,8 @@ import Data.Sequence (mapWithIndex)
 import qualified Data.List.NonEmpty as NE (cons, reverse)
 import Data.Time.Calendar (fromGregorian)
 import TrackPoint (TrackPoint(..), FixValidity (..))
+import Servant.API.WebSocketConduit (WebSocketSource)
+import Control.Concurrent (yield)
 
 data LibError
     = ConnectionError Connection.ConnectionError
@@ -156,7 +158,7 @@ uploadFlightTrack taskId tracks = do
         Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
         Right Nothing -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) "Task not found"  }
         Right (Just ft) -> do
-            pure $ toDto .progress ft <$> tracks
+            pure $ toDto . progress ft <$> tracks
 
 testStartLine :: Int32 -> Handler ((Latitude, Longitude), (Latitude, Longitude))
 testStartLine taskId = do
@@ -222,6 +224,7 @@ testTaskProgress taskId (first :| points) =
         Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
         Right x -> pure $ toDto x
 
+
 type API =
     "navpoints" :> MultipartForm Mem [NavPoint] :> Post '[JSON] (Int, Int64, Int64)
     :<|> "navpoints" :> Get '[JSON] (Vector NavPoint)
@@ -230,10 +233,13 @@ type API =
     :<|> "track" :> Capture "taskId" Int32 :> MultipartForm Mem [FlightTrack] :> Post '[JSON] [TaskProgressDto]
     :<|> "test" :> "taskProgress" :> Capture "taskId" Int32 :> ReqBody '[JSON] (NonEmpty (Latitude, Longitude)) :> Post '[JSON] TaskProgressDto
     :<|> "test" :> "startLine" :> Capture "taskId" Int32 :> Get '[JSON] ((Latitude, Longitude), (Latitude, Longitude))
+    -- :<|> "ws" :> WebSocketSource Text
         
 
-startApp :: IO ()
-startApp = run 8081 app
+startApp :: Port -> IO ()
+startApp port = do
+    putStrLn ("Server started on port " <> show port) 
+    run port app
 
 app :: Application
 app = corsMiddleware $ serve api server

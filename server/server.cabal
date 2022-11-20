@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.35.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -51,10 +51,11 @@ library
       DeriveAnyClass
       DerivingStrategies
       DerivingVia
-      DuplicateRecordFields
       LambdaCase
       NoImplicitPrelude
       OverloadedStrings
+      OverloadedRecordDot
+      DuplicateRecordFields
       DeriveGeneric
       NamedFieldPuns
       TupleSections
@@ -62,6 +63,7 @@ library
   ghc-options: -j8 -Wno-implicit-prelude
   build-depends:
       aeson
+    , async
     , base >=4.7 && <5
     , directory
     , elm-syntax
@@ -82,6 +84,8 @@ library
     , relude
     , servant-multipart
     , servant-server
+    , servant-websockets
+    , stm
     , text
     , time
     , unordered-containers
@@ -102,10 +106,11 @@ executable codegen
       DeriveAnyClass
       DerivingStrategies
       DerivingVia
-      DuplicateRecordFields
       LambdaCase
       NoImplicitPrelude
       OverloadedStrings
+      OverloadedRecordDot
+      DuplicateRecordFields
       DeriveGeneric
       NamedFieldPuns
       TupleSections
@@ -113,6 +118,7 @@ executable codegen
   ghc-options: -j8 -Wno-implicit-prelude -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
+    , async
     , base >=4.7 && <5
     , directory
     , elm-syntax
@@ -133,7 +139,9 @@ executable codegen
     , relude
     , servant-multipart
     , servant-server
+    , servant-websockets
     , server
+    , stm
     , text
     , time
     , unordered-containers
@@ -154,10 +162,11 @@ executable server-exe
       DeriveAnyClass
       DerivingStrategies
       DerivingVia
-      DuplicateRecordFields
       LambdaCase
       NoImplicitPrelude
       OverloadedStrings
+      OverloadedRecordDot
+      DuplicateRecordFields
       DeriveGeneric
       NamedFieldPuns
       TupleSections
@@ -165,6 +174,7 @@ executable server-exe
   ghc-options: -j8 -Wno-implicit-prelude -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
+    , async
     , base
     , directory
     , elm-syntax
@@ -185,7 +195,9 @@ executable server-exe
     , relude
     , servant-multipart
     , servant-server
+    , servant-websockets
     , server
+    , stm
     , text
     , time
     , unordered-containers
@@ -211,10 +223,11 @@ test-suite server-test
       DeriveAnyClass
       DerivingStrategies
       DerivingVia
-      DuplicateRecordFields
       LambdaCase
       NoImplicitPrelude
       OverloadedStrings
+      OverloadedRecordDot
+      DuplicateRecordFields
       DeriveGeneric
       NamedFieldPuns
       TupleSections
@@ -222,6 +235,7 @@ test-suite server-test
   ghc-options: -j8 -Wno-implicit-prelude -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
+    , async
     , base
     , directory
     , elm-syntax
@@ -245,7 +259,9 @@ test-suite server-test
     , relude
     , servant-multipart
     , servant-server
+    , servant-websockets
     , server
+    , stm
     , text
     , time
     , unordered-containers

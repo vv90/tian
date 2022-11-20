@@ -409,7 +409,7 @@ progressAdvance ft prevState tp =
             TaskState
                 { progressPoints =
                     ProgressPoint 
-                        { time = TrackPoint.time tp
+                        { time = tp.time
                         , lat = latitude tp
                         , lon = longitude tp
                         , altitude = TrackPoint.altitudeGps tp

@@ -24,11 +24,12 @@ default-extensions:
 - DeriveAnyClass
 - DerivingStrategies
 - DerivingVia
-- DuplicateRecordFields
 - LambdaCase
 - NoImplicitPrelude
 # - NoMonomorphismRestriction # TODO: Разобраться, https://github.com/VladimirLogachev/wolf/issues/405
 - OverloadedStrings
+- OverloadedRecordDot
+- DuplicateRecordFields
 
 #ghc2021 defaults:
 - DeriveGeneric  
@@ -44,15 +45,20 @@ dependencies:
 - base >= 4.7 && < 5
  # an alternative to Prelude
 - relude
+# for json encoding/decoding
 - aeson
+# for serving api
 - servant-server
 - servant-multipart
-# - servant-foreign
-# - servant-multipart
+- servant-websockets
+# for api server configuration
 - wai
 - wai-cors
 - warp
 - http-types
+# for multithreading
+- stm
+- async
 # monad transformer library
 - mtl
 - monad-logger
@@ -72,6 +78,7 @@ dependencies:
 - parsec
 # Geographical Position Calculations
 - jord
+# for elm codegen
 - haskell-to-elm
 - elm-syntax
 - generics-sop

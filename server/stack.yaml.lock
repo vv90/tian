@@ -7,34 +7,34 @@ packages:
 - completed:
     hackage: hspec-wai-json-0.11.0@sha256:a992e6587468119a8092edc7a8af9153c718418c5d945ff3bf7a07916e4dd4a0,1706
     pantry-tree:
-      size: 349
       sha256: b494c2cab92667d33155794b752a84c62737548cf6232a6e7156e5cd7962aa1d
+      size: 349
   original:
     hackage: hspec-wai-json-0.11.0
 - completed:
     hackage: jord-2.0.0.0@sha256:cac9c6c8135ad1335ac2ce185c4114d2c9bcfab225f158b18082134056dfb14f,3579
     pantry-tree:
-      size: 3869
       sha256: b5ab9c31e3dba2e2296156359077e928c79b3163947861220dfbd6334f597c49
+      size: 3869
   original:
     hackage: jord-2.0.0.0
 - completed:
     hackage: haskell-to-elm-0.3.2.0@sha256:02085cf6ac5c1c696c1dc923033b5f01509fcbed67c32cc79139704888821e60,4441
     pantry-tree:
-      size: 650
       sha256: 118740f5a865608a00049a271f2a84af8ae1957f02c013967a2d363b1a80c800
+      size: 650
   original:
     hackage: haskell-to-elm-0.3.2.0
 - completed:
     hackage: elm-syntax-0.3.2.0@sha256:08b3eb8b0573c2667fde3869c333b302c793381b47b40de635075a6eee1264b1,2257
     pantry-tree:
-      size: 788
       sha256: 49cf1e844575293f10590c434cb957f3b754f209d3593a44a1012b58749139a6
+      size: 788
   original:
     hackage: elm-syntax-0.3.2.0
 snapshots:
 - completed:
-    size: 619204
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/33.yaml
-    sha256: 6d1532d40621957a25bad5195bfca7938e8a06d923c91bc52aa0f3c41181f2d4
-  original: lts-19.33
+    sha256: 5cacb39a2c21842535dc0a31e2005d3b1eb18e451a89d58c28381e1efdb9520f
+    size: 647983
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2022/11/12.yaml
+  original: nightly-2022-11-12

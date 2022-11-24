@@ -1,4 +1,4 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 -- import Geo.GeoUtils exposing (..)
 -- import Utils exposing (..)
@@ -16,8 +16,9 @@ import Common.FlightTaskUtils exposing (navPoints, taskToMapItems)
 import Common.GeoUtils exposing (metersElevation)
 import Common.TaskProgressUtils exposing (progressPointsToMapItems, targetToMapItem)
 import Components.Player as Player
-import Element exposing (Element, layout, text)
+import Element exposing (Element, column, layout, padding, spacing, text)
 import Element.Font as Font
+import Element.Input as Input
 import Flags exposing (..)
 import Html exposing (Html, button, div)
 import Html.Attributes exposing (style)
@@ -36,6 +37,16 @@ import Page.Test.TestProgress as TestProgress
 import Result.Extra as ResultX
 
 
+port sendMessage : String -> Cmd msg
+
+
+port messageReceiver : (String -> msg) -> Sub msg
+
+
+
+-- port socketConnected :
+
+
 main : Program Flags Model Msg
 main =
     Browser.element
@@ -52,6 +63,7 @@ type alias Model =
     , flightTrackPage : Maybe FlightTrackUpload.Model
     , testProgressModel : TestProgress.Model
     , appState : AppState.Model
+    , messages : List String
     }
 
 
@@ -82,6 +94,7 @@ init flags =
             AppState.init
                 |> AppState.withPendingNavPoints
                 |> AppState.withPendingFlightTasks
+      , messages = []
       }
     , Cmd.batch
         [ Cmd.map AppStateMsg AppState.getNavPointsCmd
@@ -96,6 +109,8 @@ type Msg
     | FlightTrackPageMsg FlightTrackUpload.Msg
     | TestProgressMsg TestProgress.Msg
     | AppStateMsg AppState.Msg
+    | MessageReceived String
+    | MessageSent String
     | NoMsg
 
 
@@ -200,6 +215,12 @@ update msg model =
             in
             ( { model | appState = nextModel }, Cmd.map AppStateMsg cmd )
 
+        MessageReceived str ->
+            ( { model | messages = str :: model.messages }, Cmd.none )
+
+        MessageSent str ->
+            ( model, sendMessage str )
+
         NoMsg ->
             ( model, Cmd.none )
 
@@ -209,6 +230,7 @@ subscriptions model =
     Sub.batch
         [ Sub.map MapMsg (Map.subscriptions model.mapModel)
         , Sub.map FlightTaskPageMsg (FlightTaskPage.subscriptions model.flightTaskPage)
+        , messageReceiver MessageReceived
         ]
 
 
@@ -330,6 +352,11 @@ view model =
                     , flightTasks = model.appState.flightTasks
                     }
                     model.flightTaskPage
+        , detachedView TopRight <|
+            column [ padding 10, spacing 10 ]
+                (List.map text model.messages
+                    ++ [ Input.button [] { onPress = Just (MessageSent "testmsg"), label = text "Send" } ]
+                )
 
         -- for debugging
         -- , detachedView TopRight <|

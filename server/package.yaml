@@ -51,6 +51,8 @@ dependencies:
 - servant-server
 - servant-multipart
 - servant-websockets
+- conduit
+- conduit-extra
 # for api server configuration
 - wai
 - wai-cors

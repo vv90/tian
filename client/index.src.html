@@ -28,9 +28,9 @@
     <script src="https://unpkg.com/elm-canvas@2.2/elm-canvas.js"></script>
     <script>
       const env = {
-        ENV_FRONTEND_BACKEND_URL: 'http://localhost:8000',
+        ENV_FRONTEND_BACKEND_URL: "http://localhost:8000",
       };
-      Elm.Main.init({
+      const app = Elm.Main.init({
         flags: {
           backendUrl: env.ENV_FRONTEND_BACKEND_URL,
           windowSize: {
@@ -38,8 +38,50 @@
             width: window.innerWidth,
           },
         },
-        node: document.getElementById('elm-node'),
-      })
+        node: document.getElementById("elm-node"),
+      });
+
+      // Create your WebSocket.
+      const socket = new WebSocket("ws://0.0.0.0:8081/ws");
+
+      // When a command goes to the `sendMessage` port, we pass the message
+      // along to the WebSocket.
+      app.ports.sendMessage.subscribe(function (message) {
+        socket.send(message);
+      });
+
+      // When a message comes into our WebSocket, we pass the message along
+      // to the `messageReceiver` port.
+      socket.addEventListener("message", function (event) {
+        if (event.data instanceof Blob) {
+          reader = new FileReader();
+
+          reader.onload = () => {
+            console.log("Result: " + reader.result);
+          };
+
+          reader.readAsText(event.data);
+        } else {
+          console.log("Result: " + event.data);
+        }
+        // console.log("Received message from server:", event.data);
+        // app.ports.messageReceiver.send(event.data);
+      });
+      socket.addEventListener("open", function (event) {
+        console.log("Connected to server: ", event);
+        // socket.send(
+        //   `user test99123 pass -1 vers testsoftware 1.0_05 filter r/33.25/-96.5/50`
+        // );
+        // app.ports.socketConnected.send(event.data);
+      });
+      socket.addEventListener("error", function (event) {
+        console.log("Error: ", event);
+        // app.ports.socketError.send(event.data);
+      });
+      socket.addEventListener("close", function (event) {
+        console.log("Closed: ", event);
+        // app.ports.socketClosed.send(event);
+      });
     </script>
   </body>
 </html>

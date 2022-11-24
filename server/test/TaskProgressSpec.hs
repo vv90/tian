@@ -18,6 +18,7 @@ import Utils (within)
 import Text.Parsec (parse)
 import Control.Arrow (ArrowChoice(..))
 import Entity (Entity(..))
+import TrackPoint (TrackPoint(..), FixValidity (..))
 
 startNavPoint = 
     NavPoint
@@ -158,8 +159,7 @@ spec = do
                         }
                 pinit = progressInit flightTask trackPoint1
 
-            (fmap (name . fst) . target . head . progressPoints) pinit `shouldBe` Just "Start"
-            (fmap (metersDistance . snd) . target . last . progressPoints) pinit `shouldBe` Just 22.239016
+            (fmap name . target . head . progressPoints) pinit `shouldBe` Just "Start"
             0 `shouldBe` 0
 
     context "progressAdvance" $ do
@@ -189,8 +189,7 @@ spec = do
                 result =
                     progressAdvance flightTask pinit trackPoint2
 
-            (fmap (name . fst) . target . head . progressPoints) result `shouldBe` Just "Start"
-            (fmap (metersDistance . snd) . target . head . progressPoints) result `shouldBe` Just 11.119508
+            (fmap name . target . head . progressPoints) result `shouldBe` Just "Start"
 
         it "produces correct track point after start" $ do
             let trackPoint1 =
@@ -218,8 +217,7 @@ spec = do
                 result =
                     progressAdvance flightTask pinit trackPoint2
 
-            (fmap (name . fst) . target . head . progressPoints) result `shouldBe` Just "Finish"
-            (fmap (metersDistance . snd) . target . head . progressPoints) result `shouldBe` Just 1100.831289
+            (fmap name . target . head . progressPoints) result `shouldBe` Just "Finish"
 
     context "progress" $ do
         it "produces correct progress results" $ do

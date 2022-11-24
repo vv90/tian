@@ -63,7 +63,9 @@ import qualified Data.List.NonEmpty as NE (cons, reverse)
 import Data.Time.Calendar (fromGregorian)
 import TrackPoint (TrackPoint(..), FixValidity (..))
 import Servant.API.WebSocketConduit (WebSocketSource)
-import Control.Concurrent (yield)
+import Data.Conduit (ConduitT)
+import Conduit (yield, ResourceT)
+import Control.Concurrent (threadDelay)
 
 data LibError
     = ConnectionError Connection.ConnectionError
@@ -233,7 +235,7 @@ type API =
     :<|> "track" :> Capture "taskId" Int32 :> MultipartForm Mem [FlightTrack] :> Post '[JSON] [TaskProgressDto]
     :<|> "test" :> "taskProgress" :> Capture "taskId" Int32 :> ReqBody '[JSON] (NonEmpty (Latitude, Longitude)) :> Post '[JSON] TaskProgressDto
     :<|> "test" :> "startLine" :> Capture "taskId" Int32 :> Get '[JSON] ((Latitude, Longitude), (Latitude, Longitude))
-    -- :<|> "ws" :> WebSocketSource Text
+    :<|> "ws" :> WebSocketSource Text
         
 
 startApp :: Port -> IO ()
@@ -258,6 +260,11 @@ app = corsMiddleware $ serve api server
 api :: Proxy API
 api = Proxy
 
+ws :: ConduitT () Text (ResourceT IO) () 
+ws = do
+    yield "Hello"
+    liftIO $ threadDelay 100000000
+    yield "World"
 
 server :: Server API
 server =
@@ -268,4 +275,5 @@ server =
     :<|> uploadFlightTrack
     :<|> testTaskProgress
     :<|> testStartLine
+    :<|> ws
 

@@ -57,3 +57,13 @@ class GeoPosition a where
 instance GeoPosition (HorizontalPosition a) where
     latitude = LatitudeDegrees . Geodetic.decimalLatitude
     longitude = LongitudeDegrees . Geodetic.decimalLongitude
+
+roundN :: (RealFrac a, Integral b) => b -> a -> a
+roundN n x = (fromIntegral . round $ x * f) / f
+    where f = 10^n
+
+-- Degrees Decimal Minutes (DDM) to Decimal Degrees (DD)
+ddmTodd :: (RealFrac b, Integral a) => a -> a -> a -> b
+ddmTodd deg min decMin =
+    -- since the maximum precision of the input is 0.001' ~ 0.000017° we round to 6 decimal places
+    roundN 6 $ fromIntegral deg + fromIntegral min / 60 + fromIntegral decMin / 60000

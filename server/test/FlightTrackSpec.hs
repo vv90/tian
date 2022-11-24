@@ -11,6 +11,7 @@ import Text.Printf (printf)
 import Data.Time
 import Control.Arrow (ArrowChoice(..))
 import Entity (Entity(..))
+import TrackPoint (TrackPoint(..), FixValidity (..))
 
 spec :: Spec
 spec = do

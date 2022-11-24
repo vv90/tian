@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Aprs.AprsMessage
       Codegen
       Entity
       FlightTask
@@ -65,6 +66,8 @@ library
       aeson
     , async
     , base >=4.7 && <5
+    , conduit
+    , conduit-extra
     , directory
     , elm-syntax
     , filepath
@@ -120,6 +123,8 @@ executable codegen
       aeson
     , async
     , base >=4.7 && <5
+    , conduit
+    , conduit-extra
     , directory
     , elm-syntax
     , filepath
@@ -176,6 +181,8 @@ executable server-exe
       aeson
     , async
     , base
+    , conduit
+    , conduit-extra
     , directory
     , elm-syntax
     , filepath
@@ -211,6 +218,7 @@ test-suite server-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      AprsMessageSpec
       FlightTrackSpec
       NavPointSpec
       TaskProgressSpec
@@ -237,6 +245,8 @@ test-suite server-test
       aeson
     , async
     , base
+    , conduit
+    , conduit-extra
     , directory
     , elm-syntax
     , filepath

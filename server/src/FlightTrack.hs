@@ -3,7 +3,6 @@ module FlightTrack where
 
 import Data.Time
 import Relude
-import NavPoint (roundN, ddmTodd)
 import Text.Parsec
     ( Parsec,
       string,
@@ -15,7 +14,7 @@ import Text.Parsec
       alphaNum,
       char,
       oneOf, noneOf, many1, sepEndBy1, eof, try )
-import Geo (Latitude (..), Longitude (..), Elevation (..), GeoPosition(..))
+import Geo (Latitude (..), Longitude (..), Elevation (..), GeoPosition(..), ddmTodd)
 import TrackPoint ( TrackPoint(TrackPoint), FixValidity(..) )
 
 

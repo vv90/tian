@@ -8,6 +8,7 @@ import Test.Hspec
 import qualified NavPointSpec
 import qualified FlightTrackSpec
 import qualified TaskProgressSpec
+import qualified AprsMessageSpec
 
 main :: IO ()
 main = hspec $ do
@@ -15,6 +16,7 @@ main = hspec $ do
     describe "NavPoint" NavPointSpec.spec
     describe "FlightTrack" FlightTrackSpec.spec
     describe "TaskProgress" TaskProgressSpec.spec
+    describe "AprsMessage" AprsMessageSpec.spec
 
 -- spec :: Spec 
 -- spec = do

@@ -2,7 +2,7 @@ module TrackPoint where
 
 import Relude
 import Data.Time (DiffTime)
-import Geo (Latitude, Longitude, Elevation, GeoPosition (..))
+import Geo (Latitude, Longitude, Elevation, GeoPosition (..), GeoPosition3d (..), RecordedGeoPosition (..))
 
 data FixValidity
     = Gps3D
@@ -19,5 +19,11 @@ data TrackPoint = TrackPoint
     } deriving (Show, Eq)
 
 instance GeoPosition TrackPoint where
-    latitude = lat
-    longitude = lon
+    latitude x = x.lat
+    longitude x = x.lon
+
+instance GeoPosition3d TrackPoint where
+    altitude x = x.altitudeGps
+
+instance RecordedGeoPosition TrackPoint where
+    time x = x.time

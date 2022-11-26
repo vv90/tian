@@ -2,6 +2,7 @@ module FlightTrackSpec where
 
 import Relude
 import FlightTrack 
+import FlightTrack.Parser
 import NavPoint 
 import Geo
 import Test.Hspec

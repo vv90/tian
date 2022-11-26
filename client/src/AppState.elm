@@ -23,6 +23,19 @@ init =
     }
 
 
+resolvedTasks : Model -> List (Entity Int FlightTask)
+resolvedTasks model =
+    case model.flightTasks of
+        Resolved (Ok tasks) ->
+            tasks
+
+        Updating (Ok tasks) ->
+            tasks
+
+        _ ->
+            []
+
+
 withPendingNavPoints : Model -> Model
 withPendingNavPoints model =
     { model | navPoints = setPending model.navPoints }

@@ -4,9 +4,10 @@ port module Main exposing (..)
 -- import Utils exposing (..)
 
 import Api.Entity exposing (Entity)
-import Api.FlightTask exposing (FlightTask)
+import Api.FlightTask exposing (FlightTask, flightTaskDecoder)
 import Api.Geo exposing (Latitude(..), Longitude(..))
 import Api.NavPoint exposing (NavPoint, navPointDecoder)
+import Api.TaskProgress exposing (progressPointDecoder)
 import AppState
 import Browser
 import Common.ApiResult exposing (ApiResult)
@@ -23,28 +24,52 @@ import Flags exposing (..)
 import Html exposing (Html, button, div)
 import Html.Attributes exposing (style)
 import Http
+import Json.Decode as D
 import List.Extra as ListX
 import List.Nonempty as NE exposing (Nonempty(..))
 import Map as Map exposing (..)
 import MapUtils exposing (..)
 import Maybe.Extra as MaybeX
+import Page.Demo as Demo
 import Page.FlightTask.FlightTaskForm as FlightTaskForm
 import Page.FlightTask.FlightTaskList as FlightTaskList
 import Page.FlightTaskPage as FlightTaskPage
 import Page.FlightTrack.FlightTrackUpload as FlightTrackUpload
-import Page.Page as Page
 import Page.Test.TestProgress as TestProgress
 import Result.Extra as ResultX
 
 
-port sendMessage : String -> Cmd msg
+
+-- port startDemo : () -> Cmd msg
 
 
 port messageReceiver : (String -> msg) -> Sub msg
 
 
+getDemoTaskCmd : Cmd Msg
+getDemoTaskCmd =
+    Http.request
+        { method = "GET"
+        , headers = []
+        , url = "http://0.0.0.0:8081/demoTask"
+        , body = Http.emptyBody
+        , expect = Http.expectJson GotDemoFlightTask flightTaskDecoder
+        , timeout = Nothing
+        , tracker = Nothing
+        }
 
--- port socketConnected :
+
+startDemoCmd : Cmd Msg
+startDemoCmd =
+    Http.request
+        { method = "GET"
+        , headers = []
+        , url = "http://0.0.0.0:8081/startDemo"
+        , body = Http.emptyBody
+        , expect = Http.expectWhatever (\_ -> NoMsg)
+        , timeout = Nothing
+        , tracker = Nothing
+        }
 
 
 main : Program Flags Model Msg
@@ -60,10 +85,12 @@ main =
 type alias Model =
     { mapModel : Map.Model
     , flightTaskPage : FlightTaskPage.Model
-    , flightTrackPage : Maybe FlightTrackUpload.Model
+
+    -- , flightTrackPage : Maybe FlightTrackUpload.Model
     , testProgressModel : TestProgress.Model
     , appState : AppState.Model
     , messages : List String
+    , demoTask : Maybe FlightTask
     }
 
 
@@ -88,13 +115,15 @@ init flags =
     in
     ( { mapModel = mapModel
       , flightTaskPage = FlightTaskPage.init
-      , flightTrackPage = Nothing
+
+      --   , flightTrackPage = Nothing
       , testProgressModel = TestProgress.init
       , appState =
             AppState.init
                 |> AppState.withPendingNavPoints
                 |> AppState.withPendingFlightTasks
       , messages = []
+      , demoTask = Nothing
       }
     , Cmd.batch
         [ Cmd.map AppStateMsg AppState.getNavPointsCmd
@@ -106,11 +135,12 @@ init flags =
 type Msg
     = MapMsg Map.Msg
     | FlightTaskPageMsg FlightTaskPage.Msg
-    | FlightTrackPageMsg FlightTrackUpload.Msg
+      -- | FlightTrackPageMsg FlightTrackUpload.Msg
     | TestProgressMsg TestProgress.Msg
     | AppStateMsg AppState.Msg
     | MessageReceived String
-    | MessageSent String
+    | GotDemoFlightTask (ApiResult FlightTask)
+    | DemoInitiated
     | NoMsg
 
 
@@ -123,7 +153,7 @@ update msg model =
                     Map.update m model.mapModel
 
                 selectedTaskId =
-                    case model.flightTaskPage.page of
+                    case model.flightTaskPage of
                         FlightTaskPage.UploadTrack utm ->
                             Just utm.taskId
 
@@ -187,20 +217,18 @@ update msg model =
             ( model |> withFlightTaskPage nextModel, Cmd.map FlightTaskPageMsg cmd )
                 |> Effect.applyAll applyEffect effs
 
-        FlightTrackPageMsg ftPageMsg ->
-            case model.flightTrackPage of
-                Just ftpModel ->
-                    let
-                        ( nextModel, cmd ) =
-                            FlightTrackUpload.update ftPageMsg ftpModel
-                    in
-                    ( { model | flightTrackPage = Just nextModel }
-                    , Cmd.map FlightTrackPageMsg cmd
-                    )
-
-                Nothing ->
-                    ( model, Cmd.none )
-
+        -- FlightTrackPageMsg ftPageMsg ->
+        --     case model.flightTrackPage of
+        --         Just ftpModel ->
+        --             let
+        --                 ( nextModel, cmd ) =
+        --                     FlightTrackUpload.update ftPageMsg ftpModel
+        --             in
+        --             ( { model | flightTrackPage = Just nextModel }
+        --             , Cmd.map FlightTrackPageMsg cmd
+        --             )
+        --         Nothing ->
+        --             ( model, Cmd.none )
         TestProgressMsg tpMsg ->
             let
                 ( nextModel, cmd ) =
@@ -216,10 +244,34 @@ update msg model =
             ( { model | appState = nextModel }, Cmd.map AppStateMsg cmd )
 
         MessageReceived str ->
-            ( { model | messages = str :: model.messages }, Cmd.none )
+            let
+                upd =
+                    D.decodeString progressPointDecoder str
+            in
+            case ( upd, model.flightTaskPage ) of
+                ( Ok p, FlightTaskPage.DemoPage pm ) ->
+                    ( { model
+                        | flightTaskPage =
+                            FlightTaskPage.DemoPage (pm |> Demo.withPointUpdate "VB" p)
+                      }
+                    , Cmd.none
+                    )
 
-        MessageSent str ->
-            ( model, sendMessage str )
+                _ ->
+                    ( model, Cmd.none )
+
+        -- ( { model | messages = str :: model.messages }, Cmd.none )
+        GotDemoFlightTask (Ok task) ->
+            ( { model | flightTaskPage = FlightTaskPage.DemoPage (Demo.init task) }
+              -- , startDemo ()
+            , startDemoCmd
+            )
+
+        GotDemoFlightTask (Err _) ->
+            ( model, Cmd.none )
+
+        DemoInitiated ->
+            ( model, getDemoTaskCmd )
 
         NoMsg ->
             ( model, Cmd.none )
@@ -289,59 +341,19 @@ view : Model -> Html Msg
 view model =
     let
         mapItems =
-            case model.flightTaskPage.page of
+            case model.flightTaskPage of
                 FlightTaskPage.AddTask pm ->
-                    FlightTaskForm.result pm
-                        |> Result.map taskToMapItems
-                        |> Result.withDefault []
+                    FlightTaskForm.mapItems pm
 
                 FlightTaskPage.UploadTrack pm ->
-                    let
-                        task =
-                            Maybe.map .entity <| selectedFlightTask model.appState.flightTasks pm.taskId
-
-                        taskItems =
-                            task
-                                |> Maybe.map taskToMapItems
-                                |> Maybe.withDefault []
-
-                        -- trackItems =
-                        --     (deferredToMaybe >> Maybe.andThen Result.toMaybe) pm.taskProgress
-                        --         |> Maybe.map (List.concatMap (.points >> progressPointsToMapItems))
-                        --         |> Maybe.withDefault []
-                        -- taskLegs =
-                        --     (deferredToMaybe >> Maybe.andThen Result.toMaybe) pm.taskProgress
-                        --         |> Maybe.map (List.map (.legs >> Line TrackLine))
-                        --         |> Maybe.withDefault []
-                        points =
-                            pm.playerModel |> Maybe.map Player.currPoints
-
-                        findTargetNavPoint : FlightTask -> String -> Maybe NavPoint
-                        findTargetNavPoint t name =
-                            navPoints t |> ListX.find (\np -> np.name == name)
-
-                        pointItems =
-                            Maybe.map
-                                -- (\cid p -> [ Marker ( p.lat, p.lon ) (cid ++ " " ++ (metersElevation >> String.fromFloat) p.altitude ++ "m") ])
-                                (List.map (\( id, alt, pos ) -> Marker pos (id ++ " " ++ String.fromFloat alt ++ "m")))
-                                points
-                                |> Maybe.withDefault []
-                    in
-                    taskItems ++ pointItems ++ TestProgress.toMapItems model.testProgressModel
+                    -- taskItems ++ pointItems ++ TestProgress.toMapItems model.testProgressModel
+                    FlightTrackUpload.mapItems (AppState.resolvedTasks model.appState) pm
 
                 FlightTaskPage.SelectTask ->
                     []
 
-        selectedTask =
-            case model.flightTaskPage.page of
-                -- FlightTaskPage.SelectTask pm ->
-                --     pm.selectedFlightTaskId
-                --         |> Maybe.andThen (selectedFlightTask model.appState.flightTasks)
-                FlightTaskPage.UploadTrack pm ->
-                    selectedFlightTask model.appState.flightTasks pm.taskId
-
-                _ ->
-                    Nothing
+                FlightTaskPage.DemoPage pm ->
+                    Demo.mapItems pm
     in
     div []
         [ Map.view mapItems model.mapModel |> Html.map MapMsg
@@ -355,7 +367,7 @@ view model =
         , detachedView TopRight <|
             column [ padding 10, spacing 10 ]
                 (List.map text model.messages
-                    ++ [ Input.button [] { onPress = Just (MessageSent "testmsg"), label = text "Send" } ]
+                    ++ [ Input.button [] { onPress = Just DemoInitiated, label = text "Start Demo" } ]
                 )
 
         -- for debugging

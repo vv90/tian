@@ -5,8 +5,26 @@ import Lib ( startApp )
 import Control.Concurrent.Async (concurrently, concurrently_)
 import Control.Concurrent (threadDelay)
 import Data.Conduit.Network (runTCPClient, clientSettings, appSource, appSink, AppData)
-import Conduit (($$), stdoutC, runConduit, takeC, mapC)
+import Conduit (stdoutC, runConduit, takeC, mapC, runConduitRes, sourceFile, decodeUtf8C, omapCE, sinkNull, ResourceT, printC)
 import Data.Conduit ((.|), ConduitT, yield)
+import System.Directory (getCurrentDirectory, getDirectoryContents)
+import Data.Conduit.Combinators (linesUnbounded)
+import Text.Parsec (parse, Parsec)
+import FlightTrack.Parser (flightInfoParser, buildFlightTrack, FlightInfo)
+import FlightTrack (FlightTrack(FlightTrack))
+import TrackPoint (TrackPoint(TrackPoint))
+import Control.Arrow (left)
+import System.FilePath (isExtensionOf)
+import Data.Time (DiffTime)
+import qualified TrackPoint (time)
+import qualified FlightTrack (points)
+import TimeUtils (diffTimeToSeconds, diffTimeToMillis)
+import Relude.Extra (Foldable1(minimum1))
+import Text.Parsec.Error (ParseError)
+import AppConduits (demo, testC, runDemo)
+import Control.Concurrent.STM (newTBQueue, newTBQueueIO, TBQueue, TMVar, newEmptyTMVar, TQueue, newTQueue)
+import ProgressPoint (ProgressPointDto(ProgressPointDto))
+import FlightTask (FlightTask)
 
 startCounter :: Int -> IO ()
 startCounter n = do
@@ -32,5 +50,55 @@ appC ptSink responseSink = do
 runAprs = runTCPClient (clientSettings 14580 "aprs.glidernet.org") $ \server -> do
     runConduit $ appSource server .| appC stdoutC (appSink server)
 
+-- buildFlightTrackC = do
+
+
+-- trackFileC =
+--     runConduitRes 
+--     $ sourceFile "demo/155_VB.igc"
+--     .| decodeUtf8C
+--     .| linesUnbounded
+--     -- .| 
+
+-- parseFile :: Parsec Text () a -> String -> ByteString -> Either String a
+-- parseFile parser name = 
+--     left show . parse parser name . decodeUtf8
+ 
+-- loadFlightTrack :: FilePath -> IO (Either String FlightTrack)
+-- loadFlightTrack path = 
+--     (parseFile flightInfoParser path >=> buildFlightTrack) <$> readFileBS path
+
+-- startTimeMillis :: [FlightTrack] -> Maybe Int
+-- startTimeMillis fts =
+--     viaNonEmpty minimum1 
+--     $ diffTimeToMillis . TrackPoint.time . head . FlightTrack.points 
+--     <$> fts 
+
+-- runDemo = 
+--     runConduitRes $ 
+--         demoAprsSource "./demo/155_VB.igc"
+--         .| printC
+
+-- runTest = 
+--     runConduitRes $ 
+--         testC
+--         .| printC
+
+demoThread queue var = do
+    threadDelay 100000
+    x <- atomically $ tryReadTMVar var
+    case x of
+        Just ft ->
+            runDemo queue ft
+        Nothing ->
+            demoThread queue var
+
 main :: IO ()
-main = concurrently_ (startApp 8081) runAprs
+main = do 
+    queue <- atomically (newTQueue :: STM (TQueue ProgressPointDto))
+    var <- atomically (newEmptyTMVar :: STM (TMVar FlightTask))
+    -- track <- loadFile
+    -- flightTracks <- getDirectoryContents "./demo" >>= mapM loadFlightTrack . filter (isExtensionOf ".igc")
+    concurrently_ (startApp 8081 queue var) (demoThread queue var)
+    -- startApp 8081 (demo queue) (runDemo queue)
+    

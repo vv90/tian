@@ -4,7 +4,7 @@ module ProgressPoint where
 
 import Relude
 import Data.Time (DiffTime)
-import Geo (Latitude, Longitude, Elevation, Distance, GeoPosition (..), metersDistance)
+import Geo (Latitude, Longitude, Elevation, Distance, GeoPosition (..), metersDistance, GeoPosition3d (..), RecordedGeoPosition (..))
 import NavPoint (NavPoint, name)
 
 import qualified Data.Aeson as Aeson
@@ -33,11 +33,18 @@ data ProgressPoint = ProgressPoint
     , target :: Maybe NavPoint
     , distance :: Distance
     , speed :: Maybe Double
-    }
+    } 
+    deriving (Show, Eq)
 
 instance GeoPosition ProgressPoint where
-    latitude = lat
-    longitude = lon
+    latitude x = x.lat
+    longitude x = x.lon
+
+instance GeoPosition3d ProgressPoint where
+    altitude x = x.altitude
+
+instance RecordedGeoPosition ProgressPoint where
+    time x = x.time
 
 data ProgressPointDto = ProgressPointDto
     { time :: Int

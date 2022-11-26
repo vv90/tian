@@ -9,30 +9,34 @@ import Common.Effect as Effect exposing (EffectSet, effect)
 import Element exposing (Element, text)
 import Http
 import Json.Decode as D
+import Page.Demo as Demo
 import Page.FlightTask.FlightTaskForm as FlightTaskForm
 import Page.FlightTask.FlightTaskList as FlightTaskList
 import Page.FlightTrack.FlightTrackUpload as FlightTrackUpload
 
 
-type Page
+type Model
     = SelectTask
     | AddTask FlightTaskForm.Model
     | UploadTrack FlightTrackUpload.Model
+    | DemoPage Demo.Model
 
 
-type alias Model =
-    { page : Page
 
-    -- , flightTasks : Deferred (ApiResult (List (Entity Int FlightTask)))
-    }
+-- type alias Model =
+--     { page : Page
+--     -- , flightTasks : Deferred (ApiResult (List (Entity Int FlightTask)))
+--     }
+-- init : Model
+-- init =
+--     { page = SelectTask
+--     -- , flightTasks = Deferred.init
+--     }
 
 
 init : Model
 init =
-    { page = SelectTask
-
-    -- , flightTasks = Deferred.init
-    }
+    SelectTask
 
 
 
@@ -55,14 +59,9 @@ init =
 --             model
 --         ( Err _, Resolved _ ) ->
 --             model
-
-
-withPage : Page -> Model -> Model
-withPage page model =
-    { model | page = page }
-
-
-
+-- withPage : Page -> Model -> Model
+-- withPage page model =
+--     { model | page = page }
 -- getFlightTasksCmd : Cmd Msg
 -- getFlightTasksCmd =
 --     Http.get
@@ -82,6 +81,7 @@ type Msg
       -- | FlightTaskListMsg FlightTaskList.Msg
     | FlightTaskFormMsg FlightTaskForm.Msg
     | FlightTrackUploadMsg FlightTrackUpload.Msg
+    | DemoPageMsg Demo.Msg
 
 
 
@@ -94,9 +94,9 @@ type Effect
 
 update : Msg -> Model -> ( Model, Cmd Msg, EffectSet Effect )
 update msg model =
-    case ( msg, model.page ) of
+    case ( msg, model ) of
         ( FlightTaskSelected taskId, _ ) ->
-            ( model |> withPage (UploadTrack (FlightTrackUpload.init taskId))
+            ( UploadTrack (FlightTrackUpload.init taskId)
             , Cmd.none
             , Effect.none
             )
@@ -106,13 +106,13 @@ update msg model =
         --     , Cmd.none
         --     )
         ( NavBackTriggered, _ ) ->
-            ( model |> withPage SelectTask
+            ( SelectTask
             , Cmd.none
             , Effect.none
             )
 
         ( CreateTaskTriggered, _ ) ->
-            ( model |> withPage (AddTask FlightTaskForm.init)
+            ( AddTask FlightTaskForm.init
             , Cmd.none
             , Effect.none
             )
@@ -138,7 +138,7 @@ update msg model =
                         FlightTaskForm.FlightTaskSaved taskId ->
                             ( identity, Cmd.none, (FlightTaskSaved >> effect) taskId )
             in
-            ( model |> withPage (AddTask newFlightTaskForm)
+            ( AddTask newFlightTaskForm
             , Cmd.map FlightTaskFormMsg flightTaskFormCmd
             , Effect.none
             )
@@ -152,7 +152,7 @@ update msg model =
                 ( newFlightTrackUpload, flightTrackUploadCmd ) =
                     FlightTrackUpload.update flightTrackUploadMsg flightTrackUpload
             in
-            ( model |> withPage (UploadTrack newFlightTrackUpload)
+            ( UploadTrack newFlightTrackUpload
             , Cmd.map FlightTrackUploadMsg flightTrackUploadCmd
             , Effect.none
             )
@@ -160,10 +160,23 @@ update msg model =
         ( FlightTrackUploadMsg _, _ ) ->
             ( model, Cmd.none, Effect.none )
 
+        ( DemoPageMsg demoMsg, DemoPage demo ) ->
+            let
+                ( newDemo, demoCmd ) =
+                    Demo.update demoMsg demo
+            in
+            ( DemoPage newDemo
+            , Cmd.map DemoPageMsg demoCmd
+            , Effect.none
+            )
+
+        ( DemoPageMsg _, _ ) ->
+            ( model, Cmd.none, Effect.none )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.page of
+    case model of
         UploadTrack pm ->
             Sub.map FlightTrackUploadMsg (FlightTrackUpload.subscriptions pm)
 
@@ -179,7 +192,7 @@ type alias Props =
 
 view : Props -> Model -> Element Msg
 view { navPoints, flightTasks } model =
-    case model.page of
+    case model of
         SelectTask ->
             FlightTaskList.view
                 { flightTasks = flightTasks
@@ -201,3 +214,6 @@ view { navPoints, flightTasks } model =
                 { onBackTriggered = NavBackTriggered
                 }
                 flightTrackUpload
+
+        DemoPage demo ->
+            Element.map DemoPageMsg <| Demo.view demo

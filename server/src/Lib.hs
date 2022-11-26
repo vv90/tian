@@ -49,9 +49,10 @@ import Control.Monad.Error.Class (liftEither)
 import Statement (saveNavPointsStatement)
 import FlightTask (FlightTask)
 import Entity (Entity (..))
-import FlightTrack (FlightInfo, flightInfoParser, buildFlightTrack, FlightTrack (..), date, compId, points)
+import FlightTrack.Parser (FlightInfo, flightInfoParser, buildFlightTrack, flightInfoParserAll)
+import FlightTrack (FlightTrack (..))
 import TaskProgressUtils (progress, progressInit, progressAdvance, taskStartLine)
-import ProgressPoint (ProgressPoint)
+import ProgressPoint (ProgressPoint, ProgressPointDto)
 import TaskProgress (TaskProgress, TaskProgressDto)
 import qualified TaskProgress
 import Debug.Trace as Debug
@@ -64,8 +65,11 @@ import Data.Time.Calendar (fromGregorian)
 import TrackPoint (TrackPoint(..), FixValidity (..))
 import Servant.API.WebSocketConduit (WebSocketSource)
 import Data.Conduit (ConduitT)
-import Conduit (yield, ResourceT)
+import Conduit (yield, ResourceT, mapC, (.|))
 import Control.Concurrent (threadDelay)
+import AppConduits (ProgressDemo, sourceQueue)
+import Control.Concurrent.STM (TBQueue, TQueue, readTQueue)
+import Data.Conduit.TQueue (sourceTBQueue, sourceTQueue)
 
 data LibError
     = ConnectionError Connection.ConnectionError
@@ -140,7 +144,7 @@ instance FromMultipart Mem [NavPoint] where
 instance FromMultipart Mem [FlightTrack] where
     fromMultipart form =
         let
-            flightTrackResults = (parseFile flightInfoParser >=> buildFlightTrack) <$> files form
+            flightTrackResults = (parseFile flightInfoParserAll >=> buildFlightTrack) <$> files form
         in
             sequence flightTrackResults
 
@@ -235,16 +239,17 @@ type API =
     :<|> "track" :> Capture "taskId" Int32 :> MultipartForm Mem [FlightTrack] :> Post '[JSON] [TaskProgressDto]
     :<|> "test" :> "taskProgress" :> Capture "taskId" Int32 :> ReqBody '[JSON] (NonEmpty (Latitude, Longitude)) :> Post '[JSON] TaskProgressDto
     :<|> "test" :> "startLine" :> Capture "taskId" Int32 :> Get '[JSON] ((Latitude, Longitude), (Latitude, Longitude))
-    :<|> "ws" :> WebSocketSource Text
-        
+    :<|> "demo" :> WebSocketSource ProgressPointDto
+    :<|> "demoTask" :> Get '[JSON] FlightTask
+    :<|> "startDemo" :> Get '[JSON] ()
 
-startApp :: Port -> IO ()
-startApp port = do
+startApp :: Port -> TQueue ProgressPointDto -> TMVar FlightTask -> IO ()
+startApp port queue var = do
     putStrLn ("Server started on port " <> show port) 
-    run port app
+    run port (app queue var)
 
-app :: Application
-app = corsMiddleware $ serve api server
+app :: TQueue ProgressPointDto -> TMVar FlightTask -> Application
+app queue var = corsMiddleware $ serve api (server queue var)
     where
         corsMiddleware :: Middleware
         corsMiddleware = cors (const $ Just corsPolicy)
@@ -260,14 +265,47 @@ app = corsMiddleware $ serve api server
 api :: Proxy API
 api = Proxy
 
-ws :: ConduitT () Text (ResourceT IO) () 
-ws = do
-    yield "Hello"
-    liftIO $ threadDelay 100000000
-    yield "World"
+progressDemo :: TQueue ProgressPointDto -> ConduitT () ProgressPointDto (ResourceT IO) () 
+progressDemo queue = do
+    ft <- 
+        fmap (\a -> a >>= maybeToRight (FormatError "Task not found")) 
+        $ liftIO $ runExceptT $ getFlightTask 6
 
-server :: Server API
-server =
+    case ft of
+        Right (Entity _ x) -> 
+           
+            -- liftIO (runDemo x) >> demo x
+            -- sourceTQueue queue
+            sourceQueue queue
+                
+        Left e -> 
+            liftIO $ print e
+    
+demoTask :: Handler FlightTask
+demoTask = do
+    flightTask <- 
+        fmap (\a -> a >>= maybeToRight (FormatError "Task not found")) 
+        $ liftIO $ runExceptT $ getFlightTask 6
+
+    case flightTask of
+        Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
+        Right (Entity _ ft) -> pure ft 
+
+startDemo :: TMVar FlightTask -> Handler ()
+startDemo var = do
+    print "attempting to start demo"
+    flightTask <- 
+        fmap (\a -> a >>= maybeToRight (FormatError "Task not found")) 
+        $ liftIO $ runExceptT $ getFlightTask 6
+
+    case flightTask of
+        Left e -> 
+            throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
+        Right (Entity _ ft) -> 
+            liftIO $ atomically $ putTMVar var ft
+
+server :: TQueue ProgressPointDto -> TMVar FlightTask -> Server API
+server queue var =
     uploadNavPoints
     :<|> navPoints
     :<|> flightTasks
@@ -275,5 +313,7 @@ server =
     :<|> uploadFlightTrack
     :<|> testTaskProgress
     :<|> testStartLine
-    :<|> ws
+    :<|> progressDemo queue 
+    :<|> demoTask
+    :<|> startDemo var
 

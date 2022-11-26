@@ -7,6 +7,7 @@ import qualified TaskProgress (TaskProgress(points))
 import FlightTask
 import NavPoint 
 import FlightTrack
+import FlightTrack.Parser
 import Geo
 import Geo.Utils (perpendicular)
 import TaskProgressUtils ( progressInit, startLineCrossed, progressAdvance, progress, progressPoints )

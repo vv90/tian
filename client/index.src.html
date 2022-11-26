@@ -41,14 +41,15 @@
         node: document.getElementById("elm-node"),
       });
 
+      // app.ports.startDemo.subscribe(function () {
       // Create your WebSocket.
-      const socket = new WebSocket("ws://0.0.0.0:8081/ws");
+      const socket = new WebSocket("ws://0.0.0.0:8081/demo");
 
       // When a command goes to the `sendMessage` port, we pass the message
       // along to the WebSocket.
-      app.ports.sendMessage.subscribe(function (message) {
-        socket.send(message);
-      });
+      // app.ports.sendMessage.subscribe(function (message) {
+      //   socket.send(message);
+      // });
 
       // When a message comes into our WebSocket, we pass the message along
       // to the `messageReceiver` port.
@@ -65,7 +66,7 @@
           console.log("Result: " + event.data);
         }
         // console.log("Received message from server:", event.data);
-        // app.ports.messageReceiver.send(event.data);
+        app.ports.messageReceiver.send(event.data);
       });
       socket.addEventListener("open", function (event) {
         console.log("Connected to server: ", event);
@@ -82,6 +83,7 @@
         console.log("Closed: ", event);
         // app.ports.socketClosed.send(event);
       });
+      // });
     </script>
   </body>
 </html>

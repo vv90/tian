@@ -3,7 +3,7 @@ module Aprs.AprsMessage where
 
 import Relude
 import Data.Time (DiffTime, secondsToDiffTime)
-import Geo (Latitude (LatitudeDegrees), Longitude (LongitudeDegrees), Elevation (ElevationMeters), GeoPosition (..), ddmTodd)
+import Geo (Latitude (LatitudeDegrees), Longitude (LongitudeDegrees), Elevation (ElevationMeters), GeoPosition (..), ddmTodd, GeoPosition3d (..), RecordedGeoPosition (..))
 import Text.Parsec (Parsec)
 import Text.Parsec.Char (digit)
 import Text.Parsec.Combinator (count)
@@ -20,10 +20,17 @@ data AprsMessage = AprsMessage
     , lon :: Longitude
     , alt :: Elevation
     }
+    deriving (Show, Eq)
 
 instance GeoPosition AprsMessage where
-    latitude = lat
-    longitude = lon
+    latitude x = x.lat
+    longitude x = x.lon
+
+instance GeoPosition3d AprsMessage where
+    altitude x = x.alt
+
+instance RecordedGeoPosition AprsMessage where
+    time x = x.time
 
 aprsLatParser :: Parsec Text () Latitude
 aprsLatParser = do

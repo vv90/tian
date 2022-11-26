@@ -1,8 +1,11 @@
 module Page.FlightTrack.FlightTrackUpload exposing (..)
 
+import Api.Entity exposing (Entity)
+import Api.FlightTask exposing (FlightTask)
 import Api.TaskProgress exposing (ProgressPoint, TaskProgress, taskProgressDecoder)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPending)
+import Common.FlightTaskUtils exposing (taskToMapItems)
 import Common.JsonCodecsExtra exposing (filesDecoder)
 import Components.Player as Player
 import Element exposing (Element, html, row, spacing, text)
@@ -13,6 +16,8 @@ import Html.Attributes exposing (multiple, type_)
 import Html.Events exposing (on)
 import Http
 import Json.Decode as D
+import List.Extra as ListX
+import MapUtils exposing (MapItem(..))
 
 
 type alias Model =
@@ -20,6 +25,29 @@ type alias Model =
     , taskProgress : Deferred (ApiResult (List TaskProgress))
     , playerModel : Maybe Player.Model
     }
+
+
+mapItems : List (Entity Int FlightTask) -> Model -> List MapItem
+mapItems tasks model =
+    let
+        task =
+            ListX.find (\{ key } -> key == model.taskId) tasks
+
+        taskItems =
+            task
+                |> Maybe.map (.entity >> taskToMapItems)
+                |> Maybe.withDefault []
+
+        points =
+            model.playerModel |> Maybe.map Player.currPoints
+
+        pointItems =
+            Maybe.map
+                (List.map (\( id, alt, pos ) -> Marker pos (id ++ " " ++ String.fromFloat alt ++ "m")))
+                points
+                |> Maybe.withDefault []
+    in
+    taskItems ++ pointItems
 
 
 withPendingTaskProgress : Model -> Model

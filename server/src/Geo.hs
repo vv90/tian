@@ -9,6 +9,7 @@ import Magic.ElmDeriving
 import Data.Geo.Jord.Geodetic (HorizontalPosition)
 import qualified Data.Geo.Jord.Geodetic as Geodetic
 import Data.Geo.Jord.Models (S84)
+import Data.Time (DiffTime)
 
 newtype Latitude = LatitudeDegrees Double
     deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
@@ -53,6 +54,12 @@ metersDistance (DistanceMeters x) = x
 class GeoPosition a where 
     latitude :: a -> Latitude
     longitude :: a -> Longitude
+
+class GeoPosition a => GeoPosition3d a where
+    altitude :: a -> Elevation
+
+class GeoPosition a => RecordedGeoPosition a where 
+    time :: a -> DiffTime
 
 instance GeoPosition (HorizontalPosition a) where
     latitude = LatitudeDegrees . Geodetic.decimalLatitude

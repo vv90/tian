@@ -53,6 +53,7 @@ dependencies:
 - servant-websockets
 - conduit
 - conduit-extra
+- stm-conduit
 # for api server configuration
 - wai
 - wai-cors

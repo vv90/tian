@@ -13,5 +13,18 @@ services:
     volumes:
       # Scripts only run it data directory is empty (from official docs)
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
-    
-     
+  
+  server: 
+    build:
+      context: server
+      dockerfile: Dockerfile
+    ports: 
+      - "8000:8000"
+
+  client:
+    build: 
+      context: client
+      dockerfile: Dockerfile
+
+    ports:
+      - "8080:80"

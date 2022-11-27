@@ -1,14 +1,16 @@
-FROM fpco/stack-build:lts-20.1
+FROM haskell:9.2.5-buster
 
 RUN apt-get update
-RUN apt-get -y install libpq-dev
+RUN apt-get -y install libpq-dev haskell-stack
+RUN stack upgrade 
+# RUN curl -sSL https://get.haskellstack.org/stable/linux-x86_64.tar.gz | sh
 
-WORKDIR /app
+WORKDIR /server
 
-COPY src /app/src
-COPY server /app/server
+COPY src /server/src
+COPY app /server/app
 
-COPY Setup.hs stack.yaml stack.yaml.lock server.cabal /app/
+COPY Setup.hs stack.yaml stack.yaml.lock server.cabal /server/
 
 RUN stack build --copy-bins
 

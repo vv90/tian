@@ -1,0 +1,14 @@
+FROM fpco/stack-build:lts-20.1
+
+RUN apt-get update
+RUN apt-get -y install libpq-dev
+
+WORKDIR /app
+
+COPY src /app/src
+COPY server /app/server
+
+COPY Setup.hs stack.yaml stack.yaml.lock server.cabal /app/
+
+RUN stack build --copy-bins
+

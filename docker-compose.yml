@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   db: 
-    image: postgres
+    image: postgres:13.4-alpine3.14
     restart: always
     ports: 
       - "5433:5432"
@@ -10,3 +10,8 @@ services:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: cvdb
+    volumes:
+      # Scripts only run it data directory is empty (from official docs)
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    
+     

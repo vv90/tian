@@ -21,6 +21,7 @@ import System.Directory (getDirectoryContents)
 import System.FilePath (takeFileName)
 import Control.Concurrent.STM (TBQueue, TQueue, writeTQueue, readTQueue)
 import Data.Conduit.TQueue (sinkTBQueue, sourceTBQueue, sinkTQueue)
+import Control.Concurrent.Async (mapConcurrently, mapConcurrently_)
 
 startTimeMillis :: FlightTrack -> Int
 startTimeMillis =
@@ -181,49 +182,29 @@ progressC ft = do
 
         Nothing -> pass
 
+toConduit :: TQueue (String, ProgressPointDto) -> FlightTask -> (TrackFileInfo, FilePath) -> ConduitT () Void (ResourceT IO) ()
+toConduit queue ft (info, path) =
+   demoAprsSourceC ("./demo/" <> path)
+        .| playbackC 5
+        .| progressC ft
+        .| mapC ((info.callsign,) . toDto)
+        -- .| sinkQueue
+        .| sinkTQueue queue 
 
-type ProgressDemo = FlightTask -> ConduitT () ProgressPointDto (ResourceT IO) () 
+runDemo :: TQueue (String, ProgressPointDto) -> FlightTask -> IO ()
+runDemo queue ft = do
+    trackFiles <- findTrackFiles "./demo"
 
-demo :: TBQueue ProgressPointDto -> ProgressDemo
-demo queue ft =
-    -- let 
-    --     c = 
-    --         demoAprsSourceC "./demo/155_VB.igc"
+    print "running demo"
+    -- runConduitRes $
+    --     demoAprsSourceC "./demo/155_VB.igc"
     --         .| playbackC 5
     --         .| progressC ft
     --         .| mapC toDto
-    --         .| sinkTBQueue queue
-    -- in 
-        sourceTBQueue queue
-
-sourceQueue :: TQueue ProgressPointDto -> ConduitT () ProgressPointDto (ResourceT IO) ()
-sourceQueue queue = 
-    do
-        x <- liftIO $ atomically $ readTQueue queue
-        yield x
-        sourceQueue queue
-
-runDemo :: TQueue ProgressPointDto -> FlightTask -> IO ()
-runDemo queue ft =
-    let 
-        sinkQueue :: ConduitT ProgressPointDto Void (ResourceT IO) ()
-        sinkQueue = do
-            item <- await
-            case item of 
-                Just x -> do
-                    liftIO $ atomically $ writeTQueue queue x
-                    sinkQueue
-                Nothing ->
-                    pass            
-    in do
-        print "running demo"
-        runConduitRes $
-            demoAprsSourceC "./demo/155_VB.igc"
-                .| playbackC 5
-                .| printC
-                .| progressC ft
-                .| mapC toDto
-                .| sinkQueue
+    --         -- .| sinkQueue
+    --         .| sinkTQueue queue
+    mapConcurrently_ runConduitRes $
+        fmap (toConduit queue ft) trackFiles
 
 -- sinkTracks :: TBQueue ProgressPointDto -> ConduitT ProgressPointDto a (ResourceT IO) ()
 -- sinkTracks queue = 
@@ -234,8 +215,8 @@ runDemo queue ft =
 --     sourceTBQueue queue
 
 data TrackFileInfo = TrackFileInfo
-    { callsign :: String 
-    , dateStr :: String
+    { dateStr :: String
+    , callsign :: String 
     } 
     deriving (Show)
 

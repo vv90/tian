@@ -67,7 +67,6 @@ import Servant.API.WebSocketConduit (WebSocketSource)
 import Data.Conduit (ConduitT)
 import Conduit (yield, ResourceT, mapC, (.|))
 import Control.Concurrent (threadDelay)
-import AppConduits (ProgressDemo, sourceQueue)
 import Control.Concurrent.STM (TBQueue, TQueue, readTQueue)
 import Data.Conduit.TQueue (sourceTBQueue, sourceTQueue)
 
@@ -239,16 +238,16 @@ type API =
     :<|> "track" :> Capture "taskId" Int32 :> MultipartForm Mem [FlightTrack] :> Post '[JSON] [TaskProgressDto]
     :<|> "test" :> "taskProgress" :> Capture "taskId" Int32 :> ReqBody '[JSON] (NonEmpty (Latitude, Longitude)) :> Post '[JSON] TaskProgressDto
     :<|> "test" :> "startLine" :> Capture "taskId" Int32 :> Get '[JSON] ((Latitude, Longitude), (Latitude, Longitude))
-    :<|> "demo" :> WebSocketSource ProgressPointDto
+    :<|> "demo" :> WebSocketSource (String, ProgressPointDto)
     :<|> "demoTask" :> Get '[JSON] FlightTask
     :<|> "startDemo" :> Get '[JSON] ()
 
-startApp :: Port -> TQueue ProgressPointDto -> TMVar FlightTask -> IO ()
+startApp :: Port -> TQueue (String, ProgressPointDto) -> TMVar FlightTask -> IO ()
 startApp port queue var = do
     putStrLn ("Server started on port " <> show port) 
     run port (app queue var)
 
-app :: TQueue ProgressPointDto -> TMVar FlightTask -> Application
+app :: TQueue (String, ProgressPointDto) -> TMVar FlightTask -> Application
 app queue var = corsMiddleware $ serve api (server queue var)
     where
         corsMiddleware :: Middleware
@@ -265,7 +264,7 @@ app queue var = corsMiddleware $ serve api (server queue var)
 api :: Proxy API
 api = Proxy
 
-progressDemo :: TQueue ProgressPointDto -> ConduitT () ProgressPointDto (ResourceT IO) () 
+progressDemo :: TQueue (String, ProgressPointDto) -> ConduitT () (String, ProgressPointDto) (ResourceT IO) () 
 progressDemo queue = do
     ft <- 
         fmap (\a -> a >>= maybeToRight (FormatError "Task not found")) 
@@ -275,8 +274,8 @@ progressDemo queue = do
         Right (Entity _ x) -> 
            
             -- liftIO (runDemo x) >> demo x
-            -- sourceTQueue queue
-            sourceQueue queue
+            sourceTQueue queue
+            -- sourceQueue queue
                 
         Left e -> 
             liftIO $ print e
@@ -304,7 +303,7 @@ startDemo var = do
         Right (Entity _ ft) -> 
             liftIO $ atomically $ putTMVar var ft
 
-server :: TQueue ProgressPointDto -> TMVar FlightTask -> Server API
+server :: TQueue (String, ProgressPointDto) -> TMVar FlightTask -> Server API
 server queue var =
     uploadNavPoints
     :<|> navPoints

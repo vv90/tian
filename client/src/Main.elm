@@ -15,6 +15,7 @@ import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferre
 import Common.Effect as Effect
 import Common.FlightTaskUtils exposing (navPoints, taskToMapItems)
 import Common.GeoUtils exposing (metersElevation)
+import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Common.TaskProgressUtils exposing (progressPointsToMapItems, targetToMapItem)
 import Components.Player as Player
 import Element exposing (Element, column, layout, padding, spacing, text)
@@ -246,13 +247,13 @@ update msg model =
         MessageReceived str ->
             let
                 upd =
-                    D.decodeString progressPointDecoder str
+                    D.decodeString (tupleDecoder ( D.string, progressPointDecoder )) str
             in
             case ( upd, model.flightTaskPage ) of
-                ( Ok p, FlightTaskPage.DemoPage pm ) ->
+                ( Ok ( id, p ), FlightTaskPage.DemoPage pm ) ->
                     ( { model
                         | flightTaskPage =
-                            FlightTaskPage.DemoPage (pm |> Demo.withPointUpdate "VB" p)
+                            FlightTaskPage.DemoPage (pm |> Demo.withPointUpdate id p)
                       }
                     , Cmd.none
                     )

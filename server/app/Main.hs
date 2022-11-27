@@ -21,7 +21,7 @@ import qualified FlightTrack (points)
 import TimeUtils (diffTimeToSeconds, diffTimeToMillis)
 import Relude.Extra (Foldable1(minimum1))
 import Text.Parsec.Error (ParseError)
-import AppConduits (demo, testC, runDemo)
+import AppConduits (testC, runDemo)
 import Control.Concurrent.STM (newTBQueue, newTBQueueIO, TBQueue, TMVar, newEmptyTMVar, TQueue, newTQueue)
 import ProgressPoint (ProgressPointDto(ProgressPointDto))
 import FlightTask (FlightTask)
@@ -84,6 +84,7 @@ runAprs = runTCPClient (clientSettings 14580 "aprs.glidernet.org") $ \server -> 
 --         testC
 --         .| printC
 
+demoThread :: TQueue (String, ProgressPointDto) -> TMVar FlightTask -> IO ()
 demoThread queue var = do
     threadDelay 100000
     x <- atomically $ tryReadTMVar var
@@ -95,7 +96,7 @@ demoThread queue var = do
 
 main :: IO ()
 main = do 
-    queue <- atomically (newTQueue :: STM (TQueue ProgressPointDto))
+    queue <- atomically (newTQueue :: STM (TQueue (String, ProgressPointDto)))
     var <- atomically (newEmptyTMVar :: STM (TMVar FlightTask))
     -- track <- loadFile
     -- flightTracks <- getDirectoryContents "./demo" >>= mapM loadFlightTrack . filter (isExtensionOf ".igc")

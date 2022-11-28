@@ -1,9 +1,23 @@
 FROM haskell:9.2.5-buster
 
 RUN apt-get update
-RUN apt-get -y install libpq-dev haskell-stack
+RUN apt-get -y install libpq-dev haskell-stack pigz
 RUN stack upgrade 
 # RUN curl -sSL https://get.haskellstack.org/stable/linux-x86_64.tar.gz | sh
+
+# Copy and extract stack dependencies cache (if we have it)
+WORKDIR /root
+COPY cache/* /root/
+
+# If we had the cache (if it was copied successfully), then delete pre-existing stack cache and extract ours
+RUN if \
+  test -f stack_dependencies_cache.tar.gz.tar; \
+  then rm -rf .stack && \
+  tar -xf stack_dependencies_cache.tar.gz.tar && \
+  tar -x -Ipigz -f stack_dependencies_cache.tar.gz && \
+  rm stack_dependencies_cache.tar.gz.tar && \
+  rm stack_dependencies_cache.tar.gz; \
+  fi
 
 WORKDIR /server
 
@@ -12,7 +26,18 @@ COPY app /server/app
 COPY codegen /server/codegen
 COPY test /server/test
 
-COPY Setup.hs stack.yaml stack.yaml.lock server.cabal /server/
+COPY Setup.hs stack.yaml stack.yaml.lock server.cabal LICENSE /server/
 
 RUN stack build --copy-bins
 
+# Compress stack dependencies cache
+WORKDIR /root
+RUN tar -c -Ipigz -f stack_dependencies_cache.tar.gz .stack
+
+# Store server binary in a "blank" container
+# FROM ubuntu:21.04
+# COPY --from=builder /root/.local/bin/app /server/app
+
+# EXPOSE 8000
+
+# CMD ["/app/server"]

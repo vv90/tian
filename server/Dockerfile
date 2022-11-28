@@ -2,7 +2,7 @@ FROM artifacts as builder
 
 FROM ubuntu:20.04
 
-COPY --from=builder /root/.local/bin/server /app/server
+COPY --from=builder /root/.local/bin/server-exe /app/server
 
 WORKDIR /app
 

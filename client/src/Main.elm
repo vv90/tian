@@ -21,6 +21,7 @@ import Components.Player as Player
 import Element exposing (Element, column, layout, padding, spacing, text)
 import Element.Font as Font
 import Element.Input as Input
+import Env exposing (apiUrl)
 import Flags exposing (..)
 import Html exposing (Html, button, div)
 import Html.Attributes exposing (style)
@@ -52,7 +53,7 @@ getDemoTaskCmd =
     Http.request
         { method = "GET"
         , headers = []
-        , url = "http://0.0.0.0:8081/demoTask"
+        , url = apiUrl "demoTask"
         , body = Http.emptyBody
         , expect = Http.expectJson GotDemoFlightTask flightTaskDecoder
         , timeout = Nothing
@@ -65,7 +66,7 @@ startDemoCmd =
     Http.request
         { method = "GET"
         , headers = []
-        , url = "http://0.0.0.0:8081/startDemo"
+        , url = apiUrl "startDemo"
         , body = Http.emptyBody
         , expect = Http.expectWhatever (\_ -> NoMsg)
         , timeout = Nothing

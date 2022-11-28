@@ -9,6 +9,7 @@ import Common.GeoUtils exposing (GeoPoint, degreesLatitude, degreesLongitude)
 import Common.JsonCodecsExtra exposing (tupleDecoder, tupleEncoder)
 import Element exposing (Element, column, spacing, text)
 import Element.Input as Input
+import Env exposing (apiUrl)
 import Http
 import Json.Decode as D
 import Json.Encode as E
@@ -64,7 +65,7 @@ updateProgressCmd : Int -> Nonempty GeoPoint -> Cmd Msg
 updateProgressCmd taskId points =
     Http.request
         { method = "POST"
-        , url = "http://0.0.0.0:8081/test/taskProgress/" ++ String.fromInt taskId
+        , url = apiUrl "test/taskProgress/" ++ String.fromInt taskId
         , headers = []
         , body = Http.jsonBody <| E.list geoPointEncoder (NE.toList points)
         , expect = Http.expectJson (UpdateProgress taskId points << Finished) taskProgressDecoder
@@ -77,7 +78,7 @@ getTaskStartLine : Int -> Cmd Msg
 getTaskStartLine taskId =
     Http.request
         { method = "GET"
-        , url = "http://0.0.0.0:8081/test/startLine/" ++ String.fromInt taskId
+        , url = apiUrl "test/startLine/" ++ String.fromInt taskId
         , headers = []
         , body = Http.emptyBody
         , expect = Http.expectJson GotStartLine (tupleDecoder ( geoPointDecoder, geoPointDecoder ))

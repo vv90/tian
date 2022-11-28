@@ -1,6 +1,7 @@
 module FileUpload exposing (..)
 
 import Common.JsonCodecsExtra exposing (filesDecoder)
+import Env exposing (apiUrl)
 import File exposing (File)
 import Html exposing (Html, div, h2, input, text)
 import Html.Attributes exposing (type_)
@@ -28,7 +29,7 @@ uploadFileCmd : List File -> Cmd Msg
 uploadFileCmd files =
     Http.request
         { method = "POST"
-        , url = "http://0.0.0.0:8081/navpoints"
+        , url = apiUrl "navpoints"
         , headers = [] --[ Http.header "Content-Type" "multipart/form-data" ]
         , body = Http.multipartBody (List.map (Http.filePart "file") files)
         , expect = Http.expectWhatever Uploaded

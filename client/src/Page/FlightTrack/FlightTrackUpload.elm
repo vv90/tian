@@ -10,6 +10,7 @@ import Common.JsonCodecsExtra exposing (filesDecoder)
 import Components.Player as Player
 import Element exposing (Element, html, row, spacing, text)
 import Element.Input as Input
+import Env exposing (apiUrl)
 import File exposing (File)
 import Html exposing (input)
 import Html.Attributes exposing (multiple, type_)
@@ -78,7 +79,7 @@ uploadTrackCmd : Int -> List File -> Cmd Msg
 uploadTrackCmd taskId files =
     Http.request
         { method = "POST"
-        , url = "http://0.0.0.0:8081/track/" ++ String.fromInt taskId
+        , url = apiUrl "track/" ++ String.fromInt taskId
         , headers = []
         , body = Http.multipartBody (List.map (Http.filePart "file") files)
         , expect = Http.expectJson (Finished >> UploadTrack taskId files) (D.list taskProgressDecoder)

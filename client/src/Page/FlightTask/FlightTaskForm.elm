@@ -14,6 +14,7 @@ import Components.SearchSelect as SearchSelect
 import Components.Select as Select
 import Element exposing (Element, column, fill, none, spacing, table, text)
 import Element.Input as Input
+import Env exposing (apiUrl)
 import Http
 import Json.Decode as D
 import MapUtils exposing (MapItem)
@@ -287,7 +288,7 @@ saveFlightTaskCmd : FlightTask -> Cmd Msg
 saveFlightTaskCmd flightTask =
     Http.request
         { method = "POST"
-        , url = "http://0.0.0.0:8081/task"
+        , url = apiUrl "task"
         , headers = []
         , body = Http.jsonBody <| flightTaskEncoder flightTask
         , expect = Http.expectJson (SaveFlightTask flightTask << Finished) D.int

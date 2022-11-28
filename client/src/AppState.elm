@@ -5,6 +5,7 @@ import Api.FlightTask exposing (FlightTask, flightTaskDecoder, flightTaskEncoder
 import Api.NavPoint exposing (NavPoint, navPointDecoder)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPending)
+import Env exposing (apiUrl)
 import Http
 import Json.Decode as D
 import Task exposing (Task)
@@ -73,7 +74,7 @@ type Msg
 getNavPointsCmd : Cmd Msg
 getNavPointsCmd =
     Http.get
-        { url = "http://0.0.0.0:8081/navpoints"
+        { url = apiUrl "navpoints"
         , expect = Http.expectJson (Finished >> GetNavPoints) (D.list <| entityDecoder D.int navPointDecoder)
         }
 
@@ -103,7 +104,7 @@ saveFlightTaskTask : FlightTask -> Task Http.Error ( Int, List (Entity Int Fligh
 saveFlightTaskTask flightTask =
     Http.task
         { method = "POST"
-        , url = "http://0.0.0.0:8081/task"
+        , url = apiUrl "task"
         , headers = []
         , body = Http.jsonBody <| flightTaskEncoder flightTask
         , timeout = Nothing
@@ -119,7 +120,7 @@ getFlightTasksTask : Task Http.Error (List (Entity Int FlightTask))
 getFlightTasksTask =
     Http.task
         { method = "GET"
-        , url = "http://0.0.0.0:8081/task"
+        , url = apiUrl "task"
         , headers = []
         , body = Http.emptyBody
         , timeout = Nothing
@@ -135,7 +136,7 @@ saveFlightTaskCmd : (ApiResult Int -> msg) -> FlightTask -> Cmd msg
 saveFlightTaskCmd toMsg flightTask =
     Http.request
         { method = "POST"
-        , url = "http://0.0.0.0:8081/task"
+        , url = apiUrl "task"
         , headers = []
         , body = Http.jsonBody <| flightTaskEncoder flightTask
         , expect = Http.expectJson toMsg D.int
@@ -147,7 +148,7 @@ saveFlightTaskCmd toMsg flightTask =
 getFlightTasksCmd : Cmd Msg
 getFlightTasksCmd =
     Http.get
-        { url = "http://0.0.0.0:8081/task"
+        { url = apiUrl "task"
         , expect =
             Http.expectJson
                 (Finished >> GetFlightTasks)

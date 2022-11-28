@@ -20,11 +20,12 @@ RUN npm ci
 
 # Copy sources
 COPY src /build/src
+COPY env /build/env
 COPY elm.json /build/
 
 # Compile Elm code
 # RUN elm make --optimize --output="./bundle.uncompressed.js" src/Main.elm
-RUN elm make --optimize --output="./bundle.js" src/Main.elm
+RUN elm make src/Main.elm env/prod/Env.elm --optimize --output="./bundle.js"
 
 # Copy assets and index page
 COPY assets /build/assets

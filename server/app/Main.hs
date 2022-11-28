@@ -25,6 +25,7 @@ import AppConduits (testC, runDemo)
 import Control.Concurrent.STM (newTBQueue, newTBQueueIO, TBQueue, TMVar, newEmptyTMVar, TQueue, newTQueue)
 import ProgressPoint (ProgressPointDto(ProgressPointDto))
 import FlightTask (FlightTask)
+import Env (checkRequiredEnvironmentKeys)
 
 startCounter :: Int -> IO ()
 startCounter n = do
@@ -96,6 +97,7 @@ demoThread queue var = do
 
 main :: IO ()
 main = do 
+    checkRequiredEnvironmentKeys
     queue <- atomically (newTQueue :: STM (TQueue (String, ProgressPointDto)))
     var <- atomically (newEmptyTMVar :: STM (TMVar FlightTask))
     -- track <- loadFile

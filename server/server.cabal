@@ -29,6 +29,7 @@ library
       Aprs.AprsMessage
       Codegen
       Entity
+      Env
       FlightTask
       FlightTrack
       FlightTrack.Conduit
@@ -74,6 +75,7 @@ library
     , directory
     , elm-syntax
     , filepath
+    , fmt
     , generics-sop
     , haskell-to-elm
     , hasql
@@ -132,6 +134,7 @@ executable codegen
     , directory
     , elm-syntax
     , filepath
+    , fmt
     , generics-sop
     , haskell-to-elm
     , hasql
@@ -191,6 +194,7 @@ executable server-exe
     , directory
     , elm-syntax
     , filepath
+    , fmt
     , generics-sop
     , haskell-to-elm
     , hasql
@@ -256,6 +260,7 @@ test-suite server-test
     , directory
     , elm-syntax
     , filepath
+    , fmt
     , generics-sop
     , haskell-to-elm
     , hasql

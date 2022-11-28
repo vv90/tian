@@ -69,19 +69,65 @@ import Conduit (yield, ResourceT, mapC, (.|))
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (TBQueue, TQueue, readTQueue)
 import Data.Conduit.TQueue (sourceTBQueue, sourceTQueue)
-
+import System.Environment (getEnv)
+import Control.Exception (try)
 data LibError
     = ConnectionError Connection.ConnectionError
     | QueryError Session.QueryError
     | FormatError Text
+    | EnvironmentError Text
     deriving (Show)
 
+-- catchLiftIO :: IO a -> ExceptT LibError IO a
+-- catchLiftIO = withExceptT EnvironmentError . ExceptT . try
+  
+
 getConn :: ExceptT LibError IO Connection.Connection
-getConn
-    = withExceptT ConnectionError
-    $ ExceptT
-    $ Connection.acquire
-    $ Connection.settings "localhost" 5433 "admin" "admin" "cvdb"
+getConn = 
+    let 
+        catchLiftIO = 
+            withExceptT (EnvironmentError . show) 
+            . ExceptT 
+            . (try :: IO a -> IO (Either SomeException a)) 
+        
+        tryGetEnv = 
+            withExceptT (EnvironmentError . show) 
+            . ExceptT 
+            . (try :: IO a -> IO (Either SomeException a)) 
+            . getEnv
+        -- host = catchLiftIO $ getEnv "DB_HOST"
+        tryGetPort str = do
+            pstr <- tryGetEnv str
+            withExceptT EnvironmentError $ ExceptT $ (pure :: a -> IO a) $ (readEither :: String -> Either Text Word16) pstr            
+
+        conn host port usr pwd db = withExceptT ConnectionError
+                $ ExceptT
+                $ Connection.acquire
+                $ Connection.settings host port usr pwd db
+
+        -- p :: Either Text Word16
+        p = ExceptT $ (readEither :: String -> Either Text Word16) <$> getEnv "DB_PORT"
+        getPortEnv = fmap (readEither :: String -> Either Text Word16) . getEnv
+    in do
+    host <- tryGetEnv "DB_HOST"
+    port <- tryGetPort "DB_PORT"
+    usr <- tryGetEnv "DB_USER"
+    pwd <- tryGetEnv "DB_PASS"
+    db <- tryGetEnv "DB_NAME"
+
+    conn (encodeUtf8 host) port (encodeUtf8 usr) (encodeUtf8 pwd) (encodeUtf8 db)
+
+    
+    -- dbhost <- catchLiftIO $ getEnv "DB_HOST"
+    -- dbport <- catchLiftIO $ getEnv "DB_PORT"
+    -- dbuser <- catchLiftIO $ getEnv "DB_USER"
+    -- dbpass <- catchLiftIO $ getEnv "DB_PASS"
+    -- dbname <- catchLiftIO $ getEnv "DB_NAME"
+
+    -- withExceptT ConnectionError
+    -- $ ExceptT
+    -- $ Connection.acquire
+    -- $ Connection.settings "localhost" 5433 "admin" "admin" "cvdb"
 
 -- detectAndDecode :: ByteString -> Either String String
 -- detectAndDecode bs =

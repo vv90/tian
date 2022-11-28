@@ -85,11 +85,6 @@ data LibError
 getConn :: ExceptT LibError IO Connection.Connection
 getConn = 
     let 
-        catchLiftIO = 
-            withExceptT (EnvironmentError . show) 
-            . ExceptT 
-            . (try :: IO a -> IO (Either SomeException a)) 
-        
         tryGetEnv = 
             withExceptT (EnvironmentError . show) 
             . ExceptT 
@@ -105,9 +100,6 @@ getConn =
                 $ Connection.acquire
                 $ Connection.settings host port usr pwd db
 
-        -- p :: Either Text Word16
-        p = ExceptT $ (readEither :: String -> Either Text Word16) <$> getEnv "DB_PORT"
-        getPortEnv = fmap (readEither :: String -> Either Text Word16) . getEnv
     in do
     host <- tryGetEnv "DB_HOST"
     port <- tryGetPort "DB_PORT"

@@ -28,7 +28,6 @@ RUN elm make --optimize --output="./bundle.js" src/Main.elm
 
 # Copy assets and index page
 COPY assets /build/assets
-COPY assets-root /build/assets-root
 COPY index.src.html /build/
 
 # Inline all inlineable assets
@@ -44,6 +43,5 @@ WORKDIR /usr/share/nginx/html
 # Copy bundle and assets to the Nginx container
 COPY --from=builder /build/index.html .
 COPY --from=builder /build/assets ./assets
-COPY --from=builder /build/assets-root/robots.txt .
 
 EXPOSE 80

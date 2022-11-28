@@ -9,6 +9,8 @@ WORKDIR /server
 
 COPY src /server/src
 COPY app /server/app
+COPY codegen /server/codegen
+COPY test /server/test
 
 COPY Setup.hs stack.yaml stack.yaml.lock server.cabal /server/
 

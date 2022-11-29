@@ -5,7 +5,7 @@ set -e
 # Instead, we need a step-by step approach (almost like in GitHub Actions, but with local specifics).
 
 # Build backend-artifacts
-docker build -f backend/Dockerfile.artifacts -t artifacts server
+docker build -f server/Dockerfile.artifacts -t artifacts server
 
 # Create container from image without running it to extract artifacts
 id=$(docker create artifacts)
@@ -38,10 +38,10 @@ docker-compose -f docker-compose.yml build server
 # - extract generated elm files from backend-artifacts and put them to the frontend codebase
 # - format and autofix the generated code
 # - run frontend tests
-# - compile and pack frontend
+# - compile and pack frontend:
 
 # Build frontend
-docker-compose -f docker-compose.yml build frontend
+docker-compose -f docker-compose.yml build client
 
 # Stop everything
 docker-compose -f docker-compose.yml down -v

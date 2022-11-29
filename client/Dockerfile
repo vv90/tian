@@ -45,4 +45,7 @@ WORKDIR /usr/share/nginx/html
 COPY --from=builder /build/index.html .
 COPY --from=builder /build/assets ./assets
 
+# Copy nginx config
+COPY ./configs/nginx.conf /etc/nginx/conf.d/default.conf
+
 EXPOSE 80

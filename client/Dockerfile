@@ -27,12 +27,13 @@ COPY elm.json /build/
 # RUN elm make --optimize --output="./bundle.uncompressed.js" src/Main.elm
 RUN elm make src/Main.elm --optimize --output="./assets/inline/bundle.js"
 
+
 # Copy assets and index page
 COPY assets /build/assets
 COPY index.src.html /build/
 
 # Inline all inlineable assets
-RUN bash -c 'inline-source --compress false --root ./build build/index.src.html > build/index.html'
+RUN bash -c 'inline-source --compress false --root ./ index.src.html > index.html'
 
 # Remove just inlined assets
 RUN rm -rf assets/inline

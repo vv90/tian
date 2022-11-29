@@ -9,6 +9,6 @@ COPY --from=builder /root/.local/bin/server-exe /app/server
 
 WORKDIR /app
 
-EXPOSE 8000
+EXPOSE 8081
 
 CMD ["/app/server"]

@@ -25,9 +25,11 @@ source-repository head
 
 library
   exposed-modules:
-      AppConduits
       Aprs.AprsMessage
       Codegen
+      Demo.DemoConduit
+      Demo.DemoTask
+      Demo.Playback
       Entity
       Env
       FlightTask
@@ -94,6 +96,7 @@ library
     , servant-server
     , servant-websockets
     , stm
+    , stm-chans
     , stm-conduit
     , text
     , time
@@ -154,6 +157,7 @@ executable codegen
     , servant-websockets
     , server
     , stm
+    , stm-chans
     , stm-conduit
     , text
     , time
@@ -214,6 +218,7 @@ executable server-exe
     , servant-websockets
     , server
     , stm
+    , stm-chans
     , stm-conduit
     , text
     , time
@@ -283,6 +288,7 @@ test-suite server-test
     , servant-websockets
     , server
     , stm
+    , stm-chans
     , stm-conduit
     , text
     , time

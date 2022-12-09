@@ -53,7 +53,6 @@ dependencies:
 - servant-websockets
 - conduit
 - conduit-extra
-- stm-conduit
 # for api server configuration
 - wai
 - wai-cors
@@ -62,6 +61,8 @@ dependencies:
 # for multithreading
 - stm
 - async
+- stm-chans
+- stm-conduit
 # monad transformer library
 - mtl
 - monad-logger
@@ -71,6 +72,8 @@ dependencies:
 - fmt
 # for UTCTime
 - time
+# heap data structure
+# - heap
 # for database interaction
 - hasql
 - hasql-th

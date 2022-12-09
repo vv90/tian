@@ -21,11 +21,13 @@ import qualified FlightTrack (points)
 import TimeUtils (diffTimeToSeconds, diffTimeToMillis)
 import Relude.Extra (Foldable1(minimum1))
 import Text.Parsec.Error (ParseError)
-import AppConduits (testC, runDemo)
-import Control.Concurrent.STM (newTBQueue, newTBQueueIO, TBQueue, TMVar, newEmptyTMVar, TQueue, newTQueue)
+import Control.Concurrent.STM (newTBQueue, newTBQueueIO, TBQueue, TMVar, newEmptyTMVar, TQueue, newTQueue, newBroadcastTChan)
 import ProgressPoint (ProgressPointDto(ProgressPointDto))
 import FlightTask (FlightTask)
 import Env (checkRequiredEnvironmentKeys)
+import Demo.Playback (runPlayback, runTest)
+import Data.Conduit.TMChan (TMChan, newBroadcastTMChan, dupTMChan)
+import Demo.DemoConduit (testDemoConduit)
 
 startCounter :: Int -> IO ()
 startCounter n = do
@@ -51,57 +53,10 @@ appC ptSink responseSink = do
 runAprs = runTCPClient (clientSettings 14580 "aprs.glidernet.org") $ \server -> do
     runConduit $ appSource server .| appC stdoutC (appSink server)
 
--- buildFlightTrackC = do
-
-
--- trackFileC =
---     runConduitRes 
---     $ sourceFile "demo/155_VB.igc"
---     .| decodeUtf8C
---     .| linesUnbounded
---     -- .| 
-
--- parseFile :: Parsec Text () a -> String -> ByteString -> Either String a
--- parseFile parser name = 
---     left show . parse parser name . decodeUtf8
- 
--- loadFlightTrack :: FilePath -> IO (Either String FlightTrack)
--- loadFlightTrack path = 
---     (parseFile flightInfoParser path >=> buildFlightTrack) <$> readFileBS path
-
--- startTimeMillis :: [FlightTrack] -> Maybe Int
--- startTimeMillis fts =
---     viaNonEmpty minimum1 
---     $ diffTimeToMillis . TrackPoint.time . head . FlightTrack.points 
---     <$> fts 
-
--- runDemo = 
---     runConduitRes $ 
---         demoAprsSource "./demo/155_VB.igc"
---         .| printC
-
--- runTest = 
---     runConduitRes $ 
---         testC
---         .| printC
-
-demoThread :: TQueue (String, ProgressPointDto) -> TMVar FlightTask -> IO ()
-demoThread queue var = do
-    threadDelay 100000
-    x <- atomically $ tryReadTMVar var
-    case x of
-        Just ft ->
-            runDemo queue ft
-        Nothing ->
-            demoThread queue var
 
 main :: IO ()
 main = do 
+    print "starting server..."
     checkRequiredEnvironmentKeys
-    queue <- atomically (newTQueue :: STM (TQueue (String, ProgressPointDto)))
-    var <- atomically (newEmptyTMVar :: STM (TMVar FlightTask))
-    -- track <- loadFile
-    -- flightTracks <- getDirectoryContents "./demo" >>= mapM loadFlightTrack . filter (isExtensionOf ".igc")
-    concurrently_ (startApp 8081 queue var) (demoThread queue var)
-    -- startApp 8081 (demo queue) (runDemo queue)
+    startApp 8081
     

@@ -27,8 +27,8 @@ data FlightInfo
     deriving (Show, Eq)
 
 
-buildFlightTrack :: [FlightInfo] -> Either String FlightTrack
-buildFlightTrack flightInfoItems = do
+buildFlightTrack :: String -> [FlightInfo] -> Either String FlightTrack
+buildFlightTrack name flightInfoItems = do
     (fd, items) <- flightDate flightInfoItems
     (ci, items') <- compId items
     tps <- trackPoints items' 
@@ -40,21 +40,21 @@ buildFlightTrack flightInfoItems = do
         fixTrackPoint _ = Nothing
 
         trackPoints :: [FlightInfo] -> Either String (NonEmpty TrackPoint)
-        trackPoints = maybeToRight "No track points" . nonEmpty . mapMaybe fixTrackPoint
+        trackPoints = maybeToRight (name <> ": No track points") . nonEmpty . mapMaybe fixTrackPoint
 
         flightDate :: [FlightInfo] -> Either String (UTCTime, [FlightInfo])
         flightDate infoItems = 
             case infoItems of
                 (FlightDate date):rest -> Right (date, rest)
                 _:rest -> flightDate rest
-                [] -> Left "Missing or invalid location for Flight Date info"
+                [] -> Left (name <> ": Missing or invalid location for Flight Date info")
             
         compId :: [FlightInfo] -> Either String (Text, [FlightInfo])
         compId infoItems = 
             case infoItems of
                 (CompId id):rest -> Right (id, rest)
                 _:rest -> compId rest
-                [] -> Left "Missing or invalid location for Competition ID info"
+                [] -> Left (name <> ": Missing or invalid location for Competition ID info")
 
         -- combineFlightInfo :: FlightInfo -> FlightInfo -> [FlightInfo] -> Either String FlightTrack
         -- combineFlightInfo (FlightDate flightDateInfo) (CompId compIdInfo) pointsInfo =

@@ -19,13 +19,13 @@ services:
       context: server
       dockerfile: Dockerfile
     environment:
-      - DB_HOST=localhost
+      - DB_HOST=0.0.0.0
       - DB_PORT=5433
       - DB_USER=admin
       - DB_PASS=admin
       - DB_NAME=cvdb
     ports: 
-      - "8000:8000"
+      - "8081:8081"
 
   client:
     build: 

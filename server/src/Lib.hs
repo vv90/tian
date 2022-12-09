@@ -7,8 +7,6 @@
 {-# LANGUAGE UndecidableInstances       #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE InstanceSigs #-}
 module Lib
     ( startApp
@@ -25,8 +23,7 @@ import Servant
 -- import Servant.Multipart
 import Control.Monad.IO.Class
     ( MonadIO(liftIO) )
-import Control.Monad.Reader
-import Control.Monad.Writer
+
 import Data.Time (UTCTime(UTCTime))
 import Control.Monad.Logger (NoLoggingT)
 import Data.Char (toUpper)
@@ -53,23 +50,17 @@ import FlightTrack.Parser (FlightInfo, flightInfoParser, buildFlightTrack, fligh
 import FlightTrack (FlightTrack (..))
 import TaskProgressUtils (progress, progressInit, progressAdvance, taskStartLine)
 import ProgressPoint (ProgressPoint, ProgressPointDto)
-import TaskProgress (TaskProgress, TaskProgressDto)
-import qualified TaskProgress
-import Debug.Trace as Debug
-import TaskProgress (toDto)
-import Geo.Utils (perpendicular, s84position)
-import Geo (Longitude, Latitude, Elevation (ElevationMeters))
 import Data.Sequence (mapWithIndex)
 import qualified Data.List.NonEmpty as NE (cons, reverse)
 import Data.Time.Calendar (fromGregorian)
 import TrackPoint (TrackPoint(..), FixValidity (..))
 import Servant.API.WebSocketConduit (WebSocketSource)
-import Data.Conduit (ConduitT)
-import Conduit (yield, ResourceT, mapC, (.|))
-import Control.Concurrent (threadDelay)
-import Control.Concurrent.STM (TBQueue, TQueue, readTQueue)
-import Data.Conduit.TQueue (sourceTBQueue, sourceTQueue)
 import System.Environment (getEnv)
+import Demo.DemoTask (loadDemoTask)
+import Demo.DemoConduit (demoC)
+import TaskProgress (TaskProgressDto, toDto)
+import Geo (Latitude, Longitude, Elevation (..))
+import Conduit (ConduitT, ResourceT)
 import Control.Exception (try)
 data LibError
     = ConnectionError Connection.ConnectionError
@@ -181,7 +172,7 @@ instance FromMultipart Mem [NavPoint] where
 instance FromMultipart Mem [FlightTrack] where
     fromMultipart form =
         let
-            flightTrackResults = (parseFile flightInfoParserAll >=> buildFlightTrack) <$> files form
+            flightTrackResults = (\x -> parseFile flightInfoParserAll x >>= buildFlightTrack (show $ fdFileName x)) <$> files form
         in
             sequence flightTrackResults
 
@@ -276,17 +267,17 @@ type API =
     :<|> "track" :> Capture "taskId" Int32 :> MultipartForm Mem [FlightTrack] :> Post '[JSON] [TaskProgressDto]
     :<|> "test" :> "taskProgress" :> Capture "taskId" Int32 :> ReqBody '[JSON] (NonEmpty (Latitude, Longitude)) :> Post '[JSON] TaskProgressDto
     :<|> "test" :> "startLine" :> Capture "taskId" Int32 :> Get '[JSON] ((Latitude, Longitude), (Latitude, Longitude))
-    :<|> "demo" :> WebSocketSource (String, ProgressPointDto)
+    :<|> "demo" :> WebSocketSource (Text, ProgressPointDto)
     :<|> "demoTask" :> Get '[JSON] FlightTask
-    :<|> "startDemo" :> Get '[JSON] ()
+    -- :<|> "startDemo" :> Get '[JSON] ()
 
-startApp :: Port -> TQueue (String, ProgressPointDto) -> TMVar FlightTask -> IO ()
-startApp port queue var = do
+startApp :: Port -> IO ()
+startApp port = do
     putStrLn ("Server started on port " <> show port) 
-    run port (app queue var)
+    run port app
 
-app :: TQueue (String, ProgressPointDto) -> TMVar FlightTask -> Application
-app queue var = corsMiddleware $ serve api (server queue var)
+app :: Application
+app = corsMiddleware $ serve api server 
     where
         corsMiddleware :: Middleware
         corsMiddleware = cors (const $ Just corsPolicy)
@@ -302,47 +293,65 @@ app queue var = corsMiddleware $ serve api (server queue var)
 api :: Proxy API
 api = Proxy
 
-progressDemo :: TQueue (String, ProgressPointDto) -> ConduitT () (String, ProgressPointDto) (ResourceT IO) () 
-progressDemo queue = do
-    ft <- 
-        fmap (\a -> a >>= maybeToRight (FormatError "Task not found")) 
-        $ liftIO $ runExceptT $ getFlightTask 6
-
+progressDemo :: ConduitT () (Text, ProgressPointDto) (ResourceT IO) () 
+progressDemo = do
+    ft <- liftIO $ runExceptT loadDemoTask
+    
     case ft of
-        Right (Entity _ x) -> 
-           
+        Right (Entity _ x) -> do
+            -- chan <- liftIO getChan
+            print "Init demo..."
+            demoC x
+            -- resultC chan
+
+            -- sourceTMChan chan
+            -- liftIO $ withAsync (runDemo q x) $ \r -> do
             -- liftIO (runDemo x) >> demo x
-            sourceTQueue queue
+            -- print "Connecting socket..."
+
+            -- sourceTQueue q
+            -- sourceTChan
             -- sourceQueue queue
                 
         Left e -> 
             liftIO $ print e
     
+    -- where
+    --     resultC :: TMChan (String, ProgressPointDto) -> ConduitT () (String, ProgressPointDto) (ResourceT IO) ()
+    --     resultC chan = do
+    --         r <- liftIO $ atomically (readTMChan chan)
+    --         case r of
+    --             Just x -> do
+    --                 liftIO $ print "sending..."
+    --                 -- yield x
+    --                 resultC chan
+    --             Nothing -> do
+    --                 liftIO $ print "waiting..."
+    --                 resultC chan
+
 demoTask :: Handler FlightTask
 demoTask = do
-    flightTask <- 
-        fmap (\a -> a >>= maybeToRight (FormatError "Task not found")) 
-        $ liftIO $ runExceptT $ getFlightTask 6
+    flightTask <- liftIO $ runExceptT loadDemoTask
 
     case flightTask of
         Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
         Right (Entity _ ft) -> pure ft 
 
-startDemo :: TMVar FlightTask -> Handler ()
-startDemo var = do
-    print "attempting to start demo"
-    flightTask <- 
-        fmap (\a -> a >>= maybeToRight (FormatError "Task not found")) 
-        $ liftIO $ runExceptT $ getFlightTask 6
+-- startDemo :: TMVar FlightTask -> Handler ()
+-- startDemo var = do
+--     print "attempting to start demo"
+--     flightTask <- 
+--         fmap (\a -> a >>= maybeToRight (FormatError "Task not found")) 
+--         $ liftIO $ runExceptT $ getFlightTask 6
 
-    case flightTask of
-        Left e -> 
-            throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
-        Right (Entity _ ft) -> 
-            liftIO $ atomically $ putTMVar var ft
+--     case flightTask of
+--         Left e -> 
+--             throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
+--         Right (Entity _ ft) -> 
+--             liftIO $ atomically $ putTMVar var ft
 
-server :: TQueue (String, ProgressPointDto) -> TMVar FlightTask -> Server API
-server queue var =
+server :: Server API
+server =
     uploadNavPoints
     :<|> navPoints
     :<|> flightTasks
@@ -350,7 +359,6 @@ server queue var =
     :<|> uploadFlightTrack
     :<|> testTaskProgress
     :<|> testStartLine
-    :<|> progressDemo queue 
+    :<|> progressDemo
     :<|> demoTask
-    :<|> startDemo var
 

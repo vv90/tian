@@ -39,10 +39,10 @@ import Page.FlightTaskPage as FlightTaskPage
 import Page.FlightTrack.FlightTrackUpload as FlightTrackUpload
 import Page.Test.TestProgress as TestProgress
 import Result.Extra as ResultX
+import Svg.Attributes exposing (in_)
 
 
-
--- port startDemo : () -> Cmd msg
+port startDemo : () -> Cmd msg
 
 
 port messageReceiver : (String -> msg) -> Sub msg
@@ -55,23 +55,24 @@ getDemoTaskCmd =
         , headers = []
         , url = apiUrl "demoTask"
         , body = Http.emptyBody
-        , expect = Http.expectJson GotDemoFlightTask flightTaskDecoder
+        , expect = Http.expectJson (Finished >> DemoInit) flightTaskDecoder
         , timeout = Nothing
         , tracker = Nothing
         }
 
 
-startDemoCmd : Cmd Msg
-startDemoCmd =
-    Http.request
-        { method = "GET"
-        , headers = []
-        , url = apiUrl "startDemo"
-        , body = Http.emptyBody
-        , expect = Http.expectWhatever (\_ -> NoMsg)
-        , timeout = Nothing
-        , tracker = Nothing
-        }
+
+-- startDemoCmd : Cmd Msg
+-- startDemoCmd =
+--     Http.request
+--         { method = "GET"
+--         , headers = []
+--         , url = apiUrl "startDemo"
+--         , body = Http.emptyBody
+--         , expect = Http.expectWhatever (\_ -> NoMsg)
+--         , timeout = Nothing
+--         , tracker = Nothing
+--         }
 
 
 main : Program Flags Model Msg
@@ -141,8 +142,8 @@ type Msg
     | TestProgressMsg TestProgress.Msg
     | AppStateMsg AppState.Msg
     | MessageReceived String
-    | GotDemoFlightTask (ApiResult FlightTask)
-    | DemoInitiated
+      -- | GotDemoFlightTask (ApiResult FlightTask)
+    | DemoInit (AsyncOperationStatus (ApiResult FlightTask))
     | NoMsg
 
 
@@ -263,17 +264,24 @@ update msg model =
                     ( model, Cmd.none )
 
         -- ( { model | messages = str :: model.messages }, Cmd.none )
-        GotDemoFlightTask (Ok task) ->
+        -- GotDemoFlightTask (Ok task) ->
+        --     ( { model | flightTaskPage = FlightTaskPage.DemoPage (Demo.init task) }
+        --       , startDemo ()
+        --     )
+        -- GotDemoFlightTask (Err _) ->
+        --     ( model, Cmd.none )
+        -- DemoInitiated ->
+        --     ( model, startDemoCmd )
+        DemoInit Started ->
+            ( model, getDemoTaskCmd )
+
+        DemoInit (Finished (Ok task)) ->
             ( { model | flightTaskPage = FlightTaskPage.DemoPage (Demo.init task) }
-              -- , startDemo ()
-            , startDemoCmd
+            , startDemo ()
             )
 
-        GotDemoFlightTask (Err _) ->
+        DemoInit (Finished (Err e)) ->
             ( model, Cmd.none )
-
-        DemoInitiated ->
-            ( model, getDemoTaskCmd )
 
         NoMsg ->
             ( model, Cmd.none )
@@ -369,7 +377,7 @@ view model =
         , detachedView TopRight <|
             column [ padding 10, spacing 10 ]
                 (List.map text model.messages
-                    ++ [ Input.button [] { onPress = Just DemoInitiated, label = text "Start Demo" } ]
+                    ++ [ Input.button [] { onPress = Just <| DemoInit Started, label = text "Start Demo" } ]
                 )
 
         -- for debugging

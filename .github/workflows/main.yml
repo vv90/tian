@@ -46,5 +46,10 @@ jobs:
         
     - if: steps.filter.outputs.server == 'true'
       run: |
+        # Build backend-artifacts
         docker build -f Dockerfile.artifacts -t artifacts .
-        ls -la
+        # Create container from image without running it to extract artifacts
+        id=$(docker create artifacts)
+        # Save stack depenencies cache
+        # to avoid copying the same archive to the host again (useful only for frequent local docker builds)
+        docker cp $id:/root/stack_dependencies_cache.tar.gz - >./cache/stack_dependencies_cache.tar.gz.tar

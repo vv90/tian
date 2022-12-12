@@ -5,7 +5,7 @@ RUN apt-get -y install libpq-dev haskell-stack pigz
 RUN stack upgrade 
 # RUN curl -sSL https://get.haskellstack.org/stable/linux-x86_64.tar.gz | sh
 
-# Copy and extract stack dependencies cache (if we have it)
+# Copy and extract stack dependencies cache (if we have it!)
 WORKDIR /root
 COPY cache/* /root/
 

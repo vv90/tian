@@ -9,7 +9,7 @@ RUN stack upgrade
 WORKDIR /root
 COPY cache/* /root/
 
-# If we had the cache (if it was copied successfully), then delete pre-existing stack cache and extract ours
+# If we had the cache (if it was copied successfully), then delete pre-existing stack cache and extract ours!
 RUN if \
   test -f stack_dependencies_cache.tar.gz.tar; \
   then rm -rf .stack && \

@@ -1,8 +1,8 @@
-# This workflow compiles code with Elm and uploads it to s3 static site http://contest-viewer.s3-website-us-east-1.amazonaws.com/
+# Job to create server cache in the master branch that will be available to all braches that are based on master branch
 
 name: CI-contest-viewer
 
-#Environment variables
+#Environment variables!
 env:
   AWS_S3_BUCKET : contest-viewer
   AWS_REGION    : us-east-1
@@ -14,46 +14,37 @@ on:
 
 # A workflow run is made up of build and deploy job
 jobs:
-  build:
+#Server folder job
+  build_server:
   # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    defaults:
+      run:
+      # Server folder working directory.
+        working-directory: server 
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
+      # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository
     - name: Git clone
-      uses: actions/checkout@v3      
-     
-    - name: Setup Elm environment
-      uses: JorelAli/setup-elm@v3
-      with:
-        elm-version: 0.19.1
-              
-      # installs npm and runs  test
-    - name: Install npm and test 
-      run: |
-        cd client
-        mkdir ~/.npm-global
-        npm config set prefix '~/.npm-global'
-        PATH=~/.npm-global/bin:$PATH
-        npm install --location=global elm-test
-        elm-test tests/Example.elm
-        echo "Test successfull"
+      uses: actions/checkout@v3
       
-    - run: |
-        cd client
-        elm make src/Main.elm --output=bundle.js
-        mv index.src.html index.html
-        mv bundle.js assets/inline/  
-
-      # Deploys new  files to S3 static website http://contest-viewer.s3-website-us-east-1.amazonaws.com/
-    - name: sync folder with s3
-      uses: jakejarvis/s3-sync-action@master
+    - uses: dorny/paths-filter@v2
+      id: filter
       with:
-        args: --follow-symlinks --exclude '.git/*' --delete
-      env:
-        AWS_S3_BUCKET: ${{ env.AWS_S3_BUCKET }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: ${{ env.AWS_REGION }}
-        SOURCE_DIR: 'client'  
+        filters: |
+          server:
+            - 'server/**'     
+            
+    - name: Cache ~/cache
+      if: steps.filter.outputs.server == 'true'
+      uses: actions/cache@v3
+      id:   cache-stack
+      with:
+        path: cache
+        key: ${{ runner.os }}-stack-global-${{ hashFiles('stack.yaml') }}-${{ hashFiles('package.yaml') }}
+        
+    - if: steps.filter.outputs.server == 'true'
+      run: |
+        docker build -f Dockerfile.artifacts -t artifacts .
+        ls -la server

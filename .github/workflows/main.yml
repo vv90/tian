@@ -41,8 +41,8 @@ jobs:
       uses: actions/cache@v3
       id:   cache-stack
       with:
-        path: cache
-        key: ${{ runner.os }}-stack-global-${{ hashFiles('stack.yaml') }}-${{ hashFiles('package.yaml') }}
+        path: server/cache
+        key: ${{ runner.os }}-stack-global-${{ hashFiles('server/stack.yaml') }}-${{ hashFiles('server/package.yaml') }}
         
     - if: steps.filter.outputs.server == 'true'
       run: |

@@ -53,3 +53,25 @@ jobs:
         # Save stack depenencies cache
         # to avoid copying the same archive to the host again (useful only for frequent local docker builds)
         docker cp $id:/root/stack_dependencies_cache.tar.gz - >./cache/stack_dependencies_cache.tar.gz.tar
+        
+        - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      if: steps.filter.outputs.server == 'true'
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image to Amazon ECR
+      if: steps.filter.outputs.server == 'true'
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: contest-viewer
+        IMAGE_TAG: server
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG

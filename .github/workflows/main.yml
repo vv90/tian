@@ -18,7 +18,7 @@ on:
 
 # A workflow run is made up of build and deploy job
 jobs:
-#Server folder job
+#Server folder build job (runs concurrently with client build job)
   build_server:
   # The type of runner that the job will run on
     runs-on: ubuntu-22.04
@@ -80,3 +80,50 @@ jobs:
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+#client folder build job (runs concurrently with server build job)
+  build_client:
+  # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+      # Server folder working directory.
+        working-directory: client 
+
+      # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository
+    - name: Git clone
+      uses: actions/checkout@v3
+      
+    - uses: dorny/paths-filter@v2
+      id: filter
+      with:
+        filters: |
+          client:
+            - 'client/**'     
+      
+    - name: Configure AWS credentials
+      if: steps.filter.outputs.client == 'true'
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        role-to-assume: arn:aws:iam::861421774830:role/contest-viewer_ECS_access
+        role-session-name: client_push
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      if: steps.filter.outputs.client == 'true'
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image to Amazon ECR
+      if: steps.filter.outputs.client == 'true'
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: contest-viewer_client
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+        

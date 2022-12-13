@@ -7,6 +7,10 @@ env:
   AWS_S3_BUCKET : contest-viewer
   AWS_REGION    : us-east-1
 
+permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
+
 # Workflow will run on push to master
 on:
   push:
@@ -55,11 +59,12 @@ jobs:
         docker cp $id:/root/stack_dependencies_cache.tar.gz - >./cache/stack_dependencies_cache.tar.gz.tar
         
     - name: Configure AWS credentials
+      if: steps.filter.outputs.server == 'true'
       uses: aws-actions/configure-aws-credentials@v1
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
+        role-to-assume: arn:aws:iam::861421774830:role/contest-viewer_ECS_access
+        role-session-name: server_push
+        aws-region: ${{ env.AWS_REGION }}
 
     - name: Login to Amazon ECR
       if: steps.filter.outputs.server == 'true'

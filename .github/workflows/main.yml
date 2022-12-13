@@ -54,7 +54,7 @@ jobs:
         # to avoid copying the same archive to the host again (useful only for frequent local docker builds)
         docker cp $id:/root/stack_dependencies_cache.tar.gz - >./cache/stack_dependencies_cache.tar.gz.tar
         
-        - name: Configure AWS credentials
+    - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}

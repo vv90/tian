@@ -75,7 +75,7 @@ jobs:
       if: steps.filter.outputs.server == 'true'
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: contest-viewer
+        ECR_REPOSITORY: contest-viewer_server
         IMAGE_TAG: ${{ github.sha }}
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .

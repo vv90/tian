@@ -5,7 +5,7 @@ import Api.FlightTask exposing (FlightTask)
 import Api.TaskProgress exposing (ProgressPoint, TaskProgress, taskProgressDecoder)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPending)
-import Common.FlightTaskUtils exposing (taskToMapItems)
+import Common.FlightTaskUtils exposing (taskToMap3dItems, taskToMapItems)
 import Common.JsonCodecsExtra exposing (filesDecoder)
 import Components.Player as Player
 import Element exposing (Element, html, row, spacing, text)
@@ -18,6 +18,7 @@ import Html.Events exposing (on)
 import Http
 import Json.Decode as D
 import List.Extra as ListX
+import Map3dUtils exposing (Map3dItem)
 import MapUtils exposing (MapItem(..))
 
 
@@ -49,6 +50,20 @@ mapItems tasks model =
                 |> Maybe.withDefault []
     in
     taskItems ++ pointItems
+
+
+map3dItems : List (Entity Int FlightTask) -> Model -> List Map3dItem
+map3dItems tasks model =
+    let
+        task =
+            ListX.find (\{ key } -> key == model.taskId) tasks
+
+        taskItems =
+            task
+                |> Maybe.map (.entity >> taskToMap3dItems)
+                |> Maybe.withDefault []
+    in
+    taskItems
 
 
 withPendingTaskProgress : Model -> Model

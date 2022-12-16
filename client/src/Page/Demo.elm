@@ -2,11 +2,12 @@ module Page.Demo exposing (..)
 
 import Api.FlightTask exposing (FlightTask)
 import Api.TaskProgress exposing (ProgressPoint)
-import Common.FlightTaskUtils exposing (taskToMapItems)
+import Common.FlightTaskUtils exposing (taskToMap3dItems, taskToMapItems)
 import Common.GeoUtils exposing (metersElevation)
 import Common.Utils exposing (roundN)
 import Dict exposing (Dict)
 import Element exposing (Element, column, row, spacing, text)
+import Map3dUtils exposing (Map3dItem)
 import MapUtils exposing (MapItem(..))
 
 
@@ -37,6 +38,21 @@ mapItems model =
                 |> List.map toMarker
     in
     taskToMapItems model.flightTask ++ pointItems
+
+
+map3dItems : Model -> List Map3dItem
+map3dItems model =
+    let
+        pointItems =
+            model.points
+                |> Dict.toList
+                |> List.map (\( id, p ) -> Map3dUtils.Marker id ( p.lat, p.lon ) p.altitude)
+
+        taskItems =
+            model.flightTask
+                |> taskToMap3dItems
+    in
+    taskItems ++ pointItems
 
 
 withPointUpdate : String -> ProgressPoint -> Model -> Model

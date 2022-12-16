@@ -1,10 +1,11 @@
 module Common.FlightTaskUtils exposing (..)
 
 import Api.FlightTask exposing (FlightTask, TaskFinish(..), TaskStart(..), Turnpoint(..))
-import Api.Geo exposing (Distance(..))
+import Api.Geo exposing (Distance(..), Elevation(..))
 import Api.NavPoint exposing (NavPoint)
 import Common.GeoUtils exposing (bearing, linePerpendicularToBearing)
 import List.Extra as ListX
+import Map3dUtils as M3d exposing (Map3dItem)
 import MapUtils exposing (LineStyle(..), MapItem(..))
 
 
@@ -24,6 +25,22 @@ startToMapItem nextPoint ( np, start ) =
             Line TaskLine [ lp1, lp2 ]
 
 
+startToMap3dItem : NavPoint -> ( NavPoint, TaskStart ) -> Map3dItem
+startToMap3dItem nextPoint ( np, start ) =
+    case start of
+        StartLine r ->
+            let
+                startBearing =
+                    bearing ( np.lat, np.lon ) ( nextPoint.lat, nextPoint.lon )
+
+                ( lp1, lp2 ) =
+                    linePerpendicularToBearing (DistanceMeters r) ( np.lat, np.lon ) startBearing
+            in
+            -- makePerpendicularLine r np nextPoint
+            -- Circle ( np.lat, np.lon ) (DistanceMeters r)
+            M3d.Line [ ( lp1, ElevationMeters 0 ), ( lp2, ElevationMeters 0 ) ]
+
+
 finishToMapItem : NavPoint -> ( NavPoint, TaskFinish ) -> MapItem
 finishToMapItem prevPoint ( np, finish ) =
     case finish of
@@ -35,11 +52,29 @@ finishToMapItem prevPoint ( np, finish ) =
             Circle ( np.lat, np.lon ) (DistanceMeters r)
 
 
+finishToMap3dItem : NavPoint -> ( NavPoint, TaskFinish ) -> Map3dItem
+finishToMap3dItem prevPoint ( np, finish ) =
+    case finish of
+        FinishLine r ->
+            -- makePerpendicularLine r np prevPoint
+            M3d.Cylinder ( np.lat, np.lon ) (DistanceMeters r) (ElevationMeters 10000)
+
+        FinishCylinder r ->
+            M3d.Cylinder ( np.lat, np.lon ) (DistanceMeters r) (ElevationMeters 10000)
+
+
 turnpointToMapItem : ( NavPoint, Turnpoint ) -> MapItem
 turnpointToMapItem ( np, tp ) =
     case tp of
         Cylinder r ->
             Circle ( np.lat, np.lon ) (DistanceMeters r)
+
+
+turnpointToMap3dItem : ( NavPoint, Turnpoint ) -> Map3dItem
+turnpointToMap3dItem ( np, tp ) =
+    case tp of
+        Cylinder r ->
+            M3d.Cylinder ( np.lat, np.lon ) (DistanceMeters r) (ElevationMeters 10000)
 
 
 firstNavPointAfterStart : FlightTask -> NavPoint
@@ -81,6 +116,33 @@ taskToMapItems task =
                         TaskLine
                         [ ( prev.lat, prev.lon )
                         , (Tuple.first >> (\x -> ( x.lat, x.lon ))) task.finish
+                        ]
+                    :: lines
+           )
+
+
+taskToMap3dItems : FlightTask -> List Map3dItem
+taskToMap3dItems task =
+    List.foldl
+        -- at each step take the current turnpoint (`(np, tp)`) and add the corresponding circle for it and a line from the previous nav point (`prev`)
+        (\( np, tp ) ( prev, lines ) ->
+            ( np
+            , turnpointToMap3dItem ( np, tp )
+                :: M3d.Line [ ( ( prev.lat, prev.lon ), ElevationMeters 0 ), ( ( np.lat, np.lon ), ElevationMeters 0 ) ]
+                :: lines
+            )
+        )
+        -- initialize with the start nav point and a map item for the start
+        ( Tuple.first task.start
+        , [ startToMap3dItem (firstNavPointAfterStart task) task.start ]
+        )
+        task.turnpoints
+        -- add a map item for the finish and a line to it from the last nav point (`lastBeforeFinish`)
+        |> (\( prev, lines ) ->
+                finishToMap3dItem (lastNavPointBeforeFinish task) task.finish
+                    :: M3d.Line
+                        [ ( ( prev.lat, prev.lon ), ElevationMeters 0 )
+                        , (Tuple.first >> (\x -> ( ( x.lat, x.lon ), ElevationMeters 0 ))) task.finish
                         ]
                     :: lines
            )

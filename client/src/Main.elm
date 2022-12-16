@@ -30,6 +30,7 @@ import Json.Decode as D
 import List.Extra as ListX
 import List.Nonempty as NE exposing (Nonempty(..))
 import Map as Map exposing (..)
+import Map3d as Map3d exposing (..)
 import MapUtils exposing (..)
 import Maybe.Extra as MaybeX
 import Page.Demo as Demo
@@ -38,8 +39,6 @@ import Page.FlightTask.FlightTaskList as FlightTaskList
 import Page.FlightTaskPage as FlightTaskPage
 import Page.FlightTrack.FlightTrackUpload as FlightTrackUpload
 import Page.Test.TestProgress as TestProgress
-import Result.Extra as ResultX
-import Svg.Attributes exposing (in_)
 
 
 port startDemo : () -> Cmd msg
@@ -87,6 +86,7 @@ main =
 
 type alias Model =
     { mapModel : Map.Model
+    , map3dModel : Map3d.Model
     , flightTaskPage : FlightTaskPage.Model
 
     -- , flightTrackPage : Maybe FlightTrackUpload.Model
@@ -115,8 +115,14 @@ init flags =
                 flags.windowSize
                 9
                 ( LatitudeDegrees 52.030558, LongitudeDegrees 39.662962 )
+
+        ( map3dModel, m3dCmd ) =
+            Map3d.init
+                flags.windowSize
+                ( LatitudeDegrees 52.030558, LongitudeDegrees 39.662962 )
     in
     ( { mapModel = mapModel
+      , map3dModel = map3dModel
       , flightTaskPage = FlightTaskPage.init
 
       --   , flightTrackPage = Nothing
@@ -131,12 +137,14 @@ init flags =
     , Cmd.batch
         [ Cmd.map AppStateMsg AppState.getNavPointsCmd
         , Cmd.map AppStateMsg AppState.getFlightTasksCmd
+        , Cmd.map Map3dMsg m3dCmd
         ]
     )
 
 
 type Msg
     = MapMsg Map.Msg
+    | Map3dMsg Map3d.Msg
     | FlightTaskPageMsg FlightTaskPage.Msg
       -- | FlightTrackPageMsg FlightTrackUpload.Msg
     | TestProgressMsg TestProgress.Msg
@@ -203,6 +211,15 @@ update msg model =
                 --     selectedTaskId
                 --     |> Maybe.withDefault Cmd.none
                 ]
+            )
+
+        Map3dMsg m3dMsg ->
+            let
+                ( nextModel, m3dCmd ) =
+                    Map3d.update m3dMsg model.map3dModel
+            in
+            ( { model | map3dModel = nextModel }
+            , Cmd.map Map3dMsg m3dCmd
             )
 
         FlightTaskPageMsg ftPageMsg ->
@@ -291,6 +308,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Sub.map MapMsg (Map.subscriptions model.mapModel)
+        , Sub.map Map3dMsg (Map3d.subscriptions model.map3dModel)
         , Sub.map FlightTaskPageMsg (FlightTaskPage.subscriptions model.flightTaskPage)
         , messageReceiver MessageReceived
         ]
@@ -364,9 +382,21 @@ view model =
 
                 FlightTaskPage.DemoPage pm ->
                     Demo.mapItems pm
+
+        map3dItems =
+            case model.flightTaskPage of
+                FlightTaskPage.UploadTrack pm ->
+                    FlightTrackUpload.map3dItems (AppState.resolvedTasks model.appState) pm
+
+                FlightTaskPage.DemoPage pm ->
+                    Demo.map3dItems pm
+
+                _ ->
+                    []
     in
     div []
-        [ Map.view mapItems model.mapModel |> Html.map MapMsg
+        -- [ Map.view mapItems model.mapModel |> Html.map MapMsg
+        [ Map3d.view map3dItems model.map3dModel |> Html.map Map3dMsg
         , detachedView TopLeft <|
             Element.map FlightTaskPageMsg <|
                 FlightTaskPage.view
@@ -379,6 +409,9 @@ view model =
                 (List.map text model.messages
                     ++ [ Input.button [] { onPress = Just <| DemoInit Started, label = text "Start Demo" } ]
                 )
+        , detachedView BottomLeft <|
+            column [ padding 10, spacing 10 ]
+                (List.map text (Map3d.debugInfo model.map3dModel))
 
         -- for debugging
         -- , detachedView TopRight <|

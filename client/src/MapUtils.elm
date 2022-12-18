@@ -517,6 +517,11 @@ tileLength (LatitudeDegrees lat) zoom =
     earthCircumference * cos (degrees lat) / 2 ^ toFloat (zoomInt zoom)
 
 
+
+-- earthCircumference * cos (degrees lat) / tileLength = 2 ^ zoom
+-- log2 (earthCircumference * cos (degrees lat) / tileLength) = zoom
+
+
 metersPerPixel : Int -> Maybe Distance
 metersPerPixel zoom =
     let

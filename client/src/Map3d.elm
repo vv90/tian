@@ -1,7 +1,7 @@
 module Map3d exposing (..)
 
 import Angle exposing (Angle)
-import Api.Geo exposing (Distance(..), Elevation(..))
+import Api.Geo exposing (Distance(..), Elevation(..), Latitude(..))
 import Axis3d
 import Basics.Extra exposing (uncurry)
 import Browser.Events as BE
@@ -20,7 +20,7 @@ import Length exposing (Length, Meters)
 import LineSegment3d
 import List.Extra
 import Map3dUtils exposing (Map3dItem(..), ViewInfo, fillTiles, mercatorToMeters)
-import MapUtils exposing (TileKey, ZoomLevel(..), tileKeyToUrl, tileLength, toMercatorWeb, zoomInt)
+import MapUtils exposing (TileKey, ZoomLevel(..), earthCircumference, tileKeyToUrl, tileLength, toMercatorWeb, zoomInt, zoomLevel)
 import Maybe.Extra
 import Pixels exposing (Pixels)
 import Plane3d
@@ -57,7 +57,6 @@ type alias ViewArgs =
 type alias Model =
     { windowSize : WindowSize
     , origin : GeoPoint
-    , zoom : ZoomLevel
     , dragState : DragState
     , viewArgs : ViewArgs
     , loadedTiles : Dict TileKey (Maybe (Material.Texture Color))
@@ -82,12 +81,67 @@ adjustViewDistance delta viewArgs =
     { viewArgs | distance = Quantity.max newDistance minDistance }
 
 
+updateTiles : Model -> Maybe ( Model, Cmd Msg )
+updateTiles model =
+    let
+        numTiles =
+            round (toFloat model.windowSize.width / 256)
+
+        cmr =
+            camera model.viewArgs
+
+        sRect =
+            screenRectangle model.windowSize
+
+        pLeft =
+            Camera3d.ray cmr sRect (Point2d.pixels 0 0)
+                |> Axis3d.intersectionWithPlane Plane3d.xy
+
+        pRight =
+            Camera3d.ray cmr sRect (Point2d.pixels (toFloat model.windowSize.width) 0)
+                |> Axis3d.intersectionWithPlane Plane3d.xy
+
+        dist =
+            Maybe.map2 Point3d.distanceFrom pLeft pRight
+
+        tLen =
+            Maybe.map (Length.inMeters >> (\d -> d / toFloat numTiles)) dist
+
+        (LatitudeDegrees lat) =
+            Tuple.first model.origin
+
+        zoom =
+            Maybe.andThen ((\l -> logBase 2 (earthCircumference * cos (degrees lat) / l)) >> round >> zoomLevel) tLen
+
+        tiles =
+            Maybe.map
+                (fillTiles (isInView model.viewArgs model.windowSize) model.origin)
+                zoom
+
+        newModel ts =
+            { model | displayedTiles = ts }
+
+        cmd =
+            List.filter
+                (\( tileKey, _ ) -> not (Dict.member tileKey model.loadedTiles))
+                >> List.map
+                    (\( tileKey, _ ) ->
+                        Material.load (tileKeyToUrl tileKey)
+                            |> Task.attempt (Result.toMaybe >> TileLoaded tileKey)
+                    )
+                >> Cmd.batch
+    in
+    Maybe.map (\ts -> ( newModel ts, cmd ts )) tiles
+
+
 camera : ViewArgs -> Camera3d Meters WorldCoordinates
 camera viewArgs =
-    Camera3d.perspective
+    Camera3d.orthographic
         { viewpoint =
             Viewpoint3d.orbitZ viewArgs
-        , verticalFieldOfView = Angle.degrees 30
+        , viewportHeight = viewArgs.distance
+
+        -- , verticalFieldOfView = Angle.degrees 30
         }
 
 
@@ -117,12 +171,40 @@ isInView viewArgs windowSize ( x, y ) =
         && Quantity.lessThan (Length.meters 200000) depth
 
 
+pickZoom : Latitude -> WindowSize -> ViewArgs -> Maybe ZoomLevel
+pickZoom (LatitudeDegrees lat) windowSize viewArgs =
+    let
+        numTiles =
+            round (toFloat windowSize.width / 256)
+
+        cmr =
+            camera viewArgs
+
+        sRect =
+            screenRectangle windowSize
+
+        pLeft =
+            Camera3d.ray cmr sRect (Point2d.pixels 0 0)
+                |> Axis3d.intersectionWithPlane Plane3d.xy
+
+        pRight =
+            Camera3d.ray cmr sRect (Point2d.pixels (toFloat windowSize.width) 0)
+                |> Axis3d.intersectionWithPlane Plane3d.xy
+
+        dist =
+            Maybe.map2 Point3d.distanceFrom pLeft pRight
+
+        tLen =
+            Maybe.map (Length.inMeters >> (\d -> d / toFloat numTiles)) dist
+    in
+    Maybe.andThen ((\l -> logBase 2 (earthCircumference * cos (degrees lat) / l)) >> round >> zoomLevel) tLen
+
+
 init : WindowSize -> GeoPoint -> ( Model, Cmd Msg )
 init windowSize origin =
     let
-        zoom =
-            Z13
-
+        -- zoom =
+        --     Z13
         viewAzimuth =
             270
 
@@ -137,27 +219,32 @@ init windowSize origin =
             , distance = Length.meters 25000
             }
 
-        tiles =
-            fillTiles (isInView viewArgs windowSize) origin zoom
+        model =
+            { windowSize = windowSize
+            , viewArgs = viewArgs
+            , origin = origin
+            , dragState = Static
+            , loadedTiles = Dict.empty
+            , displayedTiles = []
+            }
 
-        cmds =
-            List.map
-                (\( tileKey, _ ) ->
-                    Material.load (tileKeyToUrl tileKey)
-                        |> Task.attempt (Result.toMaybe >> TileLoaded tileKey)
-                )
-                tiles
+        -- zoom =
+        --     pickZoom (Tuple.first origin) windowSize viewArgs
+        -- tiles =
+        --     Maybe.map
+        --         (fillTiles (isInView viewArgs windowSize) origin)
+        --         zoom
+        --         |> Maybe.withDefault []
+        -- cmds =
+        --     List.map
+        --         (\( tileKey, _ ) ->
+        --             Material.load (tileKeyToUrl tileKey)
+        --                 |> Task.attempt (Result.toMaybe >> TileLoaded tileKey)
+        --         )
+        --         tiles
     in
-    ( { windowSize = windowSize
-      , viewArgs = viewArgs
-      , origin = origin
-      , zoom = zoom
-      , dragState = Static
-      , loadedTiles = Dict.empty
-      , displayedTiles = tiles
-      }
-    , Cmd.batch cmds
-    )
+    updateTiles model
+        |> Maybe.withDefault ( model, Cmd.none )
 
 
 type Msg
@@ -233,19 +320,21 @@ update msg model =
                             move
                                 model.viewArgs.focalPoint
                                 d
-                    in
-                    ( { model
-                        | dragState =
-                            if isDown then
-                                MovingFrom (move currPoint d)
 
-                            else
-                                Static
-                        , viewArgs =
-                            withFocalPoint newPoint model.viewArgs
-                      }
-                    , Cmd.none
-                    )
+                        newModel =
+                            { model
+                                | dragState =
+                                    if isDown then
+                                        MovingFrom (move currPoint d)
+
+                                    else
+                                        Static
+                                , viewArgs =
+                                    withFocalPoint newPoint model.viewArgs
+                            }
+                    in
+                    updateTiles newModel
+                        |> Maybe.withDefault ( newModel, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -258,9 +347,16 @@ update msg model =
             )
 
         ZoomChanged wheelEvent ->
-            ( { model | viewArgs = model.viewArgs |> adjustViewDistance (Length.meters (wheelEvent.deltaY * 10)) }
-            , Cmd.none
-            )
+            let
+                newModel =
+                    { model
+                        | viewArgs =
+                            model.viewArgs
+                                |> adjustViewDistance (Length.meters (wheelEvent.deltaY * 10))
+                    }
+            in
+            updateTiles newModel
+                |> Maybe.withDefault ( newModel, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg

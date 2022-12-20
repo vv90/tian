@@ -130,6 +130,8 @@ fromMercatorPoint =
 
 mercatorRate : Latitude -> Quantity Float (Rate Meters MercatorUnit)
 mercatorRate lat =
+    -- length (0 to earchCircumference) in meters adjusted for the latitude
+    -- corresponds to mercator unit (0 to 1)
     Quantity.rate (Length.meters (tileLength lat Z0)) (mercatorUnit 1)
 
 
@@ -142,18 +144,17 @@ mercatorFrame center =
         ( cx, cy ) =
             toMercatorWeb center
 
+        -- translating the frame so that the `center` point coordinates become (0, 0) in the rendered world coordinates
         transVector : Vector2d MercatorUnit WorldCoords
         transVector =
             Vector2d.xy (mercatorUnit cx) (mercatorUnit (negate cy))
-                -->> mercatorToMeters lat)
-                -- |> Vector2d.at rate
                 |> Vector2d.reverse
 
         flatWorldFrame : Frame2d Meters WorldCoords { defines : PlaneCoords }
         flatWorldFrame =
             Frame2d.atOrigin
 
-        -- |> Frame2d.translateBy transVector
+        -- in mercator coordinates the Y axis is reversed
         mFrame : Frame2d MercatorUnit WorldCoords { defines : MercatorCoords }
         mFrame =
             Frame2d.at_ rate flatWorldFrame
@@ -206,9 +207,6 @@ makeTiles isInView mFrame mRate focalPoint zoom =
                 |> Point2d.at mRate
             )
 
-        -- tileCoords : TileKey -> Point2d Meters WorldCoords
-        -- tileCoords ( kx, ky, kz ) =
-        --     ( toFloat kx / toFloat numTiles, toFloat ky / toFloat numTiles )
         firstTile =
             focalPoint
                 |> Point2d.at_ mRate
@@ -248,19 +246,6 @@ makeTiles isInView mFrame mRate focalPoint zoom =
                             d
                     )
                     dict
-
-        -- > List.foldl
-        --             (\key d ->
-        --                 let
-        --                     ( p0, p1 ) =
-        --                         tileCoords center key zoom
-        --                 in
-        --                 if not (Dict.member key d) && isCoordsInView ( p0, p1 ) then
-        --                     nearbyTiles (Dict.insert key ( p0, p1 ) d) ( key, ( p0, p1 ) )
-        --                 else
-        --                     d
-        --             )
-        --             dict
     in
     expandTiles
         (Dict.singleton firstTile (tileCoords firstTile))

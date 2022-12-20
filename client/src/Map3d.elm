@@ -59,7 +59,8 @@ type alias ViewArgs =
 
 type alias Model =
     { windowSize : WindowSize
-    , origin : GeoPoint
+
+    -- , origin : GeoPoint
     , mapFrame : Frame2d MercatorUnit WorldCoords { defines : MercatorCoords }
     , mercatorRate : Quantity Float (Rate Meters MercatorUnit)
     , dragState : DragState
@@ -222,7 +223,8 @@ init windowSize origin =
         model =
             { windowSize = windowSize
             , viewArgs = viewArgs
-            , origin = origin
+
+            -- , origin = origin
             , mapFrame = mercatorFrame origin
             , mercatorRate = mercatorRate (Tuple.first origin)
             , dragState = Static
@@ -567,10 +569,10 @@ debugInfo model =
         --             )
     in
     [ model.displayedTiles |> List.length |> String.fromInt |> (++) "Tiles in view: "
-    , showGeoPoint model.origin
-    , toMercatorPoint model.origin |> show2dPoint getMercatorUnit
-    , toMercatorPoint model.origin |> Point2d.placeIn model.mapFrame |> show2dPoint getMercatorUnit
 
+    -- , showGeoPoint model.origin
+    -- , toMercatorPoint model.origin |> show2dPoint getMercatorUnit
+    -- , toMercatorPoint model.origin |> Point2d.placeIn model.mapFrame |> show2dPoint getMercatorUnit
     -- , "( ("
     --     ++ String.fromFloat fromX
     --     ++ ", "
@@ -647,6 +649,9 @@ view mapItems model =
                     |> Maybe.andThen (Maybe.map Material.texturedColor)
                     |> Maybe.withDefault (Material.color Color.lightGray)
                 )
+                -- usually quad vertices are defined in counter-clockwise order
+                -- but since in mercator projection y axis is inverted,
+                -- we need flip the texture upside down by changing the order of vertices
                 (Point3d.xyz (Point2d.xCoordinate p0) (Point2d.yCoordinate p1) (Length.meters 0))
                 (Point3d.xyz (Point2d.xCoordinate p1) (Point2d.yCoordinate p1) (Length.meters 0))
                 (Point3d.xyz (Point2d.xCoordinate p1) (Point2d.yCoordinate p0) (Length.meters 0))

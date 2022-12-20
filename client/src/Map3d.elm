@@ -1,7 +1,7 @@
 module Map3d exposing (..)
 
 import Angle exposing (Angle)
-import Api.Geo exposing (Distance(..), Elevation(..), Latitude(..))
+import Api.Geo exposing (Distance(..), Elevation(..), Latitude(..), Longitude(..))
 import Axis3d
 import Basics.Extra exposing (uncurry)
 import Browser.Events as BE
@@ -12,6 +12,7 @@ import Cylinder3d
 import Dict exposing (Dict)
 import Direction3d
 import Flags exposing (WindowSize)
+import Frame2d exposing (Frame2d)
 import Html exposing (Html, div)
 import Html.Attributes exposing (style)
 import Html.Events exposing (on)
@@ -19,35 +20,37 @@ import Json.Decode as D
 import Length exposing (Length, Meters)
 import LineSegment3d
 import List.Extra
-import Map3dUtils exposing (Map3dItem(..), ViewInfo, fillTiles, mercatorToMeters)
+import Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, ViewInfo, WorldCoords, fromMercatorPoint, getMercatorUnit, makeTiles, mercatorFrame, mercatorRate, toMercatorPoint)
 import MapUtils exposing (TileKey, ZoomLevel(..), earthCircumference, tileKeyToUrl, tileLength, toMercatorWeb, zoomInt, zoomLevel)
 import Maybe.Extra
 import Pixels exposing (Pixels)
 import Plane3d
-import Point2d
+import Point2d exposing (Point2d)
 import Point3d exposing (Point3d)
 import Point3d.Projection as Projection
-import Quantity exposing (Quantity(..), minus, plus)
+import Quantity exposing (Quantity(..), Rate, minus, plus)
 import Rectangle2d exposing (Rectangle2d)
 import Scene3d
 import Scene3d.Material as Material
+import SketchPlane3d exposing (SketchPlane3d)
 import Svg exposing (Svg)
 import Svg.Attributes as SvgAttr
 import Task
 import Viewpoint3d
 
 
-type WorldCoordinates
-    = WorldCoordinates
+
+-- type WorldCoordinates
+--     = WorldCoordinates
 
 
 type DragState
-    = MovingFrom (Point3d Meters WorldCoordinates)
+    = MovingFrom (Point3d Meters WorldCoords)
     | Static
 
 
 type alias ViewArgs =
-    { focalPoint : Point3d Meters WorldCoordinates
+    { focalPoint : Point3d Meters WorldCoords
     , azimuth : Angle
     , elevation : Angle
     , distance : Quantity Float Meters
@@ -57,14 +60,16 @@ type alias ViewArgs =
 type alias Model =
     { windowSize : WindowSize
     , origin : GeoPoint
+    , mapFrame : Frame2d MercatorUnit WorldCoords { defines : MercatorCoords }
+    , mercatorRate : Quantity Float (Rate Meters MercatorUnit)
     , dragState : DragState
     , viewArgs : ViewArgs
     , loadedTiles : Dict TileKey (Maybe (Material.Texture Color))
-    , displayedTiles : List ( TileKey, ( ( Float, Float ), ( Float, Float ) ) )
+    , displayedTiles : List ( TileKey, ( Point2d Meters WorldCoords, Point2d Meters WorldCoords ) )
     }
 
 
-withFocalPoint : Point3d Meters WorldCoordinates -> ViewArgs -> ViewArgs
+withFocalPoint : Point3d Meters WorldCoords -> ViewArgs -> ViewArgs
 withFocalPoint focalPoint viewArgs =
     { viewArgs | focalPoint = focalPoint }
 
@@ -79,6 +84,11 @@ adjustViewDistance delta viewArgs =
             Length.meters 100
     in
     { viewArgs | distance = Quantity.max newDistance minDistance }
+
+
+xyPlane : SketchPlane3d Meters WorldCoords { defines : WorldCoords }
+xyPlane =
+    SketchPlane3d.xy
 
 
 updateTiles : Model -> Maybe ( Model, Cmd Msg )
@@ -107,15 +117,33 @@ updateTiles model =
         tLen =
             Maybe.map (Length.inMeters >> (\d -> d / toFloat numTiles)) dist
 
-        (LatitudeDegrees lat) =
-            Tuple.first model.origin
+        ( LatitudeDegrees lat, _ ) =
+            -- p =
+            --     Tuple.first model.origin
+            SketchPlane3d.originPoint xyPlane
+                |> Point3d.projectInto xyPlane
+                |> Point2d.at_ model.mercatorRate
+                |> Point2d.relativeTo model.mapFrame
+                |> fromMercatorPoint
 
         zoom =
             Maybe.andThen ((\l -> logBase 2 (earthCircumference * cos (degrees lat) / l)) >> round >> zoomLevel) tLen
 
+        -- focusedGeoPoint =
+        --     Point3d.toMeters model.viewArgs.focalPoint
+        --         |> (\{ x, y } -> localToGeoPoint model.origin ( x, y ))
         tiles =
             Maybe.map
-                (fillTiles (isInView model.viewArgs model.windowSize) model.origin)
+                (makeTiles
+                    (isInView model.viewArgs model.windowSize)
+                    model.mapFrame
+                    model.mercatorRate
+                    (Point3d.projectInto xyPlane model.viewArgs.focalPoint)
+                )
+                -- (fillTiles
+                --     (isInView model.viewArgs model.windowSize)
+                --     focusedGeoPoint
+                -- )
                 zoom
 
         newModel ts =
@@ -134,7 +162,7 @@ updateTiles model =
     Maybe.map (\ts -> ( newModel ts, cmd ts )) tiles
 
 
-camera : ViewArgs -> Camera3d Meters WorldCoordinates
+camera : ViewArgs -> Camera3d Meters WorldCoords
 camera viewArgs =
     Camera3d.orthographic
         { viewpoint =
@@ -145,11 +173,12 @@ camera viewArgs =
         }
 
 
-isInView : ViewArgs -> WindowSize -> ( Float, Float ) -> Bool
-isInView viewArgs windowSize ( x, y ) =
+isInView : ViewArgs -> WindowSize -> Point2d Meters WorldCoords -> Bool
+isInView viewArgs windowSize p =
     let
-        p =
-            Point3d.meters x y 0
+        p3d =
+            -- Point3d.meters x y 0
+            Point3d.on xyPlane p
 
         sRect =
             screenRectangle windowSize
@@ -161,43 +190,14 @@ isInView viewArgs windowSize ( x, y ) =
             Projection.toScreenSpace
                 cmr
                 sRect
-                p
+                p3d
 
         depth =
-            Projection.depth cmr p
+            Projection.depth cmr p3d
     in
     Rectangle2d.contains projectedPoint sRect
         && Quantity.greaterThan (Length.meters 0) depth
         && Quantity.lessThan (Length.meters 200000) depth
-
-
-pickZoom : Latitude -> WindowSize -> ViewArgs -> Maybe ZoomLevel
-pickZoom (LatitudeDegrees lat) windowSize viewArgs =
-    let
-        numTiles =
-            round (toFloat windowSize.width / 256)
-
-        cmr =
-            camera viewArgs
-
-        sRect =
-            screenRectangle windowSize
-
-        pLeft =
-            Camera3d.ray cmr sRect (Point2d.pixels 0 0)
-                |> Axis3d.intersectionWithPlane Plane3d.xy
-
-        pRight =
-            Camera3d.ray cmr sRect (Point2d.pixels (toFloat windowSize.width) 0)
-                |> Axis3d.intersectionWithPlane Plane3d.xy
-
-        dist =
-            Maybe.map2 Point3d.distanceFrom pLeft pRight
-
-        tLen =
-            Maybe.map (Length.inMeters >> (\d -> d / toFloat numTiles)) dist
-    in
-    Maybe.andThen ((\l -> logBase 2 (earthCircumference * cos (degrees lat) / l)) >> round >> zoomLevel) tLen
 
 
 init : WindowSize -> GeoPoint -> ( Model, Cmd Msg )
@@ -223,6 +223,8 @@ init windowSize origin =
             { windowSize = windowSize
             , viewArgs = viewArgs
             , origin = origin
+            , mapFrame = mercatorFrame origin
+            , mercatorRate = mercatorRate (Tuple.first origin)
             , dragState = Static
             , loadedTiles = Dict.empty
             , displayedTiles = []
@@ -255,7 +257,7 @@ type Msg
     | ZoomChanged WheelEvent
 
 
-screenRectangle : WindowSize -> Rectangle2d Pixels WorldCoordinates
+screenRectangle : WindowSize -> Rectangle2d Pixels screenCoords
 screenRectangle windowSize =
     Rectangle2d.from
         Point2d.origin
@@ -298,7 +300,7 @@ update msg model =
                         (Point2d.pixels x y)
                         |> Axis3d.intersectionWithPlane Plane3d.xy
 
-                delta : Point3d Meters WorldCoordinates -> Point3d Meters WorldCoordinates -> ( Length.Length, Length.Length )
+                delta : Point3d Meters WorldCoords -> Point3d Meters WorldCoords -> ( Length.Length, Length.Length )
                 delta p1 p2 =
                     ( Point3d.xCoordinate p1 |> minus (Point3d.xCoordinate p2)
                     , Point3d.yCoordinate p1 |> minus (Point3d.yCoordinate p2)
@@ -376,7 +378,7 @@ subscriptions model =
     dragSubs
 
 
-mapItemView : Model -> Map3dItem -> ( Svg Msg, Scene3d.Entity WorldCoordinates )
+mapItemView : Model -> Map3dItem -> ( Svg Msg, Scene3d.Entity WorldCoords )
 mapItemView model mapItem =
     let
         cmr =
@@ -390,27 +392,19 @@ mapItemView model mapItem =
                     (toFloat model.windowSize.height)
                 )
 
-        localLatitude =
-            Tuple.first model.origin
-
-        ( cx, cy ) =
-            toMercatorWeb model.origin
-
-        to3dPoint : GeoPoint -> Elevation -> Point3d Meters WorldCoordinates
+        -- localLatitude =
+        --     Tuple.first model.origin
+        -- ( cx, cy ) =
+        --     toMercatorWeb model.origin
+        to3dPoint : GeoPoint -> Elevation -> Point3d Meters WorldCoords
         to3dPoint p (ElevationMeters elev) =
-            let
-                ( x, y ) =
-                    toMercatorWeb p
+            toMercatorPoint p
+                |> Point2d.placeIn model.mapFrame
+                |> Point2d.at model.mercatorRate
+                |> Point3d.on xyPlane
+                |> Point3d.translateIn Direction3d.positiveZ (Length.meters elev)
 
-                -- mercator coords origin is top left
-                -- but local coords origin is bottom left
-                -- so we need to invert y axis
-                ( px, py ) =
-                    mercatorToMeters localLatitude ( x - cx, cy - y )
-            in
-            Point3d.meters px py elev
-
-        project3dPoint : Point3d Meters WorldCoordinates -> ( Float, Float )
+        project3dPoint : Point3d Meters WorldCoords -> ( Float, Float )
         project3dPoint p3d =
             Projection.toScreenSpace
                 cmr
@@ -542,6 +536,17 @@ debugInfo model =
         n =
             0
 
+        showGeoPoint ( LatitudeDegrees lat, LongitudeDegrees lon ) =
+            String.fromFloat lat ++ ", " ++ String.fromFloat lon
+
+        show2dPoint fromQty p =
+            Point2d.toTuple fromQty p
+                |> (\( x, y ) -> String.fromFloat x ++ ", " ++ String.fromFloat y)
+
+        show3dPoint fromQty p =
+            Point3d.toTuple fromQty p
+                |> (\( x, y, z ) -> String.fromFloat x ++ ", " ++ String.fromFloat y ++ ", " ++ String.fromFloat z)
+
         -- (Quantity depth) =
         --     Projection.depth (camera (Point3d.meters 0 0 0)
         -- ( ( Quantity fromX, Quantity fromY ), ( Quantity toX, Quantity toY ) ) =
@@ -561,10 +566,10 @@ debugInfo model =
         --             , ( Length.meters 0, Length.meters 0 )
         --             )
     in
-    [ model.origin
-        |> toMercatorWeb
-        |> (\( x, y ) -> "x: " ++ String.fromFloat x ++ ", y: " ++ String.fromFloat y)
-    , model.displayedTiles |> List.length |> String.fromInt |> (++) "Tiles in view: "
+    [ model.displayedTiles |> List.length |> String.fromInt |> (++) "Tiles in view: "
+    , showGeoPoint model.origin
+    , toMercatorPoint model.origin |> show2dPoint getMercatorUnit
+    , toMercatorPoint model.origin |> Point2d.placeIn model.mapFrame |> show2dPoint getMercatorUnit
 
     -- , "( ("
     --     ++ String.fromFloat fromX
@@ -636,16 +641,16 @@ view mapItems model =
         --         (Point3d.meters 1000 -1000 0)
         --         (Point3d.meters 1000 1000 0)
         --         (Point3d.meters -1000 1000 0)
-        toTile ( tk, ( ( x0, y0 ), ( x1, y1 ) ) ) =
+        toTile ( tk, ( p0, p1 ) ) =
             Scene3d.quad
                 (Dict.get tk model.loadedTiles
                     |> Maybe.andThen (Maybe.map Material.texturedColor)
                     |> Maybe.withDefault (Material.color Color.lightGray)
                 )
-                (Point3d.meters x0 y0 0)
-                (Point3d.meters x1 y0 0)
-                (Point3d.meters x1 y1 0)
-                (Point3d.meters x0 y1 0)
+                (Point3d.xyz (Point2d.xCoordinate p0) (Point2d.yCoordinate p1) (Length.meters 0))
+                (Point3d.xyz (Point2d.xCoordinate p1) (Point2d.yCoordinate p1) (Length.meters 0))
+                (Point3d.xyz (Point2d.xCoordinate p1) (Point2d.yCoordinate p0) (Length.meters 0))
+                (Point3d.xyz (Point2d.xCoordinate p0) (Point2d.yCoordinate p0) (Length.meters 0))
 
         -- continue: move to init
         base =

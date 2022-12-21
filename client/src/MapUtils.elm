@@ -27,6 +27,11 @@ maxZoom =
     19
 
 
+earthCircumference : Float
+earthCircumference =
+    40075016.686
+
+
 stringFromBool : Bool -> String
 stringFromBool b =
     if b then
@@ -344,6 +349,177 @@ scaleCoords scaleCoeffcitient offset =
             x / scaleCoeffcitient
     in
     Tuple.mapBoth applyScale applyScale offset
+
+
+type ZoomLevel
+    = Z0
+    | Z1
+    | Z2
+    | Z3
+    | Z4
+    | Z5
+    | Z6
+    | Z7
+    | Z8
+    | Z9
+    | Z10
+    | Z11
+    | Z12
+    | Z13
+    | Z14
+    | Z15
+    | Z16
+    | Z17
+    | Z18
+    | Z19
+    | Z20
+
+
+zoomInt : ZoomLevel -> Int
+zoomInt zoom =
+    case zoom of
+        Z0 ->
+            0
+
+        Z1 ->
+            1
+
+        Z2 ->
+            2
+
+        Z3 ->
+            3
+
+        Z4 ->
+            4
+
+        Z5 ->
+            5
+
+        Z6 ->
+            6
+
+        Z7 ->
+            7
+
+        Z8 ->
+            8
+
+        Z9 ->
+            9
+
+        Z10 ->
+            10
+
+        Z11 ->
+            11
+
+        Z12 ->
+            12
+
+        Z13 ->
+            13
+
+        Z14 ->
+            14
+
+        Z15 ->
+            15
+
+        Z16 ->
+            16
+
+        Z17 ->
+            17
+
+        Z18 ->
+            18
+
+        Z19 ->
+            19
+
+        Z20 ->
+            20
+
+
+zoomLevel : Int -> Maybe ZoomLevel
+zoomLevel zoom =
+    case zoom of
+        0 ->
+            Just Z0
+
+        1 ->
+            Just Z1
+
+        2 ->
+            Just Z2
+
+        3 ->
+            Just Z3
+
+        4 ->
+            Just Z4
+
+        5 ->
+            Just Z5
+
+        6 ->
+            Just Z6
+
+        7 ->
+            Just Z7
+
+        8 ->
+            Just Z8
+
+        9 ->
+            Just Z9
+
+        10 ->
+            Just Z10
+
+        11 ->
+            Just Z11
+
+        12 ->
+            Just Z12
+
+        13 ->
+            Just Z13
+
+        14 ->
+            Just Z14
+
+        15 ->
+            Just Z15
+
+        16 ->
+            Just Z16
+
+        17 ->
+            Just Z17
+
+        18 ->
+            Just Z18
+
+        19 ->
+            Just Z19
+
+        20 ->
+            Just Z20
+
+        _ ->
+            Nothing
+
+
+tileLength : Latitude -> ZoomLevel -> Float
+tileLength (LatitudeDegrees lat) zoom =
+    earthCircumference * cos (degrees lat) / 2 ^ toFloat (zoomInt zoom)
+
+
+
+-- earthCircumference * cos (degrees lat) / tileLength = 2 ^ zoom
+-- log2 (earthCircumference * cos (degrees lat) / tileLength) = zoom
 
 
 metersPerPixel : Int -> Maybe Distance

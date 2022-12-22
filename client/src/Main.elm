@@ -328,9 +328,10 @@ detachedView pos content =
             [ style "position" "absolute"
             , style "margin" "10px"
             , style "padding" "10px"
-            , style "background" "white"
-            , style "border" "1px solid gray"
+            , style "background" "rgba(255, 255, 255, 0.8)"
+            , style "border" "1px solid #252525"
             , style "border-radius" "10px"
+            , style "color" "#252525"
             ]
 
         positionStyle =

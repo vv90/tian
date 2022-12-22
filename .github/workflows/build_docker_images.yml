@@ -1,0 +1,56 @@
+name: build_docker_images
+on:
+  workflow_dispatch:
+
+jobs: 
+  cancel-previous:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+    
+  build_server:
+    name: Build server
+    runs-on: ubuntu-22.04
+
+    container: docker:20.10.12-alpine3.15
+    
+    steps: 
+      - uses: actions/checkout@v2
+      
+      - name: Stack cache
+        uses: actions/cache@v2
+        with:
+          path: server/cache
+          key: stack_deps_cache_${{ runner.os }}_${{ hashFiles('server/stack.yaml', 'server/stack.yaml.lock', 'server/package.yaml') }}
+          restore-keys: stack_deps_cache_${{ runner.os }}_
+
+      - name: Build server image
+        run: |
+          docker build -f server/Dockerfile.artifacts -t artifacts server
+
+      - name: Save stack depenencies cache
+        run: |
+          id=$(docker create artifacts)
+          docker cp $id:/root/stack_dependencies_cache.tar.gz - > ./server/cache/stack_dependencies_cache.tar.gz.tar
+
+      - name: Replace the existing generated code with just generated one
+          # Note: we could also do it via docker, 
+          # but it will require anyone to build backend-artifacts before building the frontend
+          # which will take 20-40 minutes.
+        run: |
+          id=$(docker create artifacts)
+          rm -rf client/src/Api
+          docker cp $id:/client/src/Api - > client/src/Api.tar
+          tar -xf client/src/Api.tar -C client/src
+          rm client/src/Api.tar
+
+      - name: Build server image
+        run: |
+          docker build -f server/Dockerfile -t server server
+
+      - name: Build client image
+        run: |
+          docker build -f client/Dockerfile -t client client

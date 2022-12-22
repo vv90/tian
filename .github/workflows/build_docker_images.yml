@@ -20,6 +20,10 @@ jobs:
     steps: 
       - uses: actions/checkout@v2
       
+      - name: Install utilities
+        # yq is used to parse stack resolver version from stack.yaml file
+        run: apk add --no-cache yq
+
       - name: Stack cache
         uses: actions/cache@v2
         with:

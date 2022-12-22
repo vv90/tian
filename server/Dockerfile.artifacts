@@ -30,6 +30,9 @@ COPY Setup.hs stack.yaml stack.yaml.lock server.cabal LICENSE /server/
 
 RUN stack build --copy-bins
 
+# Generate Elm code
+RUN stack run codegen
+
 # Compress stack dependencies cache
 WORKDIR /root
 RUN tar -c -Ipigz -f stack_dependencies_cache.tar.gz .stack

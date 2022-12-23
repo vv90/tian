@@ -2,6 +2,12 @@ name: build_docker_images
 on:
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+  TAGS: |
+    type=sha
+    type=ref,event=branch
+
 jobs: 
   cancel-previous:
     runs-on: ubuntu-latest
@@ -31,7 +37,7 @@ jobs:
           key: stack_deps_cache_${{ runner.os }}_${{ hashFiles('server/stack.yaml', 'server/stack.yaml.lock', 'server/package.yaml') }}
           restore-keys: stack_deps_cache_${{ runner.os }}_
 
-      - name: Build server image
+      - name: Build artifacts image
         run: |
           docker build -f server/Dockerfile.artifacts -t artifacts server
 
@@ -51,10 +57,34 @@ jobs:
           tar -xf client/src/Api.tar -C client/src
           rm client/src/Api.tar
 
-      - name: Build server image
-        run: |
-          docker build -f server/Dockerfile -t server server
+      - name: Prepare tags and labels (server)
+        id: meta-server
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/vv90/contest-viewer-server
+          tags: ${{ env.TAGS }}
 
-      - name: Build client image
-        run: |
-          docker build -f client/Dockerfile -t client client
+      - name: Build and push Docker image (server)
+        uses: docker/build-push-action@v3
+        with: 
+          context: server
+          file: server/Dockerfile
+          push: true
+          tags: ${{ steps.meta-server.outputs.tags}}
+          labels: ${{ steps.meta-server.outputs.labels}}
+
+      - name: Prepare tags and labels (client)
+        id: meta-client
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/vv90/contest-viewer-client
+          tags: ${{ env.TAGS }}
+
+      - name: Build and push Docker image (client)
+        uses: docker/build-push-action@v3
+        with:
+          context: client
+          file: client/Dockerfile
+          push: true
+          tags: ${{ steps.meta-client.outputs.tags }}
+          labels: ${{ steps.meta-client.outputs.labels }}

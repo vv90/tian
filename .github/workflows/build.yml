@@ -19,8 +19,8 @@ jobs:
       - name: Stack cache
         uses: freckle/stack-cache-action@v2
         with:
-          stack-yaml: server/stack.yaml
-          working-directory: server
+          stack-yaml: ./server/stack.yaml
+          working-directory: ./server
 
       - run: | 
           cd server

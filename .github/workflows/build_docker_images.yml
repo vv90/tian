@@ -37,16 +37,8 @@ jobs:
         # yq is used to parse stack resolver version from stack.yaml file
         run: apk add --no-cache yq curl tar
 
-      - name: Install Docker buildx
-        # buildx is requred for docker docker/build-push-action.
-        # it is included in the ubuntu-latest virtual machine,
-        # but not included in the `docker` container image, which we use to run the workflow
-        run: |
-          export BUILDX_VERSION=$(curl -s 'https://api.github.com/repos/docker/buildx/releases' | jq -r '.[0].tag_name')
-          mkdir -p /usr/lib/docker/cli-plugins
-          curl -L --output /usr/lib/docker/cli-plugins/docker-buildx "https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-amd64"
-          chmod a+x /usr/lib/docker/cli-plugins/docker-buildx
-
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
       - name: Stack cache
         uses: actions/cache@v2

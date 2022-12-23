@@ -21,8 +21,6 @@ jobs:
     name: Build server
     runs-on: ubuntu-22.04
 
-    container: docker:20.10.12-alpine3.15
-    
     steps: 
       - uses: actions/checkout@v2
       

@@ -15,5 +15,6 @@ jobs:
           stack-version: 'latest'
 
       - run: | 
+          cd server
           stack build --copy-bins
           stack run codegen

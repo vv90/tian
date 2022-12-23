@@ -6,6 +6,8 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
+      - run: npm install -g elm-format
+
       - uses: actions/checkout@v2
 
       - uses: haskell/actions/setup@v2
@@ -14,7 +16,14 @@ jobs:
           enable-stack: true
           stack-version: 'latest'
 
+      - name: Stack cache
+        uses: freckle/stack-cache-action@v2
+          with:
+            stack-yaml: server/stack.yaml
+            working-directory: server
+
       - run: | 
           cd server
           stack build --copy-bins
           stack run codegen
+

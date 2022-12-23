@@ -31,10 +31,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install utilities
-        # yq is used to parse stack resolver version from stack.yaml file
-        run: apt-get install yq curl tar
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 

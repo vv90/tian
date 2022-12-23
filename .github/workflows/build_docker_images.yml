@@ -44,7 +44,7 @@ jobs:
       - name: Save stack depenencies cache
         run: |
           id=$(docker create artifacts)
-          docker cp $id:/root/stack_dependencies_cache.tar.gz.tar - > ./server/cache/stack_dependencies_cache.tar.gz.tar
+          docker cp $id:/root/stack_dependencies_cache.tar.gz - > ./server/cache/stack_dependencies_cache.tar.gz
 
       - name: Replace the existing generated code with just generated one
           # Note: we could also do it via docker, 

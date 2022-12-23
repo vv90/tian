@@ -5,6 +5,12 @@ RUN apt-get -y install libpq-dev haskell-stack pigz
 RUN stack upgrade 
 # RUN curl -sSL https://get.haskellstack.org/stable/linux-x86_64.tar.gz | sh
 
+# Install Elm-format to format the generated output (standalone is more reliable and compatible, than NPM version)
+RUN curl -L -o elm-format.tgz https://github.com/avh4/elm-format/releases/download/0.8.5/elm-format-0.8.5-linux-x64.tgz
+RUN tar -xzf elm-format.tgz
+RUN chmod +x elm-format
+RUN mv elm-format /usr/local/bin/
+
 # Copy and extract stack dependencies cache (if we have it)
 WORKDIR /root
 COPY cache/* /root/

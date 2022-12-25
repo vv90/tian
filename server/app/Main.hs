@@ -35,10 +35,6 @@ startCounter n = do
     threadDelay 1000000
     startCounter (n + 1)
 
--- runMain :: IO ()
--- runMain =
---     concurrently startApp
-
 authC :: ConduitT ByteString ByteString IO ()
 authC = 
     mapC (const "user N0CALLX09 pass -1 vers TaskView 0.1 filter r/43.7/5.8/500\r\n") 

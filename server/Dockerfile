@@ -5,7 +5,7 @@ RUN apt-get update
 RUN apt-get -y install libpq-dev
 
 # COPY /root/.local/bin/server-exe /app/server
-COPY --from=BIN_PATH_CONTEXT server-exe /app/server
+COPY --from=bin_path_context server-exe /app/server
 
 WORKDIR /app
 

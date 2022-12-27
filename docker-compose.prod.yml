@@ -18,7 +18,7 @@ services:
     image: ghcr.io/vv90/contest-viewer-server:master
     environment:
       - DB_HOST=db
-      - DB_PORT=5433
+      - DB_PORT=5432
       - DB_USER=admin
       - DB_PASS=admin
       - DB_NAME=cvdb

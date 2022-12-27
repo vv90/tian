@@ -20,10 +20,10 @@ docker cp $id:/root/stack_dependencies_cache.tar.gz - >./server/cache/stack_depe
 # but it will require anyone to build backend-artifacts before building the frontend
 # which will take 20-40 minutes.
 
-# rm -rf client/src/Api
-# docker cp $id:/client/src/Api - > client/src/Api.tar
-# tar -xf client/src/Api.tar -C client/src
-# rm client/src/Api.tar
+rm -rf client/src/Api
+docker cp $id:/client/src/Api - >client/src/Api.tar
+tar -xf client/src/Api.tar -C client/src
+rm client/src/Api.tar
 
 # Remove the container after extracting artifacts
 docker rm -v $id

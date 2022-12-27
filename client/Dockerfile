@@ -25,18 +25,19 @@ COPY elm.json /build/
 
 # Compile Elm code
 # RUN elm make --optimize --output="./bundle.uncompressed.js" src/Main.elm
-RUN elm make src/Main.elm --optimize --output="./assets/inline/bundle.js"
+RUN elm make src/Main.elm --optimize --output="./assets/bundle.js"
 
+RUN uglifyjs "./assets/bundle.js" --compress 'pure_funcs="F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9",pure_getters=true,keep_fargs=false,unsafe_comps=true,unsafe=true,passes=2' --output="./assets/bundle.js" && uglifyjs "./assets/bundle.js" --mangle --output="./assets/bundle.js"
 
 # Copy assets and index page
 COPY assets /build/assets
-COPY index.src.html /build/
+COPY index.html /build/
 
 # Inline all inlineable assets
-RUN bash -c 'inline-source --compress false --root ./ index.src.html > index.html'
+# RUN bash -c 'inline-source --compress false --root ./ index.src.html > index.html'
 
 # Remove just inlined assets
-RUN rm -rf assets/inline
+# RUN rm -rf assets/inline
 
 
 FROM nginx:1.23.0-alpine

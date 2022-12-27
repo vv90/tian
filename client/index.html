@@ -14,12 +14,8 @@
       href="https://fonts.googleapis.com/css2?family=PT+Mono&display=swap"
       rel="stylesheet"
     />
-    <link inline rel="stylesheet" href="/assets/inline/reset.css" />
-    <script
-      inline
-      type="text/javascript"
-      src="/assets/inline/bundle.js"
-    ></script>
+    <link inline rel="stylesheet" href="/assets/reset.css" />
+    <script inline type="text/javascript" src="/assets/bundle.js"></script>
   </head>
 
   <body style="overflow: hidden">
@@ -27,12 +23,8 @@
     <div id="elm-node"></div>
     <!-- <script src="https://unpkg.com/elm-canvas@2.2/elm-canvas.js"></script> -->
     <script>
-      const env = {
-        ENV_FRONTEND_BACKEND_URL: "http://localhost:8000",
-      };
       const app = Elm.Main.init({
         flags: {
-          backendUrl: env.ENV_FRONTEND_BACKEND_URL,
           windowSize: {
             height: window.innerHeight,
             width: window.innerWidth,
@@ -43,7 +35,8 @@
 
       app.ports.startDemo.subscribe(function () {
         // Create your WebSocket.
-        const socket = new WebSocket("ws://0.0.0.0:8081/demo");
+
+        const socket = new WebSocket(`ws://${location.host}:8081/demo`);
 
         // When a command goes to the `sendMessage` port, we pass the message
         // along to the WebSocket.

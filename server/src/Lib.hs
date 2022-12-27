@@ -276,19 +276,21 @@ startApp port = do
     putStrLn ("Server started on port " <> show port) 
     run port app
 
-app :: Application
-app = corsMiddleware $ serve api server 
-    where
-        corsMiddleware :: Middleware
-        corsMiddleware = cors (const $ Just corsPolicy)
+-- app :: Application
+-- app = corsMiddleware $ serve api server 
+--     where
+--         corsMiddleware :: Middleware
+--         corsMiddleware = cors (const $ Just corsPolicy)
 
-        corsPolicy =
-            simpleCorsResourcePolicy
-                { corsMethods = [methodOptions, methodGet, methodPost, methodPut, methodDelete]
-                -- Note: Content-Type header is necessary for POST requests
-                , corsRequestHeaders = ["Authorization", "Origin", "Content-Type", "Browser-Locale-Data"]
-                -- , corsIgnoreFailures = True
-                }
+--         corsPolicy =
+--             simpleCorsResourcePolicy
+--                 { corsMethods = [methodOptions, methodGet, methodPost, methodPut, methodDelete]
+--                 -- Note: Content-Type header is necessary for POST requests
+--                 , corsRequestHeaders = ["Authorization", "Origin", "Content-Type", "Browser-Locale-Data"]
+--                 -- , corsIgnoreFailures = True
+--                 }
+app :: Application
+app = serve api server
 
 api :: Proxy API
 api = Proxy

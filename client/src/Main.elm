@@ -1,4 +1,4 @@
-port module Main exposing (..)
+module Main exposing (..)
 
 -- import Geo.GeoUtils exposing (..)
 -- import Utils exposing (..)
@@ -16,9 +16,11 @@ import Common.Effect as Effect
 import Common.FlightTaskUtils exposing (navPoints, taskToMapItems)
 import Common.GeoUtils exposing (metersElevation)
 import Common.JsonCodecsExtra exposing (tupleDecoder)
+import Common.Palette as Palette
 import Common.TaskProgressUtils exposing (progressPointsToMapItems, targetToMapItem)
 import Components.Player as Player
-import Element exposing (Element, column, layout, padding, spacing, text)
+import Element exposing (Element, column, el, fill, height, layout, onRight, padding, px, rgba255, spacing, text, width)
+import Element.Background as Background
 import Element.Font as Font
 import Element.Input as Input
 import Env exposing (apiUrl)
@@ -41,26 +43,18 @@ import Page.FlightTrack.FlightTrackUpload as FlightTrackUpload
 import Page.Test.TestProgress as TestProgress
 
 
-port startDemo : () -> Cmd msg
 
-
-port messageReceiver : (String -> msg) -> Sub msg
-
-
-getDemoTaskCmd : Cmd Msg
-getDemoTaskCmd =
-    Http.request
-        { method = "GET"
-        , headers = []
-        , url = apiUrl "demoTask"
-        , body = Http.emptyBody
-        , expect = Http.expectJson (Finished >> DemoInit) flightTaskDecoder
-        , timeout = Nothing
-        , tracker = Nothing
-        }
-
-
-
+-- getDemoTaskCmd : Cmd Msg
+-- getDemoTaskCmd =
+--     Http.request
+--         { method = "GET"
+--         , headers = []
+--         , url = apiUrl "demoTask"
+--         , body = Http.emptyBody
+--         , expect = Http.expectJson (Finished >> DemoInit) flightTaskDecoder
+--         , timeout = Nothing
+--         , tracker = Nothing
+--         }
 -- startDemoCmd : Cmd Msg
 -- startDemoCmd =
 --     Http.request
@@ -82,6 +76,17 @@ main =
         , view = view
         , subscriptions = subscriptions
         }
+
+
+sidebarWidth =
+    450
+
+
+withSidebarOffset : WindowSize -> WindowSize
+withSidebarOffset windowSize =
+    { height = windowSize.height
+    , width = windowSize.width - sidebarWidth
+    }
 
 
 type alias Model =
@@ -112,18 +117,18 @@ init flags =
     let
         mapModel =
             Map.init
-                flags.windowSize
+                (withSidebarOffset flags.windowSize)
                 9
                 ( LatitudeDegrees 52.030558, LongitudeDegrees 39.662962 )
 
         ( map3dModel, m3dCmd ) =
             Map3d.init
-                flags.windowSize
+                (withSidebarOffset flags.windowSize)
                 ( LatitudeDegrees 52.030558, LongitudeDegrees 39.662962 )
     in
     ( { mapModel = mapModel
       , map3dModel = map3dModel
-      , flightTaskPage = FlightTaskPage.init
+      , flightTaskPage = FlightTaskPage.DemoPage Demo.init
 
       --   , flightTrackPage = Nothing
       , testProgressModel = TestProgress.init
@@ -151,7 +156,7 @@ type Msg
     | AppStateMsg AppState.Msg
     | MessageReceived String
       -- | GotDemoFlightTask (ApiResult FlightTask)
-    | DemoInit (AsyncOperationStatus (ApiResult FlightTask))
+      -- | DemoInit (AsyncOperationStatus (ApiResult FlightTask))
     | NoMsg
 
 
@@ -289,17 +294,14 @@ update msg model =
         --     ( model, Cmd.none )
         -- DemoInitiated ->
         --     ( model, startDemoCmd )
-        DemoInit Started ->
-            ( model, getDemoTaskCmd )
-
-        DemoInit (Finished (Ok task)) ->
-            ( { model | flightTaskPage = FlightTaskPage.DemoPage (Demo.init task) }
-            , startDemo ()
-            )
-
-        DemoInit (Finished (Err e)) ->
-            ( model, Cmd.none )
-
+        -- DemoInit Started ->
+        --     ( model, getDemoTaskCmd )
+        -- DemoInit (Finished (Ok task)) ->
+        --     ( { model | flightTaskPage = FlightTaskPage.DemoPage  }
+        --     , startDemo ()
+        --     )
+        -- DemoInit (Finished (Err e)) ->
+        --     ( model, Cmd.none )
         NoMsg ->
             ( model, Cmd.none )
 
@@ -310,7 +312,8 @@ subscriptions model =
         [ Sub.map MapMsg (Map.subscriptions model.mapModel)
         , Sub.map Map3dMsg (Map3d.subscriptions model.map3dModel)
         , Sub.map FlightTaskPageMsg (FlightTaskPage.subscriptions model.flightTaskPage)
-        , messageReceiver MessageReceived
+
+        -- , messageReceiver MessageReceived
         ]
 
 
@@ -329,9 +332,10 @@ detachedView pos content =
             , style "margin" "10px"
             , style "padding" "10px"
             , style "background" "rgba(255, 255, 255, 0.8)"
-            , style "border" "1px solid #252525"
-            , style "border-radius" "10px"
+            , style "border" "1px solid rgba(37, 37, 37, 0.5)"
+            , style "border-radius" "5px"
             , style "color" "#252525"
+            , style "font-family" "Roboto"
             ]
 
         positionStyle =
@@ -351,7 +355,24 @@ detachedView pos content =
     div
         (viewStyle ++ positionStyle)
         [ Element.layout
-            [ Font.size 16 ]
+            [ Font.size 16
+            , Font.family [ Font.typeface "Roboto" ]
+            ]
+            content
+        ]
+
+
+sidebar : Element msg -> Html msg
+sidebar content =
+    div
+        [ style "width" (String.fromInt sidebarWidth ++ "px")
+        , style "background" "white"
+        ]
+        [ Element.layout
+            [ Font.size 16
+            , Font.family [ Font.typeface "Roboto" ]
+            , padding 40
+            ]
             content
         ]
 
@@ -395,25 +416,35 @@ view model =
                 _ ->
                     []
     in
-    div []
+    div
+        [ style "display" "flex"
+        , style "flex-direction" "row"
+        ]
         -- [ Map.view mapItems model.mapModel |> Html.map MapMsg
-        [ Map3d.view map3dItems model.map3dModel |> Html.map Map3dMsg
-        , detachedView TopLeft <|
+        [ sidebar <|
             Element.map FlightTaskPageMsg <|
                 FlightTaskPage.view
                     { navPoints = model.appState.navPoints
                     , flightTasks = model.appState.flightTasks
                     }
                     model.flightTaskPage
-        , detachedView TopRight <|
-            column [ padding 10, spacing 10 ]
-                (List.map text model.messages
-                    ++ [ Input.button [] { onPress = Just <| DemoInit Started, label = text "Start Demo" } ]
-                )
-        , detachedView BottomLeft <|
-            column [ padding 10, spacing 10 ]
-                (List.map text (Map3d.debugInfo model.map3dModel))
+        , Map3d.view map3dItems model.map3dModel |> Html.map Map3dMsg
 
+        -- , detachedView TopLeft <|
+        --     Element.map FlightTaskPageMsg <|
+        --         FlightTaskPage.view
+        --             { navPoints = model.appState.navPoints
+        --             , flightTasks = model.appState.flightTasks
+        --             }
+        --             model.flightTaskPage
+        -- , detachedView TopRight <|
+        --     column [ padding 10, spacing 10 ]
+        --         (List.map text model.messages
+        --             ++ [ Input.button [] { onPress = Just <| DemoInit Started, label = text "Start Demo" } ]
+        --         )
+        -- , detachedView BottomLeft <|
+        --     column [ padding 10, spacing 10 ]
+        --         (List.map text (Map3d.debugInfo model.map3dModel))
         -- for debugging
         -- , detachedView TopRight <|
         --     Element.map TestProgressMsg <|

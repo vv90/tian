@@ -180,6 +180,9 @@ subscriptions model =
         UploadTrack pm ->
             Sub.map FlightTrackUploadMsg (FlightTrackUpload.subscriptions pm)
 
+        DemoPage pm ->
+            Sub.map DemoPageMsg (Demo.subscriptions pm)
+
         _ ->
             Sub.none
 

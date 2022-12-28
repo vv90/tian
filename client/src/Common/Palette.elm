@@ -7,8 +7,12 @@ white =
     rgb255 255 255 255
 
 
+darkerGray =
+    rgb255 38 38 38
+
+
 darkGray =
-    rgb255 51 51 51
+    rgb255 80 80 80
 
 
 gray =
@@ -23,12 +27,20 @@ tarnsparent =
     rgba255 255 255 255 0
 
 
+shadow =
+    rgba255 0 0 0 0.5
+
+
 primaryDark =
     rgb255 102 106 134
 
 
-primaryLight =
-    rgb255 149 184 209
+primary =
+    rgb255 21 101 192
+
+
+primaryFont =
+    white
 
 
 accent =

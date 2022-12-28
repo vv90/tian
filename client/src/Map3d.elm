@@ -431,7 +431,7 @@ mapItemView model mapItem =
             ( Svg.g []
                 [ Svg.line
                     [ SvgAttr.strokeWidth "1"
-                    , SvgAttr.stroke "lightblue"
+                    , SvgAttr.stroke "#D7BDE2"
                     , SvgAttr.x1 <| String.fromFloat pProjX
                     , SvgAttr.y1 <| String.fromFloat pProjY
                     , SvgAttr.x2 <| String.fromFloat pgProjX
@@ -439,7 +439,7 @@ mapItemView model mapItem =
                     ]
                     []
                 , Svg.circle
-                    [ SvgAttr.fill "black"
+                    [ SvgAttr.fill "#34495E"
                     , SvgAttr.cx (String.fromFloat pProjX)
                     , SvgAttr.cy (String.fromFloat pProjY)
                     , SvgAttr.r "3"
@@ -450,6 +450,8 @@ mapItemView model mapItem =
                     , SvgAttr.y <| String.fromFloat pProjY
                     , SvgAttr.dy "-10"
                     , SvgAttr.textAnchor "middle"
+                    , SvgAttr.fill "#34495E"
+                    , SvgAttr.fontFamily "Roboto Mono"
                     ]
                     [ Svg.text id ]
                 ]
@@ -470,30 +472,28 @@ mapItemView model mapItem =
                 pts =
                     xs |> List.map (uncurry to3dPoint >> project3dPoint >> coordsToString)
 
-                to3dLineSegment ( p1, elev1 ) ( p2, elev2 ) =
-                    Scene3d.lineSegment
-                        (Material.color Color.black)
-                        (LineSegment3d.from
-                            (to3dPoint p1 elev1)
-                            (to3dPoint p2 elev2)
-                        )
-
-                lineSegments =
-                    case xs of
-                        a :: b :: rest ->
-                            List.foldl
-                                (\curr ( segments, prev ) -> ( to3dLineSegment prev curr :: segments, curr ))
-                                ( [ to3dLineSegment a b ], b )
-                                rest
-                                |> Tuple.first
-
-                        _ ->
-                            []
+                -- to3dLineSegment ( p1, elev1 ) ( p2, elev2 ) =
+                --     Scene3d.lineSegment
+                --         (Material.color Color.black)
+                --         (LineSegment3d.from
+                --             (to3dPoint p1 elev1)
+                --             (to3dPoint p2 elev2)
+                --         )
+                -- lineSegments =
+                --     case xs of
+                --         a :: b :: rest ->
+                --             List.foldl
+                --                 (\curr ( segments, prev ) -> ( to3dLineSegment prev curr :: segments, curr ))
+                --                 ( [ to3dLineSegment a b ], b )
+                --                 rest
+                --                 |> Tuple.first
+                --         _ ->
+                --             []
             in
             ( Svg.polyline
                 [ SvgAttr.points <| String.join " " pts
                 , SvgAttr.strokeWidth "2"
-                , SvgAttr.stroke "black"
+                , SvgAttr.stroke "#555555"
                 , SvgAttr.fill "transparent"
                 ]
                 []
@@ -677,6 +677,7 @@ view mapItems model =
     div
         [ on "mousedown" (D.map DragStart decodePosition)
         , on "wheel" (D.map ZoomChanged decodeWheelEvent)
+        , style "position" "relative"
         ]
         [ Scene3d.cloudy
             { entities = entities

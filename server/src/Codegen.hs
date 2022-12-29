@@ -24,6 +24,7 @@ import Geo (Latitude, Elevation, Direction, Longitude, Distance)
 import Data.Time (DiffTime)
 import ProgressPoint (ProgressPointDto)
 import TaskProgress (TaskProgressDto)
+import Demo.NameMatch (NameMatch(NameMatch))
 
 typeDefinitions :: [Definition]
 typeDefinitions =
@@ -42,6 +43,7 @@ typeDefinitions =
         , jsonDefinitions @Entity
         , jsonDefinitions @ProgressPointDto
         , jsonDefinitions @TaskProgressDto
+        , jsonDefinitions @NameMatch
         ]
 
 elmSrcPath :: FilePath

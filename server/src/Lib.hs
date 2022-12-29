@@ -62,6 +62,7 @@ import TaskProgress (TaskProgressDto, toDto)
 import Geo (Latitude, Longitude, Elevation (..))
 import Conduit (ConduitT, ResourceT)
 import Control.Exception (try)
+import Demo.NameMatch (loadNames, NameMatch)
 data LibError
     = ConnectionError Connection.ConnectionError
     | QueryError Session.QueryError
@@ -268,7 +269,7 @@ type API =
     :<|> "test" :> "taskProgress" :> Capture "taskId" Int32 :> ReqBody '[JSON] (NonEmpty (Latitude, Longitude)) :> Post '[JSON] TaskProgressDto
     :<|> "test" :> "startLine" :> Capture "taskId" Int32 :> Get '[JSON] ((Latitude, Longitude), (Latitude, Longitude))
     :<|> "demo" :> WebSocketSource (Text, ProgressPointDto)
-    :<|> "demoTask" :> Get '[JSON] FlightTask
+    :<|> "demoTask" :> Get '[JSON] (FlightTask, [NameMatch])
     -- :<|> "startDemo" :> Get '[JSON] ()
 
 startApp :: Port -> IO ()
@@ -331,13 +332,14 @@ progressDemo = do
     --                 liftIO $ print "waiting..."
     --                 resultC chan
 
-demoTask :: Handler FlightTask
+demoTask :: Handler (FlightTask, [NameMatch])
 demoTask = do
     flightTask <- liftIO $ runExceptT loadDemoTask
+    nameMatch <- liftIO $ runExceptT loadNames
 
-    case flightTask of
+    case (,) <$> flightTask <*> nameMatch of
         Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
-        Right (Entity _ ft) -> pure ft 
+        Right (Entity _ ft, nm) -> pure (ft, nm) 
 
 -- startDemo :: TMVar FlightTask -> Handler ()
 -- startDemo var = do

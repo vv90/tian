@@ -4,7 +4,7 @@ import Relude
 import Entity (Entity(Entity))
 import FlightTask (FlightTask)
 import Control.Monad.Except (withExceptT)
-import Data.Aeson (eitherDecodeFileStrict')
+import Data.Aeson (eitherDecodeFileStrict', Value)
 
 loadDemoTask :: ExceptT String IO (Entity Int32 FlightTask)
 loadDemoTask = 
@@ -12,3 +12,4 @@ loadDemoTask =
         $ fmap (\x -> Entity 0 x :: Entity Int32 FlightTask) 
         $ ExceptT 
         $ eitherDecodeFileStrict' "./demo/task.json"
+

@@ -1,5 +1,6 @@
 module Page.Demo exposing (..)
 
+import Api.Demo exposing (NameMatch, nameMatchDecoder)
 import Api.FlightTask exposing (FlightTask, flightTaskDecoder)
 import Api.TaskProgress exposing (ProgressPoint, progressPointDecoder)
 import Common.ApiResult exposing (ApiResult)
@@ -17,6 +18,7 @@ import Element.Region as Region
 import Env exposing (apiUrl)
 import Http
 import Json.Decode as D
+import List.Extra as ListX
 import Map3dUtils exposing (Map3dItem)
 import MapUtils exposing (MapItem(..))
 import Maybe.Extra as MaybeX
@@ -25,14 +27,14 @@ import Styling
 
 
 type alias Model =
-    { flightTask : Maybe FlightTask
+    { demoData : Maybe ( FlightTask, List NameMatch )
     , points : Dict String ProgressPoint
     }
 
 
 init : Model
 init =
-    { flightTask = Nothing
+    { demoData = Nothing
     , points = Dict.empty
     }
 
@@ -51,7 +53,7 @@ mapItems model =
                 |> List.map toMarker
 
         taskItems =
-            MaybeX.unwrap [] taskToMapItems model.flightTask
+            MaybeX.unwrap [] (Tuple.first >> taskToMapItems) model.demoData
     in
     taskItems ++ pointItems
 
@@ -65,7 +67,7 @@ map3dItems model =
                 |> List.map (\( id, p ) -> Map3dUtils.Marker id ( p.lat, p.lon ) p.altitude)
 
         taskItems =
-            MaybeX.unwrap [] taskToMap3dItems model.flightTask
+            MaybeX.unwrap [] (Tuple.first >> taskToMap3dItems) model.demoData
     in
     taskItems ++ pointItems
 
@@ -82,7 +84,10 @@ getDemoTaskCmd =
         , headers = []
         , url = apiUrl "demoTask"
         , body = Http.emptyBody
-        , expect = Http.expectJson (Finished >> DemoInit) flightTaskDecoder
+        , expect =
+            Http.expectJson
+                (Finished >> DemoInit)
+                (tupleDecoder ( flightTaskDecoder, D.list nameMatchDecoder ))
         , timeout = Nothing
         , tracker = Nothing
         }
@@ -90,7 +95,7 @@ getDemoTaskCmd =
 
 type Msg
     = ProgressUpdated String ProgressPoint
-    | DemoInit (AsyncOperationStatus (ApiResult FlightTask))
+    | DemoInit (AsyncOperationStatus (ApiResult ( FlightTask, List NameMatch )))
     | MessageReceived String
 
 
@@ -105,8 +110,8 @@ update msg model =
         DemoInit Started ->
             ( model, getDemoTaskCmd )
 
-        DemoInit (Finished (Ok task)) ->
-            ( { model | flightTask = Just task }
+        DemoInit (Finished (Ok data)) ->
+            ( { model | demoData = Just data }
             , Ports.startDemo ()
             )
 
@@ -130,11 +135,17 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Ports.messageReceiver MessageReceived
+    case model.demoData of
+        Just _ ->
+            Ports.messageReceiver MessageReceived
+
+        Nothing ->
+            Sub.none
 
 
 type alias ProgressPointStats =
     { id : String
+    , name : String
     , speed : Float
     , distance : Float
     , target : String
@@ -144,11 +155,17 @@ type alias ProgressPointStats =
 view : Model -> Element Msg
 view model =
     let
+        findName id =
+            model.demoData
+                |> Maybe.andThen (Tuple.second >> ListX.find (\n -> n.compId == id))
+                |> Maybe.map .name
+
         toStats : String -> ProgressPoint -> Maybe ProgressPointStats
         toStats id point =
             Maybe.map2
                 (\s t ->
                     { id = id
+                    , name = findName id |> Maybe.withDefault ""
                     , speed = roundN 2 (s * 3.6)
                     , distance = roundN 2 (point.distance / 1000)
                     , target = t
@@ -186,7 +203,12 @@ view model =
                     [ { header = text ""
                       , width = shrink
                       , view =
-                            \stats -> text stats.id
+                            \stats -> text <| stats.id
+                      }
+                    , { header = text "Name"
+                      , width = shrink
+                      , view =
+                            \stats -> text <| stats.name
                       }
                     , { header = el [ Font.alignRight ] <| text "Task speed"
                       , width = fill
@@ -239,7 +261,7 @@ view model =
                     ]
                 , paragraph
                     [ Region.mainContent ]
-                    [ text "For this demo real time tracking is replaced with pre-recorded flight tracks played back at 5X speed" ]
+                    [ text "For this demo real time tracking is replaced with pre-recorded flight tracks played back at 5x speed" ]
                 , Input.button
                     Styling.buttonDefault
                     { onPress = Just (DemoInit Started)
@@ -247,7 +269,7 @@ view model =
                     }
                 ]
     in
-    case model.flightTask of
+    case model.demoData of
         Nothing ->
             greeting
 

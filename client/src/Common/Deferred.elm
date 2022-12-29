@@ -34,6 +34,22 @@ deferredToMaybe d =
             Nothing
 
 
+deferredIsPending : Deferred a -> Bool
+deferredIsPending d =
+    case d of
+        NotStarted ->
+            False
+
+        InProgress ->
+            True
+
+        Updating _ ->
+            True
+
+        Resolved _ ->
+            False
+
+
 type AsyncOperationStatus a
     = Started
     | Finished a

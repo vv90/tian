@@ -19,7 +19,7 @@ import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Common.Palette as Palette
 import Common.TaskProgressUtils exposing (progressPointsToMapItems, targetToMapItem)
 import Components.Player as Player
-import Element exposing (Element, column, el, fill, height, layout, onRight, padding, px, rgba255, spacing, text, width)
+import Element exposing (Element, alignBottom, column, el, fill, height, layout, link, onRight, padding, paddingEach, px, rgba255, row, spacing, text, width)
 import Element.Background as Background
 import Element.Font as Font
 import Element.Input as Input
@@ -79,7 +79,7 @@ main =
 
 
 sidebarWidth =
-    450
+    480
 
 
 withSidebarOffset : WindowSize -> WindowSize
@@ -371,9 +371,34 @@ sidebar content =
         [ Element.layout
             [ Font.size 16
             , Font.family [ Font.typeface "Roboto" ]
-            , padding 40
+            , paddingEach { top = 30, bottom = 10, left = 30, right = 30 }
             ]
-            content
+            (column [ height fill ]
+                [ content
+                , column
+                    [ alignBottom
+                    , Font.color Palette.darkGray
+                    , spacing 5
+                    , Font.size 14
+                    ]
+                    [ text "Contact me: "
+                    , row []
+                        [ text " • "
+                        , link [ Font.color Palette.primary ]
+                            { url = "mailto:vladimir.kirienko.e@gmail.com"
+                            , label = text "vladimir.kirienko.e@gmail.com"
+                            }
+                        ]
+                    , row []
+                        [ text " • "
+                        , link [ Font.color Palette.primary ]
+                            { url = "https://www.linkedin.com/in/vladimir-kirienko/"
+                            , label = text "linkedin.com/in/vladimir-kirienko"
+                            }
+                        ]
+                    ]
+                ]
+            )
         ]
 
 

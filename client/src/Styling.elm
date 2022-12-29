@@ -17,12 +17,24 @@ shadowDefault =
         }
 
 
+buttonBase : List (Attribute msg)
+buttonBase =
+    [ padding 15
+    , Border.rounded 5
+    ]
+
+
 buttonDefault : List (Attribute msg)
 buttonDefault =
-    [ padding 15
-    , Background.color Palette.primary
-    , Font.color Palette.primaryFont
-    , Border.rounded 5
+    buttonBase
+        ++ [ Background.color Palette.primary
+           , Font.color Palette.primaryFont
+           ]
 
-    -- , shadowDefault
-    ]
+
+buttonDisabled : List (Attribute msg)
+buttonDisabled =
+    buttonBase
+        ++ [ Background.color Palette.lightGray
+           , Font.color Palette.white
+           ]

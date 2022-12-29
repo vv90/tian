@@ -3,8 +3,8 @@ module Page.Demo exposing (..)
 import Api.Demo exposing (NameMatch, nameMatchDecoder)
 import Api.FlightTask exposing (FlightTask, flightTaskDecoder)
 import Api.TaskProgress exposing (ProgressPoint, progressPointDecoder)
-import Common.ApiResult exposing (ApiResult)
-import Common.Deferred exposing (AsyncOperationStatus(..))
+import Common.ApiResult exposing (ApiResult, DeferredResult)
+import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredIsPending, deferredToMaybe)
 import Common.FlightTaskUtils exposing (taskToMap3dItems, taskToMapItems)
 import Common.GeoUtils exposing (metersElevation)
 import Common.JsonCodecsExtra exposing (tupleDecoder)
@@ -27,14 +27,14 @@ import Styling
 
 
 type alias Model =
-    { demoData : Maybe ( FlightTask, List NameMatch )
+    { demoData : DeferredResult ( FlightTask, List NameMatch )
     , points : Dict String ProgressPoint
     }
 
 
 init : Model
 init =
-    { demoData = Nothing
+    { demoData = NotStarted
     , points = Dict.empty
     }
 
@@ -53,7 +53,9 @@ mapItems model =
                 |> List.map toMarker
 
         taskItems =
-            MaybeX.unwrap [] (Tuple.first >> taskToMapItems) model.demoData
+            model.demoData
+                |> (deferredToMaybe >> Maybe.andThen Result.toMaybe)
+                |> MaybeX.unwrap [] (Tuple.first >> taskToMapItems)
     in
     taskItems ++ pointItems
 
@@ -67,7 +69,9 @@ map3dItems model =
                 |> List.map (\( id, p ) -> Map3dUtils.Marker id ( p.lat, p.lon ) p.altitude)
 
         taskItems =
-            MaybeX.unwrap [] (Tuple.first >> taskToMap3dItems) model.demoData
+            model.demoData
+                |> (deferredToMaybe >> Maybe.andThen Result.toMaybe)
+                |> MaybeX.unwrap [] (Tuple.first >> taskToMap3dItems)
     in
     taskItems ++ pointItems
 
@@ -110,13 +114,10 @@ update msg model =
         DemoInit Started ->
             ( model, getDemoTaskCmd )
 
-        DemoInit (Finished (Ok data)) ->
-            ( { model | demoData = Just data }
+        DemoInit (Finished res) ->
+            ( { model | demoData = Resolved res }
             , Ports.startDemo ()
             )
-
-        DemoInit (Finished (Err _)) ->
-            ( model, Cmd.none )
 
         MessageReceived str ->
             let
@@ -136,10 +137,10 @@ update msg model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model.demoData of
-        Just _ ->
+        Resolved (Ok _) ->
             Ports.messageReceiver MessageReceived
 
-        Nothing ->
+        _ ->
             Sub.none
 
 
@@ -157,6 +158,7 @@ view model =
     let
         findName id =
             model.demoData
+                |> (deferredToMaybe >> Maybe.andThen Result.toMaybe)
                 |> Maybe.andThen (Tuple.second >> ListX.find (\n -> n.compId == id))
                 |> Maybe.map .name
 
@@ -248,7 +250,7 @@ view model =
                     , Font.bold
                     , Font.color Palette.darkerGray
                     ]
-                    (text "Competition tracking")
+                    (text "Competition Tracking")
                 , paragraph
                     [ Region.mainContent ]
                     [ column [ spacing 10 ]
@@ -262,14 +264,22 @@ view model =
                 , paragraph
                     [ Region.mainContent ]
                     [ text "For this demo real time tracking is replaced with pre-recorded flight tracks played back at 5x speed" ]
-                , Input.button
-                    Styling.buttonDefault
-                    { onPress = Just (DemoInit Started)
-                    , label = text "Start Demo"
-                    }
+                , if deferredIsPending model.demoData then
+                    Input.button
+                        Styling.buttonDisabled
+                        { onPress = Nothing
+                        , label = text "Starting demo..."
+                        }
+
+                  else
+                    Input.button
+                        Styling.buttonDefault
+                        { onPress = Just (DemoInit Started)
+                        , label = text "Start Demo"
+                        }
                 ]
     in
-    case model.demoData of
+    case deferredToMaybe model.demoData of
         Nothing ->
             greeting
 

@@ -80,12 +80,16 @@ dependencies:
 - hasql-transaction
 - profunctors
 - vector
+# data structures like IntMap, IntSet, Graph, etc.
+# - containers
 # statically checked physical dimensions
 # - dimensional
 # Parser combinators
 - parsec
 # Geographical Position Calculations
 - jord
+# for working with binary data
+- binary
 # for elm codegen
 - haskell-to-elm
 - elm-syntax

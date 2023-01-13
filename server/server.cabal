@@ -29,6 +29,7 @@ library
       Codegen
       Demo.DemoConduit
       Demo.DemoTask
+      Demo.GeoTiff
       Demo.NameMatch
       Demo.Playback
       Entity
@@ -39,8 +40,11 @@ library
       FlightTrack.Parser
       Geo
       Geo.Utils
+      GeoTiff.LZW
+      GeoTiff.Tiff
       Lib
       Magic.ElmDeriving
+      Map
       NavPoint
       ProgressPoint
       RwLenUnits
@@ -73,6 +77,7 @@ library
       aeson
     , async
     , base >=4.7 && <5
+    , binary
     , conduit
     , conduit-extra
     , directory
@@ -133,6 +138,7 @@ executable codegen
       aeson
     , async
     , base >=4.7 && <5
+    , binary
     , conduit
     , conduit-extra
     , directory
@@ -194,6 +200,7 @@ executable server-exe
       aeson
     , async
     , base
+    , binary
     , conduit
     , conduit-extra
     , directory
@@ -261,6 +268,7 @@ test-suite server-test
       aeson
     , async
     , base
+    , binary
     , conduit
     , conduit-extra
     , directory

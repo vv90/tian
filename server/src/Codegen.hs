@@ -25,6 +25,7 @@ import Data.Time (DiffTime)
 import ProgressPoint (ProgressPointDto)
 import TaskProgress (TaskProgressDto)
 import Demo.NameMatch (NameMatch(NameMatch))
+import Map (MapTile(MapTile))
 
 typeDefinitions :: [Definition]
 typeDefinitions =
@@ -44,6 +45,7 @@ typeDefinitions =
         , jsonDefinitions @ProgressPointDto
         , jsonDefinitions @TaskProgressDto
         , jsonDefinitions @NameMatch
+        , jsonDefinitions @MapTile
         ]
 
 elmSrcPath :: FilePath

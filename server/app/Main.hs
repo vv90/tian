@@ -28,6 +28,7 @@ import Env (checkRequiredEnvironmentKeys)
 import Demo.Playback (runPlayback, runTest)
 import Data.Conduit.TMChan (TMChan, newBroadcastTMChan, dupTMChan)
 import Demo.DemoConduit (testDemoConduit)
+import GeoTiff.Tiff (testGeoTiff)
 
 startCounter :: Int -> IO ()
 startCounter n = do
@@ -55,4 +56,9 @@ main = do
     print "starting server..."
     checkRequiredEnvironmentKeys
     startApp 8081
+   
+    -- testGeoTiff "./demo/ASTGTMV003_N52E039_dem.tif"
+    
+    -- mapM print d
+    -- pure ()
     

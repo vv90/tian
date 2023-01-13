@@ -1,7 +1,6 @@
 
 
-module NavPoint
-    where
+module NavPoint where
 
 import Relude
 import qualified Data.Aeson as Aeson
@@ -19,7 +18,7 @@ import Text.Parsec.Pos (updatePosString, updatePosChar)
 import Text.Parsec.Prim (tokenPrim, token, tokens, (<?>))
 import qualified Generics.SOP as SOP
 import Language.Haskell.To.Elm (HasElmEncoder, HasElmDecoder, HasElmType)
-import Magic.ElmDeriving
+import Magic.ElmDeriving ( ElmType )
 import Geo (Latitude (..), Longitude (..), Elevation (..), Direction (..), Distance (..), GeoPosition(..), ddmTodd)
 
 data WaypointStyle

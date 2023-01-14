@@ -8,7 +8,7 @@ import FlightTask
 import NavPoint 
 import FlightTrack
 import FlightTrack.Parser
-import Geo
+import Geo (Latitude(..), Longitude(..), Elevation(..), metersElevation, degreesLatitude, degreesLongitude)
 import Geo.Utils (perpendicular)
 import TaskProgressUtils ( progressInit, startLineCrossed, progressAdvance, progress, progressPoints )
 import ProgressPoint ( ProgressPoint(target, altitude) )
@@ -160,7 +160,7 @@ spec = do
                         }
                 pinit = progressInit flightTask trackPoint1
 
-            (fmap name . target . head . progressPoints) pinit `shouldBe` Just "Start"
+            (fmap name . target . head) pinit.progressPoints `shouldBe` Just "Start"
             0 `shouldBe` 0
 
     context "progressAdvance" $ do
@@ -190,7 +190,7 @@ spec = do
                 result =
                     progressAdvance flightTask pinit trackPoint2
 
-            (fmap name . target . head . progressPoints) result `shouldBe` Just "Start"
+            (fmap name . target . head) result.progressPoints `shouldBe` Just "Start"
 
         it "produces correct track point after start" $ do
             let trackPoint1 =
@@ -218,7 +218,7 @@ spec = do
                 result =
                     progressAdvance flightTask pinit trackPoint2
 
-            (fmap name . target . head . progressPoints) result `shouldBe` Just "Finish"
+            (fmap name . target . head) result.progressPoints `shouldBe` Just "Finish"
 
     context "progress" $ do
         it "produces correct progress results" $ do
@@ -233,8 +233,9 @@ spec = do
                     \B0722165201562N03940404EA0008700166066060\n\
                     \B0722205201562N03940404EA0008700167000046\n\
                     \B0722245201562N03940404EA0008700168000048"
-                result = parse flightInfoParser "" input
-                flightTrack = left show result >>= buildFlightTrack 
+                -- Either Error FlightInfo
+                result = parse flightInfoParserAll "" input
+                flightTrack = left show result >>= buildFlightTrack ""
                 taskProgress = progress (Entity 0 flightTask) <$> flightTrack
 
                 elevationPoints :: Either String [Double]

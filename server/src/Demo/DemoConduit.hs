@@ -113,6 +113,10 @@ extractSmallest f (x :| xs) =
 
 mergeSourcesOn :: (Ord b) => (a -> b) -> [ConduitT () a (ResourceT IO) ()] -> ConduitT () a (ResourceT IO) ()
 mergeSourcesOn f sources = 
+    -- we have a list of data conduits where data in each conduit is sorted
+    -- but the they are not sorted with respect to each other
+
+    -- we need to merge them into a single conduit where data is sorted
     let 
         makeSinkQueue c = do
             q <- atomically $ newTBMQueue 100
@@ -122,8 +126,8 @@ mergeSourcesOn f sources =
             runConduitRes $ 
                 bracketP 
                     pass
-                    (\_ -> atomically $ closeTBMQueue q)
-                    (\_ -> c .| sinkTBMQueue q)
+                    (\_ -> atomically $ closeTBMQueue q) -- make sure to close the queue when the conduit is done
+                    (\_ -> c .| sinkTBMQueue q) -- feed the queue with data from the conduit
 
 
         readQ q = do
@@ -131,9 +135,12 @@ mergeSourcesOn f sources =
             pure $ (,q) <$> v
         
         consumeQueues qs = do
+            -- the structure is (`last extracted value`, `queue containing the rest of the values`)
+            -- pick the smallest of the extracted values with it's corresponding queue
             let m = viaNonEmpty (extractSmallest (\(v, q) -> f v)) qs
             whenJust m $ \((v, q), rest) -> do
                 yield v
+                -- read the next value from the queue which produced the smallest value last time
                 next <- readQ q
                 case next of
                     Just x -> do
@@ -141,14 +148,15 @@ mergeSourcesOn f sources =
                     Nothing -> do
                         consumeQueues rest
     in do
+        -- make a list of tuples (queue, conduit)
         qs <- traverse (liftIO . makeSinkQueue) sources
 
         bracketP 
-            (liftIO $ traverse (forkIO . uncurry feedSinkQueue) qs)
-            (liftIO . traverse_ killThread)
+            (liftIO $ traverse (forkIO . uncurry feedSinkQueue) qs) -- fork a thread for each conduit to feed it's queue
+            (liftIO . traverse_ killThread) -- kill the threads when the conduit is done
             (\tids -> do 
-                qs' <- catMaybes <$> traverse readQ (fst <$> qs)
-                consumeQueues qs'
+                qs' <- catMaybes <$> traverse readQ (fst <$> qs) -- read the first value from each queue
+                consumeQueues qs' 
             )
 
 progressAdvanceC :: (Monad m) => FlightTask -> TaskState -> ConduitT AprsMessage ProgressPoint m ()

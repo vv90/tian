@@ -25,7 +25,6 @@ import Control.Concurrent.STM (newTBQueue, newTBQueueIO, TBQueue, TMVar, newEmpt
 import ProgressPoint (ProgressPointDto(ProgressPointDto))
 import FlightTask (FlightTask)
 import Env (checkRequiredEnvironmentKeys)
-import Demo.Playback (runPlayback, runTest)
 import Data.Conduit.TMChan (TMChan, newBroadcastTMChan, dupTMChan)
 import Demo.DemoConduit (testDemoConduit)
 import GeoTiff.Tiff (testGeoTiff)

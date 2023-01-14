@@ -29,9 +29,7 @@ library
       Codegen
       Demo.DemoConduit
       Demo.DemoTask
-      Demo.GeoTiff
       Demo.NameMatch
-      Demo.Playback
       Entity
       Env
       FlightTask

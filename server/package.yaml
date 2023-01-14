@@ -6,6 +6,8 @@ author:              "Author name here"
 maintainer:          "example@example.com"
 copyright:           "2022 Author name here"
 
+# language: GHC2021
+
 extra-source-files:
 - README.md
 - ChangeLog.md
@@ -38,8 +40,49 @@ default-extensions:
 - ImportQualifiedPost
 
 ghc-options:
-- -j8
-- -Wno-implicit-prelude
+  # Use up to 8 cores for compilation https://ghc.gitlab.haskell.org/ghc/doc/users_guide/using.html?highlight=j#ghc-flag--j[%E2%9F%A8n%E2%9F%A9]
+  - -j8
+  # Set up rts options for GHC itself https://ghc.gitlab.haskell.org/ghc/doc/users_guide/runtime_control.html#setting-rts-options
+  - +RTS -A32m -RTS
+  # Optimization level:
+  # -O0 produces a non-optimized binary (significantly reduces Seq performance), but builds fast.
+  # -O2 produces a heavily optimized binary, but builds ~ 2 times slower.
+  # Note: Stack reuses existing binaries instead of rebuilding if the source code hasn't changed.
+  # We build optimized binaries by default and turn optimizations off by `--fast` flag.
+  - -O2
+    # Enables local documentation
+  - -haddock
+    # Enable all possible warnings as errors (Werror is provided manually in dockerfile for production builds and CI)
+  # - -Weverything # TODO: https://github.com/vv90/contest-viewer/issues/9
+    # Intentionally ignore some warnings
+  - -Wno-all-missed-specialisations
+  - -Wno-implicit-prelude
+  - -Wno-missed-specialisations
+  - -Wno-missing-local-signatures
+  - -Wno-missing-export-lists
+  - -Wno-unsafe
+  - -Wno-safe
+  - -Wno-unused-packages
+  # -Wmissing-kind-signatures requires kind signature for every newtype. Not worth it.
+  - -Wno-missing-kind-signatures
+  # Not sure if it's really useful for us, because some modules are still not "safe haskell".
+  - -Wno-missing-safe-haskell-mode
+    # Temporarily disabled warnings which need to be fixed eventually
+    # 1. It is inconvenient to specify imports for all record fields and all value constructors
+    # We need to find a better way.
+  - -Wno-missing-import-lists
+    # Because of hpack implementation details
+  - -Wno-prepositive-qualified-module
+  # ------ temporary:
+  # - -Wno-missing-deriving-strategies
+  # # - -Wno-unused-imports
+  # - -Wno-name-shadowing
+  # - -Wno-operator-whitespace
+  # - -Wno-type-defaults
+  # - -Wno-unused-matches
+  # - -Wno-identities
+  # - -Wno-incomplete-patterns
+
 
 dependencies:
 - base >= 4.7 && < 5

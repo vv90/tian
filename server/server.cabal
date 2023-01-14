@@ -70,7 +70,7 @@ library
       NamedFieldPuns
       TupleSections
       ImportQualifiedPost
-  ghc-options: -j8 -Wno-implicit-prelude
+  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Wno-all-missed-specialisations -Wno-implicit-prelude -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-safe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -Wno-prepositive-qualified-module
   build-depends:
       aeson
     , async
@@ -131,7 +131,7 @@ executable codegen
       NamedFieldPuns
       TupleSections
       ImportQualifiedPost
-  ghc-options: -j8 -Wno-implicit-prelude -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Wno-all-missed-specialisations -Wno-implicit-prelude -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-safe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -Wno-prepositive-qualified-module -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , async
@@ -193,7 +193,7 @@ executable server-exe
       NamedFieldPuns
       TupleSections
       ImportQualifiedPost
-  ghc-options: -j8 -Wno-implicit-prelude -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Wno-all-missed-specialisations -Wno-implicit-prelude -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-safe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -Wno-prepositive-qualified-module -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , async
@@ -261,7 +261,7 @@ test-suite server-test
       NamedFieldPuns
       TupleSections
       ImportQualifiedPost
-  ghc-options: -j8 -Wno-implicit-prelude -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Wno-all-missed-specialisations -Wno-implicit-prelude -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-safe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -Wno-prepositive-qualified-module -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , async

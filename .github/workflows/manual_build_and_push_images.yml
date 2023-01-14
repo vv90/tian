@@ -1,6 +1,7 @@
-name: Build and push containers
-on: 
-  workflow_dispatch:
+name: Build and push images
+
+on:
+  workflow_dispatch
 
 env:
   REGISTRY: ghcr.io
@@ -29,10 +30,13 @@ jobs:
           working-directory: server
 
       - name: Build executables and run codegen
+      # TODO: enable --pedantic flag https://github.com/vv90/contest-viewer/issues/10
         run: | 
           cd server
-          stack build --copy-bins
+          stack clean
+          stack build --copy-bins  
           stack run codegen
+          stack test
 
       - name: Log in to the Container registry
         uses: docker/login-action@v2

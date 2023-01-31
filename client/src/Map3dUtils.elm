@@ -324,7 +324,8 @@ tileMesh xyPlane mFrame mRate elevValues tile =
             Point2d.xyIn
                 mFrame
                 (mercatorUnit <| xStart + toFloat i * xStep)
-                (mercatorUnit <| yStart + toFloat j * yStep)
+                -- invert the y axis to match the texture orientation
+                (mercatorUnit <| yEnd - toFloat j * yStep)
                 |> Point2d.at mRate
                 |> in3d (elevAt i j)
                 |> withRelativeCoords ( toFloat i / xCount, toFloat j / yCount )

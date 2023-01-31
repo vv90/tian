@@ -40,32 +40,38 @@ bitsC = do
             yield $ byte .&. 0b00000001
             bitsC
 
-decodeC :: (Monad m) => ConduitT Word8 Word8 m ()
+decodeC :: (MonadIO m, MonadFail m) => ConduitT Word8 Word8 m ()
 decodeC = 
     let 
         initTable :: Vector (NonEmpty Word8)
         initTable = Vector.fromList $ 
             [ x:|[] | x <- [0..255] ] ++ [ 0:|[] , 0:|[] ]
 
-        awaitBits n = do
+        awaitBits (n, s) = do
             bits <- replicateM n await
             case sequence bits of
                 Just bs -> 
                     return $ foldl' (\acc bit -> (acc `shiftL` 1) .|. fromIntegral bit) (0::Int) bs
-                Nothing ->
-                    error "not enough bits"
+                Nothing -> do
+                    -- pure ()
+                    print $ "Table size: " <> show s
+                    print $ "bits: " <> show bits
+                    fail $ "Not enough bits in the input stream. Need " <> show n <> " , got " <> show (filter isJust bits & length)
 
         codeSize tableSize
-            | tableSize < 511 = 9
-            | tableSize < 1023 = 10
-            | tableSize < 2047 = 11
-            | otherwise = 12
+            | tableSize < 511 = (9, tableSize)
+            | tableSize < 1023 = (10, tableSize)
+            | tableSize < 2047 = (11, tableSize)
+            | otherwise = (12, tableSize)
 
         consumeCode table lastVal = do
             code <- awaitBits $ codeSize $ Vector.length table
             -- print $ "code " <> show code
+            -- print $ "table size " <> show (Vector.length table)
             case (code, table !? code) of
-                (256, _) -> start
+                (256, _) -> do 
+                    -- print "start"
+                    start
                 (257, _) -> pure ()
                 (c, Just val) -> do
                     yieldMany val
@@ -77,7 +83,7 @@ decodeC =
                     consumeCode (Vector.snoc table res) res
 
         start = do
-            code <- awaitBits 9
+            code <- awaitBits (9, Vector.length initTable)
             case (code, initTable !? code) of
                 (256, _) -> start
                 (257, _) -> pure ()
@@ -85,18 +91,26 @@ decodeC =
                     yieldMany val
                     consumeCode initTable val
                 (c, Nothing) -> do
-                    error $ "Code " <> show c <> " not found in the initial table"
+                    fail $ "Code " <> show c <> " not found in the initial table"
     in do
         start
 
         
-decodeLZW :: ByteOrder -> [Word8] -> ExceptT String IO (Vector Word16)
+decodeLZW :: ByteOrder -> Vector Word8 -> ExceptT String IO (Vector Word16)
 decodeLZW bo input = do
-    print "decoding"
+    -- print "decoding"
     runConduit $
         yieldMany input .| bitsC .| decodeC .| packWordsC bo .| sinkVector
 
-packWordsC :: (Monad m) => ByteOrder -> ConduitT Word8 Word16 m ()
+watchC :: (MonadIO m, Show a) => ConduitT a a m ()
+watchC = do
+    whenJustM await $ \a -> do
+        liftIO $ print a
+        yield a
+        -- getLine 
+        watchC
+
+packWordsC :: (MonadIO m, MonadFail m) => ByteOrder -> ConduitT Word8 Word16 m ()
 packWordsC byteOrder = do
     b0 <- await 
     b1 <- await
@@ -111,7 +125,7 @@ packWordsC byteOrder = do
             packWordsC byteOrder
 
         (_, Just b0', Nothing) -> 
-            error "Odd number of bytes in the input stream"
+            fail "Odd number of bytes in the input stream"
 
         _ -> pure ()
 

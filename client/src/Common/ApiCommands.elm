@@ -15,8 +15,13 @@ loadElevationsCmd onLoaded tiles =
         asTile ( x, y, z ) =
             Tile x y z
     in
-    Http.post
-        { url = apiUrl "elevationPoints"
-        , body = Http.jsonBody <| E.list tileEncoder (List.map asTile tiles)
-        , expect = Http.expectJson onLoaded <| D.list <| D.list D.int
-        }
+    case tiles of
+        [] ->
+            Cmd.none
+
+        _ ->
+            Http.post
+                { url = apiUrl "elevationPoints"
+                , body = Http.jsonBody <| E.list tileEncoder (List.map asTile tiles)
+                , expect = Http.expectJson onLoaded <| D.list <| D.list D.int
+                }

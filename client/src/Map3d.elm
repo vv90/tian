@@ -8,10 +8,11 @@ import Browser.Events as BE
 import Camera3d exposing (Camera3d)
 import Color exposing (Color)
 import Common.ApiCommands exposing (loadElevationsCmd)
-import Common.ApiResult exposing (ApiResult)
-import Common.Deferred exposing (AsyncOperationStatus(..))
+import Common.ApiResult exposing (ApiResult, DeferredResult)
+import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
 import Common.GeoUtils exposing (GeoPoint, metersDistance)
 import Dict exposing (Dict)
+import Dict.Extra as DictX
 import Direction3d
 import Flags exposing (WindowSize)
 import Frame2d exposing (Frame2d)
@@ -46,6 +47,10 @@ import Viewpoint3d
 --     = WorldCoordinates
 
 
+type WebGLResult
+    = Web
+
+
 type DragState
     = MovingFrom (Point3d Meters WorldCoords)
     | Static
@@ -60,8 +65,8 @@ type alias ViewArgs =
 
 
 type alias TileData =
-    { texture : Maybe (Material.Texture Color)
-    , mesh : Maybe (Mesh.Textured WorldCoords)
+    { texture : Deferred (Material.Texture Color)
+    , mesh : Deferred (Mesh.Textured WorldCoords) -- todo: add Result to support refetching in case of error
     }
 
 
@@ -78,6 +83,44 @@ type alias Model =
     -- , loadedTiles : Dict TileKey (Maybe (Material.Texture Color))
     , displayedTiles : List ( TileKey, ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords ) )
     }
+
+
+withPendingTextures : List TileKey -> Model -> Model
+withPendingTextures keys model =
+    let
+        setPendingTexture item =
+            case item of
+                Just data ->
+                    Just { data | texture = setPending data.texture }
+
+                Nothing ->
+                    Just { texture = InProgress, mesh = NotStarted }
+
+        -- updateItem key dict =
+        --     Dict.update key setPendingTexture dict
+        updatedTiles =
+            keys
+                |> List.foldl (\key dict -> Dict.update key setPendingTexture dict) model.loadedTiles
+    in
+    { model | loadedTiles = updatedTiles }
+
+
+withPendingMeshes : List TileKey -> Model -> Model
+withPendingMeshes keys model =
+    let
+        setPendingMesh item =
+            case item of
+                Just data ->
+                    Just { data | mesh = setPending data.mesh }
+
+                Nothing ->
+                    Just { texture = NotStarted, mesh = InProgress }
+
+        updatedTiles =
+            keys
+                |> List.foldl (\key dict -> Dict.update key setPendingMesh dict) model.loadedTiles
+    in
+    { model | loadedTiles = updatedTiles }
 
 
 withFocalPoint : Point3d Meters WorldCoords -> ViewArgs -> ViewArgs
@@ -120,20 +163,29 @@ pickZoom model =
         |> zoomLevel
 
 
-loadMissingTilesCmd : Dict TileKey TileData -> List TileKey -> Cmd Msg
-loadMissingTilesCmd dict keys =
-    keys
-        |> List.filter
-            (\tileKey -> not (Dict.member tileKey dict))
-        >> List.map
-            (\tileKey ->
-                Material.load (tileKeyToUrl tileKey)
-                    |> Task.attempt (Result.toMaybe >> TileLoaded tileKey)
-            )
-        >> Cmd.batch
+
+-- loadMissingTilesCmd : Dict TileKey TileData -> List TileKey -> Cmd Msg
+-- loadMissingTilesCmd dict keys =
+--     keys
+--         |> List.filter
+--             (\tileKey -> not (Dict.member tileKey dict))
+--         >> List.map
+--             (\tileKey ->
+--                 Material.load (tileKeyToUrl tileKey)
+--                     |> Task.attempt (Result.toMaybe >> TileLoaded tileKey)
+--             )
+--         >> Cmd.batch
 
 
-updateTiles : Model -> Maybe ( Model, Cmd Msg )
+loadTextureCmd : TileKey -> Cmd Msg
+loadTextureCmd tileKey =
+    tileKey
+        |> tileKeyToUrl
+        |> Material.load
+        |> Task.attempt (Result.toMaybe >> TileLoaded tileKey)
+
+
+updateTiles : Model -> ( Model, Cmd Msg )
 updateTiles model =
     let
         numTiles =
@@ -160,8 +212,6 @@ updateTiles model =
             Maybe.map (Length.inMeters >> (\d -> d / toFloat numTiles)) dist
 
         ( LatitudeDegrees lat, _ ) =
-            -- p =
-            --     Tuple.first model.origin
             SketchPlane3d.originPoint xyPlane
                 |> Point3d.projectInto xyPlane
                 |> Point2d.at_ model.mercatorRate
@@ -175,39 +225,80 @@ updateTiles model =
         --     Point3d.toMeters model.viewArgs.focalPoint
         --         |> (\{ x, y } -> localToGeoPoint model.origin ( x, y ))
         tiles =
-            Maybe.map
-                (makeTiles
-                    (isInView model.viewArgs model.windowSize)
-                    model.mapFrame
-                    model.mercatorRate
-                    (Point3d.projectInto xyPlane model.viewArgs.focalPoint)
+            zoom
+                |> MaybeX.unwrap
+                    []
+                    (makeTiles
+                        (isInView model.viewArgs model.windowSize)
+                        model.mapFrame
+                        model.mercatorRate
+                        (Point3d.projectInto xyPlane model.viewArgs.focalPoint)
+                    )
+
+        -- gets tile keys that are missing the given property
+        missingKeys prop =
+            List.filterMap
+                (\( tk, _ ) ->
+                    case Maybe.map prop (Dict.get tk model.loadedTiles) of
+                        Just NotStarted ->
+                            Just tk
+
+                        Just _ ->
+                            Nothing
+
+                        Nothing ->
+                            Just tk
                 )
-                -- (fillTiles
-                --     (isInView model.viewArgs model.windowSize)
-                --     focusedGeoPoint
-                -- )
-                zoom
 
-        newModel ts =
-            { model | displayedTiles = ts }
+        missingTextures =
+            missingKeys .texture tiles
 
-        missingKeys ts =
-            List.filter
-                (\( tileKey, _ ) -> not (Dict.member tileKey model.loadedTiles))
-                ts
-                |> List.map Tuple.first
+        missingMeshes =
+            missingKeys .mesh tiles
 
-        cmds keys =
-            -- loadElevationsCmd (Finished >> LoadElevations keys) keys
-            List.map
-                (\tileKey ->
-                    tileKey
-                        |> tileKeyToUrl
-                        |> Material.load
-                        |> Task.attempt (Result.toMaybe >> TileLoaded tileKey)
-                )
-                keys
+        newModel =
+            { model | displayedTiles = tiles }
+                |> withPendingTextures missingTextures
+                |> withPendingMeshes missingMeshes
 
+        cmds =
+            loadElevationsCmd (Finished >> LoadElevations missingMeshes) missingMeshes
+                :: (missingTextures |> List.map loadTextureCmd)
+
+        -- missingKeys ts =
+        --     List.filter
+        --         (\( tileKey, _ ) -> not (Dict.member tileKey model.loadedTiles))
+        --         ts
+        --         |> List.map Tuple.first
+        -- cmds keys =
+        -- loadElevationsCmd (Finished >> LoadElevations keys) keys
+        -- List.map
+        --     (\tileKey ->
+        --         tileKey
+        --             |> tileKeyToUrl
+        --             |> Material.load
+        --             |> Task.attempt (Result.toMaybe >> TileLoaded tileKey)
+        --     )
+        --     keys
+        -- cmds keys =
+        --     (missingKeys .mesh keys |> (\ks -> loadElevationsCmd (Finished >> LoadElevations ks) ks))
+        --         :: (missingKeys .texture keys |> List.map loadTextureCmd)
+        -- missingTextures =
+        --     List.filterMap
+        --         (\(tk, _) ->
+        --             case Maybe.map (.texture) (Dict.get tk model.loadedTiles) of
+        --                 Just (NotStarted) -> Just tk
+        --                 Just _ -> Nothing
+        --                 Nothing -> Just tk
+        --         )
+        -- missingMeshes =
+        --     List.filterMap
+        --         (\(tk, _) ->
+        --             case Maybe.map (.mesh) (Dict.get tk model.loadedTiles) of
+        --                 Just (NotStarted) -> Just tk
+        --                 Just _ -> Nothing
+        --                 Nothing -> Just tk
+        --         )
         -- loadElevationsCmd (Finished >> LoadElevations (missingKeys ts)) (missingKeys ts)
         -- :: List.map
         --         (\tileKey ->
@@ -227,7 +318,8 @@ updateTiles model =
         --             )
         --         >> Cmd.batch
     in
-    Maybe.map (\ts -> ( newModel ts, ts |> missingKeys |> cmds |> Cmd.batch )) tiles
+    -- Maybe.map (\ts -> ( newModel ts, ts |> cmds |> Cmd.batch )) tiles
+    ( newModel, Cmd.batch cmds )
 
 
 camera : ViewArgs -> Camera3d Meters WorldCoords
@@ -316,7 +408,6 @@ init windowSize origin =
         --         |> Maybe.withDefault []
     in
     updateTiles model
-        |> Maybe.withDefault ( model, Cmd.none )
 
 
 
@@ -358,10 +449,10 @@ update msg model =
                         (\data ->
                             case data of
                                 Just val ->
-                                    Just { val | texture = texture }
+                                    Just { val | texture = MaybeX.unwrap NotStarted Resolved texture }
 
                                 Nothing ->
-                                    Just { texture = texture, mesh = Nothing }
+                                    Just { texture = MaybeX.unwrap NotStarted Resolved texture, mesh = NotStarted }
                         )
                         model.loadedTiles
               }
@@ -373,13 +464,22 @@ update msg model =
 
         LoadElevations tiles (Finished (Ok res)) ->
             let
+                makeMesh ( tx, ty, zoom ) elevVals =
+                    tileMesh
+                        xyPlane
+                        model.mapFrame
+                        model.mercatorRate
+                        elevVals
+                        { x = tx, y = ty, zoom = zoomLevel zoom }
+
+                updateTileData : TileKey -> List Int -> Maybe TileData -> Maybe TileData
                 updateTileData ( tx, ty, zoom ) elevVals data =
                     case data of
                         Just val ->
-                            Just { val | mesh = Just <| tileMesh xyPlane model.mapFrame model.mercatorRate elevVals { x = tx, y = ty, zoom = zoomLevel zoom } }
+                            Just { val | mesh = makeMesh ( tx, ty, zoom ) elevVals |> Resolved }
 
                         Nothing ->
-                            Just { texture = Nothing, mesh = Just <| tileMesh xyPlane model.mapFrame model.mercatorRate elevVals { x = tx, y = ty, zoom = zoomLevel zoom } }
+                            Just { texture = NotStarted, mesh = makeMesh ( tx, ty, zoom ) elevVals |> Resolved }
 
                 newLoadedTiles =
                     ListX.zip tiles res
@@ -392,6 +492,8 @@ update msg model =
         LoadElevations tiles (Finished (Err err)) ->
             ( model, Cmd.none )
 
+        -- LoadElevations tiles (Finished (Err err)) ->
+        --     ( model, Cmd.none )
         DragStart ( x, y ) ->
             let
                 point =
@@ -462,7 +564,6 @@ update msg model =
                         --     |> List.map Tuple.first
                     in
                     updateTiles newModel
-                        |> Maybe.withDefault ( newModel, Cmd.none )
 
                 -- ( newModel, loadMissingTilesCmd newModel.loadedTiles tiles)
                 _ ->
@@ -485,7 +586,6 @@ update msg model =
                     }
             in
             updateTiles newModel
-                |> Maybe.withDefault ( newModel, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -768,24 +868,28 @@ view mapItems model =
         --         (Point3d.meters 1000 1000 0)
         --         (Point3d.meters -1000 1000 0)
         unwrapTexture =
-            MaybeX.unwrap
-                (Material.color Color.lightGray)
-                Material.texturedColor
+            deferredToMaybe
+                >> MaybeX.unwrap
+                    (Material.color Color.lightGray)
+                    Material.texturedColor
 
         toTile ( tk, ( p0, p1 ) ) =
             Dict.get tk model.loadedTiles
                 |> Maybe.withDefault
-                    { texture = Nothing
-                    , mesh = Nothing
+                    { texture = NotStarted
+                    , mesh = NotStarted
                     }
                 |> (\data ->
-                        case data.mesh of
+                        case deferredToMaybe data.mesh of
                             Just mesh ->
                                 Scene3d.mesh (unwrapTexture data.texture) mesh
 
                             Nothing ->
                                 Scene3d.quad
                                     (unwrapTexture data.texture)
+                                    -- usually quad vertices are defined in counter-clockwise order
+                                    -- but since in mercator projection y axis is inverted,
+                                    -- we need flip the texture upside down by changing the order of vertices
                                     (Point3d.xyz (Point2d.xCoordinate p0) (Point2d.yCoordinate p1) (Length.meters 0))
                                     (Point3d.xyz (Point2d.xCoordinate p1) (Point2d.yCoordinate p1) (Length.meters 0))
                                     (Point3d.xyz (Point2d.xCoordinate p1) (Point2d.yCoordinate p0) (Length.meters 0))

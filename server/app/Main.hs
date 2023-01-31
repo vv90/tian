@@ -27,7 +27,7 @@ import FlightTask (FlightTask)
 import Env (checkRequiredEnvironmentKeys)
 import Data.Conduit.TMChan (TMChan, newBroadcastTMChan, dupTMChan)
 import Demo.DemoConduit (testDemoConduit)
-import GeoTiff.Tiff (testGeoTiff)
+import GeoTiff.Tiff (convertTiffSafe)
 
 startCounter :: Int -> IO ()
 startCounter n = do
@@ -54,6 +54,17 @@ main :: IO ()
 main = do 
     print "starting server..."
     checkRequiredEnvironmentKeys
+    -- print "N52E039" 
+    -- convertTiffSafe "./demo/ASTGTMV003_N52E039_dem.tif"
+    
+
+    -- print "N51E039"
+    -- convertTiffSafe "./demo/ASTGTMV003_N51E039_dem.tif"
+    
+    -- convertTiffSafe "./demo/ASTGTMV003_N44E006_dem.tif"
+    -- convertTiffSafe "./demo/ASTGTMV003_N45E005_dem.tif"
+    
+    -- print "done"
     startApp 8081
    
     -- testGeoTiff "./demo/ASTGTMV003_N52E039_dem.tif"

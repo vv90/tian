@@ -64,7 +64,7 @@ import Conduit (ConduitT, ResourceT)
 import Control.Exception (try)
 import Demo.NameMatch (loadNames, NameMatch)
 import Map (MapTile)
-import GeoTiff.Tiff (readTiff)
+import GeoTiff.Tiff (readTiff, readElevations)
 data LibError
     = ConnectionError Connection.ConnectionError
     | QueryError Session.QueryError
@@ -272,7 +272,7 @@ type API =
     :<|> "test" :> "startLine" :> Capture "taskId" Int32 :> Get '[JSON] ((Latitude, Longitude), (Latitude, Longitude))
     :<|> "demo" :> WebSocketSource (Text, ProgressPointDto)
     :<|> "demoTask" :> Get '[JSON] (FlightTask, [NameMatch])
-    :<|> "elevationPoints" :> ReqBody '[JSON] [MapTile] :> Post '[JSON] [[Int]]
+    :<|> "elevationPoints" :> ReqBody '[JSON] [MapTile] :> Post '[JSON] [Vector Int]
     -- :<|> "startDemo" :> Get '[JSON] ()
 
 startApp :: Port -> IO ()
@@ -344,12 +344,13 @@ demoTask = do
         Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
         Right (Entity _ ft, nm) -> pure (ft, nm) 
 
-elevationPoints :: [MapTile] -> Handler [[Int]]
+elevationPoints :: [MapTile] -> Handler [Vector Int]
 elevationPoints tiles = do
-    pts <- liftIO $ runExceptT $ readTiff "./demo/ASTGTMV003_N52E039_dem.tif" tiles
-    case pts of
-        Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
-        Right x -> pure x
+    -- pts <- liftIO $ runExceptT $ readTiff "./demo/ASTGTMV003_N52E039_dem.tif" tiles
+    liftIO $ readElevations tiles
+    -- case pts of
+    --     Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
+    --     Right x -> pure x
 
 
 -- startDemo :: TMVar FlightTask -> Handler ()

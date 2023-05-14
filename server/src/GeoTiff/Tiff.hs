@@ -365,7 +365,7 @@ readElevations :: [MapTile] -> IO [Vector Int]
 readElevations tiles = 
     let
         fileRef = ElevFileReference
-            { tiePoint = ModelTiePoint (0.0,0.0,0.0,38.9998611111111,53.0001388888889,0.0)
+            { tiePoint = ModelTiePoint (0.0,0.0,0.0,4.99986111111111,46.0001388888889,0.0)
             , pixelScale = ModelPixelScale (2.77777777777778e-4,2.77777777777778e-4,0.0)
             , imageWidth = ImageWidth 3601
             , imageHeight = ImageHeight 3601

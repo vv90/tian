@@ -27,7 +27,7 @@ import FlightTask (FlightTask)
 import Env (checkRequiredEnvironmentKeys)
 import Data.Conduit.TMChan (TMChan, newBroadcastTMChan, dupTMChan)
 import Demo.DemoConduit (testDemoConduit)
-import GeoTiff.Tiff (convertTiffSafe)
+import GeoTiff.Tiff (convertTiffSafe, testGeoTiff, convertTiff)
 
 startCounter :: Int -> IO ()
 startCounter n = do
@@ -67,7 +67,7 @@ main = do
     -- print "done"
     startApp 8081
    
-    -- testGeoTiff "./demo/ASTGTMV003_N52E039_dem.tif"
+    -- convertTiffSafe "./demo/ASTGTMV003_N45E005_dem.tif"
     
     -- mapM print d
     -- pure ()

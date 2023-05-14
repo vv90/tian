@@ -51,12 +51,13 @@ decodeC =
             bits <- replicateM n await
             case sequence bits of
                 Just bs -> 
-                    return $ foldl' (\acc bit -> (acc `shiftL` 1) .|. fromIntegral bit) (0::Int) bs
+                    return . Just $ foldl' (\acc bit -> (acc `shiftL` 1) .|. fromIntegral bit) (0::Int) bs
                 Nothing -> do
                     -- pure ()
                     print $ "Table size: " <> show s
                     print $ "bits: " <> show bits
-                    fail $ "Not enough bits in the input stream. Need " <> show n <> " , got " <> show (filter isJust bits & length)
+                    -- fail $ "Not enough bits in the input stream. Need " <> show n <> " , got " <> show (filter isJust bits & length)
+                    return Nothing
 
         codeSize tableSize
             | tableSize < 511 = (9, tableSize)
@@ -68,29 +69,31 @@ decodeC =
             code <- awaitBits $ codeSize $ Vector.length table
             -- print $ "code " <> show code
             -- print $ "table size " <> show (Vector.length table)
-            case (code, table !? code) of
-                (256, _) -> do 
+            case (code, code >>= (table !?)) of
+                (Nothing, _ ) -> pure ()
+                (Just 256, _) -> do 
                     -- print "start"
                     start
-                (257, _) -> pure ()
-                (c, Just val) -> do
+                (Just 257, _) -> pure ()
+                (Just c, Just val) -> do
                     yieldMany val
                     let newVal = lastVal <> (fromIntegral (head val):|[])
                     consumeCode (Vector.snoc table newVal) val
-                (c, Nothing) -> do
+                (Just c, Nothing) -> do
                     let res = lastVal <> (head lastVal :| [])
                     yieldMany res
                     consumeCode (Vector.snoc table res) res
 
         start = do
             code <- awaitBits (9, Vector.length initTable)
-            case (code, initTable !? code) of
-                (256, _) -> start
-                (257, _) -> pure ()
-                (c, Just val) -> do
+            case (code, code >>= (initTable !? )) of
+                (Nothing, _ ) -> pure ()
+                (Just 256, _) -> start
+                (Just 257, _) -> pure ()
+                (Just c, Just val) -> do
                     yieldMany val
                     consumeCode initTable val
-                (c, Nothing) -> do
+                (Just c, Nothing) -> do
                     fail $ "Code " <> show c <> " not found in the initial table"
     in do
         start

@@ -58,20 +58,17 @@ library
   hs-source-dirs:
       src
   default-extensions:
+      NoImplicitPrelude
+      NoPolyKinds
       DataKinds
       DeriveAnyClass
       DerivingStrategies
       DerivingVia
-      LambdaCase
-      NoImplicitPrelude
-      OverloadedStrings
-      OverloadedRecordDot
       DuplicateRecordFields
-      DeriveGeneric
-      NamedFieldPuns
-      TupleSections
-      ImportQualifiedPost
-  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Wno-all-missed-specialisations -Wno-implicit-prelude -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-safe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -Wno-prepositive-qualified-module
+      LambdaCase
+      OverloadedRecordDot
+      OverloadedStrings
+  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Weverything -Wno-all-missed-specialisations -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists
   build-depends:
       aeson
     , async
@@ -110,7 +107,7 @@ library
     , wai
     , wai-cors
     , warp
-  default-language: Haskell2010
+  default-language: GHC2021
 
 executable codegen
   main-is: Main.hs
@@ -119,20 +116,17 @@ executable codegen
   hs-source-dirs:
       codegen
   default-extensions:
+      NoImplicitPrelude
+      NoPolyKinds
       DataKinds
       DeriveAnyClass
       DerivingStrategies
       DerivingVia
-      LambdaCase
-      NoImplicitPrelude
-      OverloadedStrings
-      OverloadedRecordDot
       DuplicateRecordFields
-      DeriveGeneric
-      NamedFieldPuns
-      TupleSections
-      ImportQualifiedPost
-  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Wno-all-missed-specialisations -Wno-implicit-prelude -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-safe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -Wno-prepositive-qualified-module -threaded -rtsopts -with-rtsopts=-N
+      LambdaCase
+      OverloadedRecordDot
+      OverloadedStrings
+  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Weverything -Wno-all-missed-specialisations -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , async
@@ -172,7 +166,7 @@ executable codegen
     , wai
     , wai-cors
     , warp
-  default-language: Haskell2010
+  default-language: GHC2021
 
 executable seed
   main-is: Main.hs
@@ -181,20 +175,17 @@ executable seed
   hs-source-dirs:
       seed
   default-extensions:
+      NoImplicitPrelude
+      NoPolyKinds
       DataKinds
       DeriveAnyClass
       DerivingStrategies
       DerivingVia
-      LambdaCase
-      NoImplicitPrelude
-      OverloadedStrings
-      OverloadedRecordDot
       DuplicateRecordFields
-      DeriveGeneric
-      NamedFieldPuns
-      TupleSections
-      ImportQualifiedPost
-  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Wno-all-missed-specialisations -Wno-implicit-prelude -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-safe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -Wno-prepositive-qualified-module -threaded -rtsopts -with-rtsopts=-N
+      LambdaCase
+      OverloadedRecordDot
+      OverloadedStrings
+  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Weverything -Wno-all-missed-specialisations -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , async
@@ -234,7 +225,7 @@ executable seed
     , wai
     , wai-cors
     , warp
-  default-language: Haskell2010
+  default-language: GHC2021
 
 executable server-exe
   main-is: Main.hs
@@ -243,20 +234,17 @@ executable server-exe
   hs-source-dirs:
       app
   default-extensions:
+      NoImplicitPrelude
+      NoPolyKinds
       DataKinds
       DeriveAnyClass
       DerivingStrategies
       DerivingVia
-      LambdaCase
-      NoImplicitPrelude
-      OverloadedStrings
-      OverloadedRecordDot
       DuplicateRecordFields
-      DeriveGeneric
-      NamedFieldPuns
-      TupleSections
-      ImportQualifiedPost
-  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Wno-all-missed-specialisations -Wno-implicit-prelude -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-safe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -Wno-prepositive-qualified-module -threaded -rtsopts -with-rtsopts=-N
+      LambdaCase
+      OverloadedRecordDot
+      OverloadedStrings
+  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Weverything -Wno-all-missed-specialisations -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , async
@@ -296,7 +284,7 @@ executable server-exe
     , wai
     , wai-cors
     , warp
-  default-language: Haskell2010
+  default-language: GHC2021
 
 test-suite server-test
   type: exitcode-stdio-1.0
@@ -312,20 +300,17 @@ test-suite server-test
   hs-source-dirs:
       test
   default-extensions:
+      NoImplicitPrelude
+      NoPolyKinds
       DataKinds
       DeriveAnyClass
       DerivingStrategies
       DerivingVia
-      LambdaCase
-      NoImplicitPrelude
-      OverloadedStrings
-      OverloadedRecordDot
       DuplicateRecordFields
-      DeriveGeneric
-      NamedFieldPuns
-      TupleSections
-      ImportQualifiedPost
-  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Wno-all-missed-specialisations -Wno-implicit-prelude -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-safe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -Wno-prepositive-qualified-module -threaded -rtsopts -with-rtsopts=-N
+      LambdaCase
+      OverloadedRecordDot
+      OverloadedStrings
+  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Weverything -Wno-all-missed-specialisations -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , async
@@ -368,4 +353,4 @@ test-suite server-test
     , wai
     , wai-cors
     , warp
-  default-language: Haskell2010
+  default-language: GHC2021

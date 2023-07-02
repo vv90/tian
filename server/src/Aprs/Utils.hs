@@ -1,10 +1,8 @@
+module Aprs.Utils where
 
-module Aprs.Utils where 
-
-import Relude
-
-import Conduit (ConduitT, mapC, takeC, (.|), runConduit, stdoutC)
+import Conduit (ConduitT, mapC, runConduit, stdoutC, takeC, (.|))
 import Data.Conduit.Network (appSink, appSource, clientSettings, runTCPClient)
+import Relude
 
 authC :: ConduitT ByteString ByteString IO ()
 authC =

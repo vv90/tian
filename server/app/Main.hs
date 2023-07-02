@@ -1,7 +1,7 @@
 module Main where
 
-import Lib (startApp)
 import Env (checkRequiredEnvironmentKeys)
+import Lib (startApp)
 import Relude
 
 -- startCounter :: Int -> IO ()
@@ -9,7 +9,6 @@ import Relude
 --   print n
 --   threadDelay 1000000
 --   startCounter (n + 1)
-
 
 main :: IO ()
 main = do

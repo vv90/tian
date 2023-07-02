@@ -20,7 +20,7 @@ jobs:
       - name: Setup haskell
         uses: haskell/actions/setup@v2
         with:
-          ghc-version: '9.2.5'
+          ghc-version: '9.4.5'
           enable-stack: true
           stack-version: 'latest'
 
@@ -28,6 +28,24 @@ jobs:
         uses: freckle/stack-cache-action@v2
         with:
           working-directory: server
+
+      # TODO: use this:
+      # - name: Backend Build and test
+      #   uses: freckle/stack-action@v4
+      #   id: stack
+      #   env:
+      #     TPG_DB: wolf
+      #     TPG_USER: admin
+      #     TPG_PASS: admin
+      #     TPG_HOST: localhost
+      #     TPG_PORT: 5432
+      #   with:
+      #     working-directory: backend
+      #     fast: false
+      #     pedantic: true
+      #     test: true
+      #     cache-prefix: nightly-2023-06-14
+      #     stack-arguments: --copy-bins --local-bin-path target
 
       - name: Build executables and run codegen
       # TODO: enable --pedantic flag https://github.com/vv90/contest-viewer/issues/10

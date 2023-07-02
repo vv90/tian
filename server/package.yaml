@@ -160,7 +160,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - base
+    # - base
     - server
 
   codegen: 
@@ -173,6 +173,19 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
 
+  seed: 
+    main: Main.hs
+    source-dirs: seed
+
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+
+    dependencies:
+    # - base
+    - server
+
 tests:
   server-test:
     main:                Spec.hs
@@ -182,7 +195,7 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - base
+    # - base
     - server
     - hspec
     - hspec-wai

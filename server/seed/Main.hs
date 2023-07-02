@@ -4,6 +4,6 @@ import Relude
 
 main :: IO ()
 main = do
-  print "seeding data..."
+  putStrLn "seeding data..."
 
   pure ()

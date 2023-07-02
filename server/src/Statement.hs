@@ -86,9 +86,9 @@ saveNavPointsStatement =
   lmap
     nest
     [rowsAffectedStatement|
-            insert into nav_points (name, code, country, lat, lon, elev, style, rwdir, rwlen, freq, descr) 
-            select * from unnest ( $1 :: text[], $2 :: text[], $3 :: text?[], $4 :: float8[], $5 :: float8[], $6 :: float8[], $7 :: text[], $8 :: int4?[], $9 :: float8?[], $10 :: text?[], $11 :: text[] )
-        |]
+        insert into nav_points (name, code, country, lat, lon, elev, style, rwdir, rwlen, freq, descr) 
+        select * from unnest ( $1 :: text[], $2 :: text[], $3 :: text?[], $4 :: float8[], $5 :: float8[], $6 :: float8[], $7 :: text[], $8 :: int4?[], $9 :: float8?[], $10 :: text?[], $11 :: text[] )
+    |]
   where
     nest nps =
       let names = toText . name <$> nps
@@ -97,7 +97,7 @@ saveNavPointsStatement =
           latitudes = degreesLatitude . lat <$> nps
           longitudes = degreesLongitude . lon <$> nps
           elevations = metersElevation . elev <$> nps
-          styles = show . style <$> nps
+          styles = (show @Text) . style <$> nps
           rwdirs = fmap degreesDirection . rwdir <$> nps
           rwlens = fmap metersDistance . rwlen <$> nps
           freqs = fmap toText . freq <$> nps

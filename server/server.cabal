@@ -45,14 +45,17 @@ library
       Magic.ElmDeriving
       Map
       NavPoint
+      Persistence.Connection
+      Persistence.Session
+      Persistence.Statement
       ProgressPoint
       RwLenUnits
-      Session
-      Statement
+      Seed.Utils
       TaskProgress
       TaskProgressUtils
       TimeUtils
       TrackPoint
+      Utils
   other-modules:
       Paths_server
   hs-source-dirs:

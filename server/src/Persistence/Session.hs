@@ -1,4 +1,4 @@
-module Session where
+module Persistence.Session where
 
 import Data.Vector (Vector)
 import Entity (Entity (..))
@@ -7,8 +7,8 @@ import Hasql.Session (Session, statement)
 import Hasql.Transaction qualified as Transaction
 import Hasql.Transaction.Sessions (IsolationLevel (Serializable), Mode (Write), transaction)
 import NavPoint (NavPoint)
+import Persistence.Statement (deleteDuplicateNavPointsStatement, getAllFlightTasksStatement, getFlightTaskStatement, getNavPointsStatement, saveElevationPointsStatement, saveFlightTaskStatement, saveFlightTaskTurnpointsStatement, saveNavPointsStatement)
 import Relude
-import Statement (deleteDuplicateNavPointsStatement, getAllFlightTasksStatement, getFlightTaskStatement, getNavPointsStatement, saveFlightTaskStatement, saveFlightTaskTurnpointsStatement, saveNavPointsStatement)
 
 getNavPointsSession :: Session (Vector NavPoint)
 getNavPointsSession =
@@ -21,6 +21,10 @@ deleteDuplicateNavPointsSession names =
 saveNavPointsSession :: Vector NavPoint -> Session Int64
 saveNavPointsSession nps =
   statement nps saveNavPointsStatement
+
+saveElevationPointsSession :: (Int32, Double, Double) -> Session Int64
+saveElevationPointsSession eps =
+  statement eps saveElevationPointsStatement
 
 saveFlightTaskSession :: FlightTask -> Session Int64
 saveFlightTaskSession ft =

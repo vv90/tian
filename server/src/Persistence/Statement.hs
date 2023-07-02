@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Statement where
+module Persistence.Statement where
 
 import Control.Arrow (left)
 import Data.Profunctor (Profunctor (lmap))
@@ -103,6 +103,12 @@ saveNavPointsStatement =
           freqs = fmap toText . freq <$> nps
           descs = toText . desc <$> nps
        in (names, codes, countries, latitudes, longitudes, elevations, styles, rwdirs, rwlens, freqs, descs)
+
+saveElevationPointsStatement :: Statement (Int32, Double, Double) Int64
+saveElevationPointsStatement =
+  [rowsAffectedStatement|
+    insert into elevations (elevation, location) values ($1 :: int4, ST_GeogFromText('SRID=4326;POINT(' || $2 :: float8 || ' ' || $3 :: float8 || ')'))
+  |]
 
 encodeStartType :: TaskStart -> Text
 encodeStartType = \case

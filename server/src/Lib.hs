@@ -4,7 +4,6 @@ module Lib (startApp, app) where
 
 import Conduit (ConduitT, ResourceT)
 import Control.Arrow (ArrowChoice (left))
-import Control.Exception (try)
 import Control.Monad.Except (withExceptT)
 import Data.List.NonEmpty qualified as NE (cons, reverse)
 import Data.Time (UTCTime (UTCTime))
@@ -19,25 +18,24 @@ import FlightTrack (FlightTrack (..))
 import FlightTrack.Parser (buildFlightTrack, flightInfoParserAll)
 import Geo (Elevation (..), Latitude, Longitude)
 import GeoTiff.Tiff (readElevations)
-import Hasql.Connection qualified as Connection
 import Hasql.Session qualified as Session
 import Map (MapTile)
 import NavPoint (NavPoint, name, navPointLinesParser)
 import Network.Wai.Handler.Warp (Port, run)
+import Persistence.Connection (getConnection)
+import Persistence.Session (deleteDuplicateNavPointsSession, getAllFlightTasksSession, getFlightTaskSession, getNavPointsSession, saveFlightTaskSession, saveNavPointsSession)
 import ProgressPoint (ProgressPointDto)
 import Relude
 import Servant
 import Servant.API.WebSocketConduit (WebSocketSource)
 import Servant.Multipart (FileData (fdFileName, fdPayload), FromMultipart (fromMultipart), Mem, MultipartData (files), MultipartForm)
-import Session (deleteDuplicateNavPointsSession, getAllFlightTasksSession, getFlightTaskSession, getNavPointsSession, saveFlightTaskSession, saveNavPointsSession)
-import System.Environment (getEnv)
 import TaskProgress (TaskProgressDto, toDto)
 import TaskProgressUtils (progress, taskStartLine)
 import Text.Parsec (Parsec, parse)
 import TrackPoint (FixValidity (..), TrackPoint (..))
 
 data LibError
-  = ConnectionError Connection.ConnectionError
+  = ConnectionError Text
   | QueryError Session.QueryError
   | FormatError Text
   | EnvironmentError Text
@@ -50,31 +48,31 @@ instance ToLText LibError where
 -- catchLiftIO :: IO a -> ExceptT LibError IO a
 -- catchLiftIO = withExceptT EnvironmentError . ExceptT . try
 
-getConn :: ExceptT LibError IO Connection.Connection
-getConn =
-  let tryGetEnv =
-        withExceptT (EnvironmentError . show)
-          . ExceptT
-          . (try :: IO a -> IO (Either SomeException a))
-          . getEnv
-      -- host = catchLiftIO $ getEnv "DB_HOST"
-      tryGetPort str = do
-        pstr <- tryGetEnv str
-        withExceptT EnvironmentError $ ExceptT $ (pure :: a -> IO a) $ (readEither :: String -> Either Text Word16) pstr
+-- getConn :: ExceptT LibError IO Connection.Connection
+-- getConn =
+--   let tryGetEnv =
+--         withExceptT (EnvironmentError . show)
+--           . ExceptT
+--           . (try :: IO a -> IO (Either SomeException a))
+--           . getEnv
+--       -- host = catchLiftIO $ getEnv "DB_HOST"
+--       tryGetPort str = do
+--         pstr <- tryGetEnv str
+--         withExceptT EnvironmentError $ ExceptT $ (pure :: a -> IO a) $ (readEither :: String -> Either Text Word16) pstr
 
-      conn host port usr pwd db =
-        withExceptT ConnectionError
-          $ ExceptT
-          $ Connection.acquire
-          $ Connection.settings host port usr pwd db
-   in do
-        host <- tryGetEnv "DB_HOST"
-        port <- tryGetPort "DB_PORT"
-        usr <- tryGetEnv "DB_USER"
-        pwd <- tryGetEnv "DB_PASS"
-        db <- tryGetEnv "DB_NAME"
+--       conn host port usr pwd db =
+--         withExceptT ConnectionError
+--           $ ExceptT
+--           $ Connection.acquire
+--           $ Connection.settings host port usr pwd db
+--    in do
+--         host <- tryGetEnv "DB_HOST"
+--         port <- tryGetPort "DB_PORT"
+--         usr <- tryGetEnv "DB_USER"
+--         pwd <- tryGetEnv "DB_PASS"
+--         db <- tryGetEnv "DB_NAME"
 
-        conn (encodeUtf8 host) port (encodeUtf8 usr) (encodeUtf8 pwd) (encodeUtf8 db)
+--         conn (encodeUtf8 host) port (encodeUtf8 usr) (encodeUtf8 pwd) (encodeUtf8 db)
 
 -- dbhost <- catchLiftIO $ getEnv "DB_HOST"
 -- dbport <- catchLiftIO $ getEnv "DB_PORT"
@@ -96,28 +94,28 @@ getConn =
 
 getNavPoints :: ExceptT LibError IO (Vector NavPoint)
 getNavPoints =
-  getConn >>= withExceptT QueryError . ExceptT . Session.run getNavPointsSession
+  withExceptT ConnectionError getConnection >>= withExceptT QueryError . ExceptT . Session.run getNavPointsSession
 
 saveNavPoints :: Vector NavPoint -> ExceptT LibError IO (Int64, Int64)
 saveNavPoints nps = do
-  conn <- getConn
+  conn <- withExceptT ConnectionError getConnection
   deleted <- withExceptT QueryError . ExceptT $ Session.run (deleteDuplicateNavPointsSession $ toText . name <$> nps) conn
   added <- withExceptT QueryError . ExceptT $ Session.run (saveNavPointsSession nps) conn
   pure (deleted, added)
 
 getAllFlightTasks :: ExceptT LibError IO [Entity Int32 FlightTask]
 getAllFlightTasks = do
-  conn <- getConn
+  conn <- withExceptT ConnectionError getConnection
   withExceptT QueryError . ExceptT $ Session.run getAllFlightTasksSession conn
 
 getFlightTask :: Int32 -> ExceptT LibError IO (Maybe (Entity Int32 FlightTask))
 getFlightTask taskId = do
-  conn <- getConn
+  conn <- withExceptT ConnectionError getConnection
   withExceptT QueryError . ExceptT $ Session.run (getFlightTaskSession taskId) conn
 
 saveFlightTask :: FlightTask -> ExceptT LibError IO Int64
 saveFlightTask ft = do
-  conn <- getConn
+  conn <- withExceptT ConnectionError getConnection
   savedTpsNum <- withExceptT QueryError . ExceptT $ Session.run (saveFlightTaskSession ft) conn
   pure $ savedTpsNum + 1
 

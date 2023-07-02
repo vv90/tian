@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Aprs.AprsMessage
+      Aprs.Utils
       Codegen
       Demo.DemoConduit
       Demo.DemoTask

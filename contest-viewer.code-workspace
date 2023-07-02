@@ -18,7 +18,8 @@
       "editor.formatOnSave": true
     },
     "[haskell]": {
-      "editor.formatOnSave": true
+      "editor.formatOnSave": false,
+      "editor.defaultFormatter": "haskell.haskell"
     },
     "[markdown]": {
       "editor.formatOnSave": true,

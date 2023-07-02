@@ -1,13 +1,10 @@
 module GeoTiff.Tiff where
 
-import Conduit (ConduitT, ResourceT, awaitForever, bracketP, lengthC, mapC, mapMC, replicateC, runConduit, runConduitPure, sinkList, sinkNull, sumC, takeC, withSinkFile, yield, yieldMany, (.|))
-import Control.Monad.Except (liftEither, mapExceptT)
-import Data.Binary.Get (Get, bytesRead, getDoublebe, getDoublele, getWord16be, getWord16le, getWord32be, getWord32le, getWord8, runGet, runGetOrFail, skip)
+import Conduit (ConduitT, awaitForever, runConduit, withSinkFile, yield, yieldMany, (.|))
+import Control.Monad.Except (liftEither)
+import Data.Binary.Get (Get, getDoublebe, getDoublele, getWord16be, getWord16le, getWord32be, getWord32le, getWord8, runGetOrFail)
 import Data.Binary.Put (Put, putWord16be, putWord16le, runPut)
-import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
-import Data.List (groupBy)
-import Data.Map.Strict qualified as Map
 import Data.Vector (Vector, (!), (!?), (//))
 import Data.Vector qualified as Vector
 import GHC.ByteOrder (ByteOrder (..))
@@ -15,10 +12,9 @@ import GHC.IO (bracket)
 import GHC.IO.Handle (hSeek)
 import Geo (Latitude (..), Longitude (..))
 import GeoTiff.LZW (decodeLZW)
-import Map (MapTile (..), ZoomLevel, tileCoords, toMercatorWeb)
+import Map (MapTile (..), tileCoords, toMercatorWeb)
 import Relude
-import System.IO (SeekMode (AbsoluteSeek), hClose, hPrint, hPutStrLn, hTell, openBinaryFile, openFile, withBinaryFile)
-import Text.Printf (printf)
+import System.IO (SeekMode (AbsoluteSeek), hClose, hPrint, hPutStrLn, hTell, openBinaryFile, withBinaryFile)
 
 data DataType
   = Byte Word8 -- 1
@@ -62,49 +58,49 @@ type PixelScale = (Double, Double, Double)
 --     deriving (Show)
 
 newtype ImageWidth = ImageWidth Int -- 256
-  deriving (Show)
+  deriving stock (Show)
 
 newtype ImageHeight = ImageHeight Int -- 257
-  deriving (Show)
+  deriving stock (Show)
 
 newtype BitsPerSample = BitsPerSample Int -- 258
-  deriving (Show)
+  deriving stock (Show)
 
 data Compression = NoCompression | LZW -- 259
-  deriving (Show)
+  deriving stock (Show)
 
 data PhotometricInterpretation = BlackIsZero -- 262
-  deriving (Show)
+  deriving stock (Show)
 
 data SamplesPerPixel = OneSample -- Int -- 277
-  deriving (Show)
+  deriving stock (Show)
 
 data PlanarConfiguration = Chunky -- 284
-  deriving (Show)
+  deriving stock (Show)
 
 data Predictor = PredictorNone -- 317
-  deriving (Show)
+  deriving stock (Show)
 
 newtype TileWidth = TileWidth Int -- 322
-  deriving (Show)
+  deriving stock (Show)
 
 newtype TileHeight = TileHeight Int -- 323
-  deriving (Show)
+  deriving stock (Show)
 
 newtype TileOffsets = TileOffsets (Vector Integer) -- 324
-  deriving (Show)
+  deriving stock (Show)
 
 newtype TileByteCounts = TileByteCounts (Vector Integer) -- 325
-  deriving (Show)
+  deriving stock (Show)
 
 data SampleFormat = UnsignedInteger | SignedInteger -- 339
-  deriving (Show)
+  deriving stock (Show)
 
 newtype ModelPixelScale = ModelPixelScale PixelScale -- 33550
-  deriving (Show)
+  deriving stock (Show)
 
 newtype ModelTiePoint = ModelTiePoint TiePoint -- 33922
-  deriving (Show)
+  deriving stock (Show)
 
 data GeoKey
   = GTModelType ModelType -- 1024
@@ -114,19 +110,19 @@ data GeoKey
   | GeogAngularUnits AngularUnits -- 2054
   | GeogSemiMajorAxis Double -- 2057
   | GeogInvFlattening Double -- 2059
-  deriving (Show)
+  deriving stock (Show)
 
 data ModelType = Geographic
-  deriving (Show)
+  deriving stock (Show)
 
 data RasterType = PixelIsArea | PixelIsPoint
-  deriving (Show)
+  deriving stock (Show)
 
 data GeographicType = WGS_84
-  deriving (Show)
+  deriving stock (Show)
 
 data AngularUnits = Degree
-  deriving (Show)
+  deriving stock (Show)
 
 data TiffConfig = TiffConfig
   { imageWidth :: ImageWidth,
@@ -145,7 +141,7 @@ data TiffConfig = TiffConfig
     modelPixelScale :: ModelPixelScale,
     modelTiePoint :: ModelTiePoint
   }
-  deriving (Show)
+  deriving stock (Show)
 
 testGeoTiff :: FilePath -> IO ()
 testGeoTiff path = do
@@ -254,7 +250,7 @@ readConfig bo h =
       tileOffsets :: Word16 -> Word16 -> Word32 -> Word32 -> Either String (Int, Integer)
       tileOffsets 324 4 count offset =
         Right (fromIntegral count, fromIntegral offset)
-      tileOffsets 324 dt count _ =
+      tileOffsets 324 dt _count _ =
         Left $ "TileOffsets: invalid dataType: " <> show dt <> ", expected 4"
       tileOffsets tid _ _ _ =
         Left $ "TileOffsets: invalid tagId: " <> show tid <> ", expected 324"
@@ -262,7 +258,7 @@ readConfig bo h =
       tileByteCounts :: Word16 -> Word16 -> Word32 -> Word32 -> Either String (Int, Integer)
       tileByteCounts 325 4 count offset =
         Right (fromIntegral count, fromIntegral offset)
-      tileByteCounts 325 dt count _ =
+      tileByteCounts 325 dt _count _ =
         Left $ "TileByteCounts: invalid dataType: " <> show dt <> ", expected 4"
       tileByteCounts tid _ _ _ =
         Left $ "TileByteCounts: invalid tagId: " <> show tid <> ", expected 325"
@@ -353,8 +349,8 @@ readTiff path tiles = do
   h <- liftIO $ openBinaryFile path ReadMode
   (byteOrder, ifdOffset) <- ExceptT $ decodeHeader <$> LBS.hGet h 8
 
-  liftIO $ hSeek h AbsoluteSeek $ fromIntegral ifdOffset
-  numTags <- readWord16 byteOrder h
+  liftIO $ hSeek h AbsoluteSeek ifdOffset
+  _numTags <- readWord16 byteOrder h
   config <- readConfig byteOrder h
   readTileData byteOrder tiles h config
 
@@ -367,9 +363,10 @@ readElevations tiles =
             imageWidth = ImageWidth 3601,
             imageHeight = ImageHeight 3601
           }
-      -- path = "./demo/ASTGTMV003_N52E039_dem.tif.out"
+      path :: FilePath
       path = "./demo/ASTGTMV003_N45E005_dem.tif.out"
-   in bracket
+   in -- path = "./demo/ASTGTMV003_N52E039_dem.tif.out"
+      bracket
         (openBinaryFile path ReadMode)
         hClose
         ( \h -> do
@@ -383,13 +380,13 @@ tiffChunksC :: Handle -> ConduitT () (Vector Word16) (ExceptT String IO) ()
 tiffChunksC h = do
   (byteOrder, ifdOffset) <- lift $ ExceptT $ decodeHeader <$> LBS.hGet h 8
 
-  liftIO $ hSeek h AbsoluteSeek $ fromIntegral ifdOffset
-  numTags <- lift $ readWord16 byteOrder h
+  liftIO $ hSeek h AbsoluteSeek ifdOffset
+  _numTags <- lift $ readWord16 byteOrder h
   config <- lift $ readConfig byteOrder h
 
-  let ModelTiePoint tiePoint@(px, py, pz, mLon, mLat, mz) = config.modelTiePoint
+  let ModelTiePoint _tiePoint@(_px, _py, _pz, _mLon, _mLat, _mz) = config.modelTiePoint
       -- size of raster pixel spacing in the model space units
-      ModelPixelScale pixelScale@(xScale, yScale, zScale) = config.modelPixelScale
+      ModelPixelScale _pixelScale@(_xScale, _yScale, _zScale) = config.modelPixelScale
       TileHeight modelTileHeight = config.tileHeight
       TileWidth modelTileWidth = config.tileWidth
       ImageHeight imageHeight = config.imageHeight
@@ -398,9 +395,11 @@ tiffChunksC h = do
       TileByteCounts tileByteCounts = config.tileByteCounts
 
       -- width of the image in tiles (rounded up to cover the whole image)
-      tilesCountRow = ceiling $ fromIntegral imageWidth / fromIntegral modelTileWidth
+      tilesCountRow :: Int
+      tilesCountRow = (ceiling @Double @Int) $ fromIntegral imageWidth / fromIntegral modelTileWidth
       -- height of the image in tiles (rounded up to cover the whole image)
-      tilesCountCol = ceiling $ fromIntegral imageHeight / fromIntegral modelTileHeight
+      tilesCountCol :: Int
+      tilesCountCol = (ceiling @Double @Int) $ fromIntegral imageHeight / fromIntegral modelTileHeight
 
       getTileOffset :: Int -> Either String Integer
       getTileOffset i =
@@ -444,31 +443,31 @@ tiffChunksC h = do
       -- pure (width, height, values)
 
       -- unwraps flat tile data into 2d vector: Vector[row][col]
-      tileToRows :: Vector Word16 -> Vector (Vector Word16)
-      tileToRows tile =
+      _tileToRows :: Vector Word16 -> Vector (Vector Word16)
+      _tileToRows tile =
         Vector.generate modelTileHeight
           $ \rowIndex -> Vector.slice (rowIndex * modelTileWidth) modelTileWidth tile
 
       -- appends each tile row to the corresponding row the `rows` vector
-      appendTileToRows :: Vector (Vector Word16) -> Vector Word16 -> Vector (Vector Word16)
-      appendTileToRows rows tile =
-        Vector.zipWith (Vector.++) rows (tileToRows tile)
+      _appendTileToRows :: Vector (Vector Word16) -> Vector Word16 -> Vector (Vector Word16)
+      _appendTileToRows rows tile =
+        Vector.zipWith (Vector.++) rows (_tileToRows tile)
 
       -- reads tile with index `tileIndex`,
       -- transforms it into rows
       -- and appends each row to corresponding row in the `rows` vector
-      foldTiles :: Vector (Vector Word16) -> Int -> ExceptT String IO (Vector (Vector Word16))
-      foldTiles rows tileIndex = do
+      _foldTiles :: Vector (Vector Word16) -> Int -> ExceptT String IO (Vector (Vector Word16))
+      _foldTiles rows tileIndex = do
         tile <- readTile tileIndex
-        pure $ appendTileToRows rows tile
+        pure $ _appendTileToRows rows tile
 
       -- creates empty rows vector
-      emptyRows row = Vector.replicate modelTileHeight Vector.empty
+      _emptyRows _row = Vector.replicate modelTileHeight Vector.empty
 
       -- vector of tile indexes in the tile row `tileRowIndex`
       tileIndexes tileRowIndex =
         Vector.generate tilesCountRow (\i -> i + tileRowIndex * tilesCountRow)
-  print $ config
+  print config
   -- print $ "Image width: " <> show imageWidth
   -- print $ "Image height: " <> show imageHeight
   -- print $ "Tile width: " <> show modelTileWidth
@@ -529,7 +528,7 @@ encodeRowC :: (Monad m) => ConduitT (Vector Word16) ByteString m ()
 encodeRowC =
   awaitForever $ \row -> do
     let write = runPut $ traverse_ putWord16le row
-    yield $ toStrict $ runPut $ traverse_ putWord16le row
+    yield $ toStrict write
 
 convertTiffSafe :: FilePath -> IO ()
 convertTiffSafe path =
@@ -565,8 +564,8 @@ convertTiff h = do
   -- h <- liftIO $ openBinaryFile path ReadMode
   (byteOrder, ifdOffset) <- ExceptT $ decodeHeader <$> LBS.hGet h 8
 
-  liftIO $ hSeek h AbsoluteSeek $ fromIntegral ifdOffset
-  numTags <- readWord16 byteOrder h
+  liftIO $ hSeek h AbsoluteSeek ifdOffset
+  _numTags <- readWord16 byteOrder h
   config <- readConfig byteOrder h
   res <- convertElevationData byteOrder h config
 
@@ -577,7 +576,7 @@ data TileCache
   | Empty (ExceptT String IO (Vector Word16))
 
 convertElevationData :: ByteOrder -> Handle -> TiffConfig -> ExceptT String IO [(String, Int16)]
-convertElevationData byteOrder h config =
+convertElevationData _byteOrder _h config =
   let -- using zoom level of 12 in OSM tiles
       -- the world map consists of 4096 x 4096 = 16 777 216 tiles at this zoom level
       -- each tile is 256 x 256 pixels and is about 0.0879° degrees in size at the equator
@@ -589,24 +588,25 @@ convertElevationData byteOrder h config =
 
       -- the data is split into files each covering area of 1 degree by 1 degree
 
-      samplesPerMapTile = 10
+      -- samplesPerMapTile = 10
 
       -- raster -> model tiepoint pair associating a point (px, py, pz) in the raster space with a point (mLat, mLon, mz) in the model space
-      ModelTiePoint tiePoint@(px, py, pz, mLon, mLat, mz) = config.modelTiePoint
+      ModelTiePoint _tiePoint@(px, py, _pz, mLon, mLat, _mz) = config.modelTiePoint
       -- size of raster pixel spacing in the model space units
-      ModelPixelScale pixelScale@(xScale, yScale, zScale) = config.modelPixelScale
-      TileHeight modelTileHeight = config.tileHeight
-      TileWidth modelTileWidth = config.tileWidth
-      ImageHeight imageHeight = config.imageHeight
-      ImageWidth imageWidth = config.imageWidth
-      TileOffsets tileOffsets = config.tileOffsets
-      TileByteCounts tileByteCounts = config.tileByteCounts
+      ModelPixelScale _pixelScale@(xScale, yScale, _zScale) = config.modelPixelScale
+      -- TileHeight modelTileHeight = config.tileHeight
+      -- TileWidth modelTileWidth = config.tileWidth
+      -- ImageHeight imageHeight = config.imageHeight
+      -- ImageWidth imageWidth = config.imageWidth
+      -- TileOffsets tileOffsets = config.tileOffsets
+      -- TileByteCounts tileByteCounts = config.tileByteCounts
 
       -- width of the image in tiles (rounded up to cover the whole image)
-      tilesCountRow = ceiling $ fromIntegral imageWidth / fromIntegral modelTileWidth
+      -- tilesCountRow = ceiling $ fromIntegral imageWidth / fromIntegral modelTileWidth
       -- height of the image in tiles (rounded up to cover the whole image)
-      tilesCountCol = ceiling $ fromIntegral imageHeight / fromIntegral modelTileHeight
+      -- tilesCountCol = ceiling $ fromIntegral imageHeight / fromIntegral modelTileHeight
 
+      numTiles :: Double
       numTiles = 4096.0 -- number of tiles at zoom level 12
 
       -- top left corner coordinates in mercator units
@@ -615,56 +615,56 @@ convertElevationData byteOrder h config =
 
       -- top left corner coordinates in global pixel units
       (xStart, yStart) = (mxStart * numTiles * 256, myStart * numTiles * 256)
-      -- therefore, this file covers global pixels starting from (ceiling xStart, ceiling yStart)
+   in -- therefore, this file covers global pixels starting from (ceiling xStart, ceiling yStart)
 
-      getTileOffset :: Int -> Either String Integer
-      getTileOffset i =
-        maybeToRight ("Failed to get tile offset for tile index [" <> show i <> "]")
-          $ tileOffsets
-          !? i
+      -- getTileOffset :: Int -> Either String Integer
+      -- getTileOffset i =
+      --   maybeToRight ("Failed to get tile offset for tile index [" <> show i <> "]")
+      --     $ tileOffsets
+      --     !? i
       -- \$ tileOffsets !? (i + j * modelTileRowLength)
 
-      getTileByteCount :: Int -> Either String Integer
-      getTileByteCount i =
-        maybeToRight ("Failed to get tile byte count for tile [" <> show i <> "]")
-          $ tileByteCounts
-          !? i
+      -- getTileByteCount :: Int -> Either String Integer
+      -- getTileByteCount i =
+      --   maybeToRight ("Failed to get tile byte count for tile [" <> show i <> "]")
+      --     $ tileByteCounts
+      --     !? i
       -- \$ tileByteCounts !? (i + j * modelTileRowLength)
 
-      readTile :: Int -> ExceptT String IO (Vector Word16)
-      readTile i = do
-        offset <- liftEither (getTileOffset i)
-        count <- liftEither (getTileByteCount i)
-        liftIO $ hSeek h AbsoluteSeek offset
-        tileData <- readWord8Many (fromIntegral count) h
-        decodeLZW byteOrder tileData
+      -- readTile :: Int -> ExceptT String IO (Vector Word16)
+      -- readTile i = do
+      --   offset <- liftEither (getTileOffset i)
+      --   count <- liftEither (getTileByteCount i)
+      --   liftIO $ hSeek h AbsoluteSeek offset
+      --   tileData <- readWord8Many (fromIntegral count) h
+      --   decodeLZW byteOrder tileData
 
-      allTiles =
-        Vector.generateM
-          (tilesCountRow * tilesCountCol)
-          readTile
+      -- allTiles =
+      --   Vector.generateM
+      --     (tilesCountRow * tilesCountCol)
+      --     readTile
       -- [ (i, j)
       -- \| i <- [0..modelTileRowLength - 1]
       -- , j <- [0..modelTileColLength - 1]
       -- ]
 
       -- takePixel :: Int -> Word16
-      takePixel tiles index =
-        let -- pixel coords in the image
-            (i, j) = index `divMod` imageWidth
-            -- tile containing the pixel
-            (tx, ty) = (i `div` modelTileWidth, j `div` modelTileHeight)
-            -- pixel coords in the tile
-            (ti, tj) = (i `mod` modelTileWidth, j `mod` modelTileHeight)
-         in do
-              tile <-
-                maybeToRight ("Failed to get tile at index [" <> show (tx, ty) <> "]")
-                  $ tiles
-                  !? (tx * tilesCountRow + ty)
-              maybeToRight ("Failed to get pixel at index [" <> show (ti, tj) <> "] from tile [" <> show (tx, ty) <> "]")
-                $ tile
-                !? (ti * modelTileWidth + tj)
-   in -- let
+      -- takePixel tiles index =
+      --   let -- pixel coords in the image
+      --       (i, j) = index `divMod` imageWidth
+      --       -- tile containing the pixel
+      --       (tx, ty) = (i `div` modelTileWidth, j `div` modelTileHeight)
+      --       -- pixel coords in the tile
+      --       (ti, tj) = (i `mod` modelTileWidth, j `mod` modelTileHeight)
+      --    in do
+      --         tile <-
+      --           maybeToRight ("Failed to get tile at index [" <> show (tx, ty) <> "]")
+      --             $ tiles
+      --             !? (tx * tilesCountRow + ty)
+      --         maybeToRight ("Failed to get pixel at index [" <> show (ti, tj) <> "] from tile [" <> show (tx, ty) <> "]")
+      --           $ tile
+      --           !? (ti * modelTileWidth + tj)
+      -- let
       --     (i, j) = index `divMod` modelTileWidth
       --     tileIndex = i * modelTileRowLength + j
       --     tile = allTiles ! tileIndex
@@ -698,13 +698,14 @@ data ElevFileReference = ElevFileReference
 readTileElevations :: (ElevFileReference, Handle) -> MapTile -> IO (Vector Int)
 readTileElevations (fileRef, handle) t =
   let -- determines returned data resolution
+      samplesPerMapTile :: Int
       samplesPerMapTile = 10
 
       -- raster -> model tiepoint pair associating a point (px, py, pz) in the raster space with a point (mLat, mLon, mz) in the model space
-      ModelTiePoint tiePoint@(px, py, pz, mLon, mLat, mz) = fileRef.tiePoint
+      ModelTiePoint _tiePoint@(_px, _py, _pz, mLon, mLat, _mz) = fileRef.tiePoint
       -- size of raster pixel spacing in the model space units
-      ModelPixelScale pixelScale@(xScale, yScale, zScale) = fileRef.pixelScale
-      ImageHeight imageHeight = fileRef.imageHeight
+      ModelPixelScale _pixelScale@(xScale, yScale, _zScale) = fileRef.pixelScale
+      ImageHeight _imageHeight = fileRef.imageHeight
       ImageWidth imageWidth = fileRef.imageWidth
 
       -- requested data boundaries in model space (lat/lon)
@@ -718,19 +719,19 @@ readTileElevations (fileRef, handle) t =
       -- while in model space latitude is decreasing from pole to equator
 
       -- starting coords in raster space
-      (xMin, yMin) =
+      (xMin, yMin) :: (Int, Int) =
         ( round $ (lonStart - mLon) / xScale,
           round $ (mLat - latStart) / yScale
         )
       -- ending coords in raster space
-      (xMax, yMax) =
+      (xMax, yMax) :: (Int, Int) =
         ( round $ (lonEnd - mLon) / xScale,
           round $ (mLat - latEnd) / yScale
         )
 
       -- step length in raster space (pixels)
       -- calculated to return a fixed number of samples per mapTile
-      (xStep, yStep) =
+      (xStep, yStep) :: (Int, Int) =
         ( ceiling $ ((lonEnd - lonStart) / fromIntegral samplesPerMapTile) / xScale,
           ceiling $ ((latStart - latEnd) / fromIntegral samplesPerMapTile) / yScale
         )
@@ -762,17 +763,19 @@ readTileData byteOrder mapTiles h config =
       -- for now lat/lon degrees are assumed
 
       -- determines returned data resolution
+      samplesPerMapTile :: Int
       samplesPerMapTile = 10
 
       -- raster -> model tiepoint pair associating a point (px, py, pz) in the raster space with a point (mLat, mLon, mz) in the model space
-      ModelTiePoint tiePoint@(px, py, pz, mLon, mLat, mz) = config.modelTiePoint
+      ModelTiePoint _tiePoint@(_px, _py, _pz, mLon, mLat, _mz) = config.modelTiePoint
       -- size of raster pixel spacing in the model space units
-      ModelPixelScale pixelScale@(xScale, yScale, zScale) = config.modelPixelScale
+      ModelPixelScale _pixelScale@(xScale, yScale, _zScale) = config.modelPixelScale
       TileHeight modelTileHeight = config.tileHeight
       TileWidth modelTileWidth = config.tileWidth
       ImageHeight imageHeight = config.imageHeight
       ImageWidth imageWidth = config.imageWidth
-      modelTileRowLength = ceiling $ fromIntegral imageWidth / fromIntegral modelTileWidth
+      modelTileRowLength :: Int
+      modelTileRowLength = (ceiling @Double @Int) $ fromIntegral imageWidth / fromIntegral modelTileWidth
       TileOffsets tileOffsets = config.tileOffsets
       TileByteCounts tileByteCounts = config.tileByteCounts
 
@@ -790,19 +793,19 @@ readTileData byteOrder mapTiles h config =
             -- while in model space latitude is decreasing from pole to equator
 
             -- starting coords in raster space
-            (xMin, yMin) =
+            (xMin, yMin) :: (Int, Int) =
               ( round $ (lonStart - mLon) / xScale,
                 round $ (mLat - latStart) / yScale
               )
             -- ending coords in raster space
-            (xMax, yMax) =
+            (xMax, yMax) :: (Int, Int) =
               ( round $ (lonEnd - mLon) / xScale,
                 round $ (mLat - latEnd) / yScale
               )
 
             -- step length in raster space (pixels)
             -- calculated to return a fixed number of samples per mapTile
-            (xStep, yStep) =
+            (xStep, yStep) :: (Int, Int) =
               ( ceiling $ ((lonEnd - lonStart) / fromIntegral samplesPerMapTile) / xScale,
                 ceiling $ ((latStart - latEnd) / fromIntegral samplesPerMapTile) / yScale
               )
@@ -1003,9 +1006,9 @@ readTileData byteOrder mapTiles h config =
       readTilePixelValues cache coords = do
         foldl'
           ( \acc px -> do
-              (cache, values) <- acc
-              (cache', value) <- readPixelValue cache px
-              pure (cache', value : values)
+              (cache', values) <- acc
+              (cache'', value) <- readPixelValue cache' px
+              pure (cache'', value : values)
           )
           (pure (cache, []))
           coords
@@ -1059,9 +1062,9 @@ readTileData byteOrder mapTiles h config =
       readAll cache =
         foldl'
           ( \acc pxs -> do
-              (cache, values) <- acc
-              (cache', values') <- readTilePixelValues cache pxs
-              pure (cache', values' : values)
+              (cache', values) <- acc
+              (cache'', values') <- readTilePixelValues cache' pxs
+              pure (cache'', values' : values)
           )
           (pure (cache, []))
           pixelsToRead
@@ -1129,7 +1132,7 @@ geoKeys keyEntries doubleParams asciiParams =
       -- GeogAngularUnits
       readKeyEntry (2054 : 0 : 1 : 9102 : rest) =
         Right (GeogAngularUnits Degree, rest)
-      readKeyEntry (2054 : 0 : 1 : value : rest) =
+      readKeyEntry (2054 : 0 : 1 : value : _rest) =
         Left $ "GeogAngularUnits not supported: " <> show value
       -- GeogSemiMajorAxis
       readKeyEntry (2057 : 34736 : 1 : offset : rest) =
@@ -1138,7 +1141,7 @@ geoKeys keyEntries doubleParams asciiParams =
           <$> maybeToRight
             "Failed to read value from GeoDoubleParams. Index out of range."
             (maybeAt (fromIntegral offset) doubleParams)
-      readKeyEntry (2057 : 34736 : count : offset : rest) =
+      readKeyEntry (2057 : 34736 : count : _offset : _rest) =
         Left $ "GeogSemiMajorAxis: invalid dataCount: " <> show count <> " (Should be 1)"
       -- GeogInvFlattening
       readKeyEntry (2059 : 34736 : 1 : offset : rest) =
@@ -1147,9 +1150,9 @@ geoKeys keyEntries doubleParams asciiParams =
           <$> maybeToRight
             "Failed to read value from GeoDoubleParams. Index out of range."
             (maybeAt (fromIntegral offset) doubleParams)
-      readKeyEntry (2059 : 34736 : count : offset : rest) =
+      readKeyEntry (2059 : 34736 : count : _offset : _rest) =
         Left $ "GeogInvFlattening: invalid dataCount: " <> show count <> " (Should be 1)"
-      readKeyEntry (keyId : location : count : value : rest) =
+      readKeyEntry (keyId : _location : _count : _value : _rest) =
         Left $ "Unsupported GeoKey: " <> show keyId
       readKeyEntry _ =
         Left "Invalid GeoKeyDirectory entry"
@@ -1225,7 +1228,7 @@ readDoubleMany count bo h =
   ExceptT $ runGetOrError (replicateM count (decodeDouble bo)) <$> LBS.hGet h (8 * count)
 
 runGetOrError :: Get a -> LBS.ByteString -> Either String a
-runGetOrError get input =
-  case runGetOrFail get input of
+runGetOrError get' input =
+  case runGetOrFail get' input of
     Left (_, _, e) -> Left e
     Right (_, _, a) -> Right a

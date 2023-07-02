@@ -27,7 +27,8 @@ data TaskProgressDto = TaskProgressDto
     points :: [ProgressPointDto],
     legs :: [(Latitude, Longitude)]
   }
-  deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
     via ElmType "Api.TaskProgress.TaskProgress" TaskProgressDto

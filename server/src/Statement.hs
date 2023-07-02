@@ -1,26 +1,17 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 module Statement where
 
 import Control.Arrow (left)
-import Data.Geo.Jord.Angle (decimalDegrees)
-import Data.Geo.Jord.Geodetic (latLongHeightPos)
-import Data.Geo.Jord.Length (metres)
-import Data.Geo.Jord.Models (WGS84 (WGS84))
-import Data.Int (Int32)
-import Data.Profunctor (Profunctor (lmap), dimap)
-import Data.Text (Text)
+import Data.Profunctor (Profunctor (lmap))
 import Data.Vector (Vector)
-import Data.Vector as V (Vector, foldl, fromList, indexed)
+import Data.Vector as V (foldl, fromList, indexed)
 import Entity (Entity (..))
 import FlightTask (FlightTask (..), TaskFinish (..), TaskStart (..), Turnpoint (..))
 import Geo (Direction (..), Distance (..), Elevation (..), Latitude (..), Longitude (..), degreesDirection, degreesLatitude, degreesLongitude, metersDistance, metersElevation)
-import Hasql.Encoders qualified as Encoders
 import Hasql.Statement (Statement, refineResult)
-import Hasql.TH (maybeStatement, rowsAffectedStatement, singletonStatement, vectorStatement)
-import NavPoint (NavPoint (..), WaypointStyle)
+import Hasql.TH (rowsAffectedStatement, singletonStatement, vectorStatement)
+import NavPoint (NavPoint (..))
 import Relude
 
 newtype NavPointId = NavPointId Int32
@@ -187,7 +178,7 @@ decodeFlightTaskRow ::
   ) ->
   Either Text (Entity Int32 FlightTask)
 decodeFlightTaskRow
-  ( id,
+  ( eid,
     start_type,
     start_radius,
     start_point_name,
@@ -216,7 +207,7 @@ decodeFlightTaskRow
     finish_point_descr,
     turnpoint_type,
     turnpoint_radius,
-    turnpoint_order,
+    _turnpoint_order,
     turnpoint_name,
     turnpoint_code,
     turnpoint_country,
@@ -276,21 +267,21 @@ decodeFlightTaskRow
         finish = (,) <$> finishPoint <*> (decodeFinishType finish_type <*> pure finish_radius)
         turn = (,) <$> turnPoint <*> (decodeTurnpointType turnpoint_type <*> pure turnpoint_radius)
         flightTask = FlightTask <$> start <*> (one <$> turn) <*> finish
-     in Entity id <$> flightTask
+     in Entity eid <$> flightTask
 
 combineFlightTaskRows :: Vector (Entity Int32 FlightTask) -> [Entity Int32 FlightTask]
 combineFlightTaskRows rows =
   -- here we rely on the fact that the rows are sorted by task id and turnpoint order
   let combine :: [Entity Int32 FlightTask] -> Entity Int32 FlightTask -> [Entity Int32 FlightTask]
-      combine all currentEntity@(Entity currentKey (FlightTask _ currentTurnpoints _)) =
-        case all of
+      combine allEntities currentEntity@(Entity currentKey (FlightTask _ currentTurnpoints _)) =
+        case allEntities of
           -- when previous row has the same key as current row, combine the turnpoints
           (Entity lastKey (FlightTask start turnpoints finish)) : rest
             | lastKey == currentKey ->
                 Entity lastKey (FlightTask start (turnpoints <> currentTurnpoints) finish) : rest
           -- in all other cases just add the current row to the list
           _ ->
-            currentEntity : all
+            currentEntity : allEntities
    in V.foldl combine [] rows
 
 getFlightTaskStatement :: Statement Int32 (Maybe (Entity Int32 FlightTask))
@@ -430,11 +421,13 @@ saveFlightTaskStatement =
             returning id :: int4
         |]
   where
+    startType :: TaskStart -> Text
     startType = \case
       StartLine _ -> "StartLine"
     startRadius = \case
       StartLine r -> r
 
+    finishType :: TaskFinish -> Text
     finishType = \case
       FinishLine _ -> "FinishLine"
       FinishCylinder _ -> "FinishCylinder"

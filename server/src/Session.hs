@@ -1,7 +1,5 @@
 module Session where
 
-import Data.Int (Int32)
-import Data.Text (Text)
 import Data.Vector (Vector)
 import Entity (Entity (..))
 import FlightTask (FlightTask)

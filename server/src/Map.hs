@@ -19,7 +19,8 @@ data MapTile = MapTile
     y :: Int,
     zoom :: Int
   }
-  deriving (Show, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
     via ElmType "Api.Map.Tile" MapTile
@@ -37,15 +38,16 @@ toMercatorWeb (LatitudeDegrees latDeg, LongitudeDegrees lonDeg) =
 
 fromMercatorWeb :: (Double, Double) -> GeoPoint
 fromMercatorWeb (x, y) =
-  let sinh a = (exp a - exp (-a)) / 2
+  let sinh' a = (exp a - exp (-a)) / 2
       lonDeg = x * 360 - 180
-      latRad = atan (sinh (pi * (1 - 2 * y)))
+      latRad = atan (sinh' (pi * (1 - 2 * y)))
       latDeg = latRad * 180 / pi
    in (LatitudeDegrees latDeg, LongitudeDegrees lonDeg)
 
 tileCoords :: MapTile -> GeoPoint
 tileCoords (MapTile x y zoom) =
-  let n = 2 ^ zoom
+  let n :: Int
+      n = 2 ^ zoom
    in fromMercatorWeb
         ( fromIntegral x / fromIntegral n,
           fromIntegral y / fromIntegral n

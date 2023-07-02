@@ -3,7 +3,6 @@ module Geo where
 import Data.Aeson qualified as Aeson
 import Data.Geo.Jord.Geodetic (HorizontalPosition)
 import Data.Geo.Jord.Geodetic qualified as Geodetic
-import Data.Geo.Jord.Models (S84)
 import Data.Time (DiffTime)
 import Generics.SOP qualified as SOP
 import Language.Haskell.To.Elm (HasElmDecoder, HasElmEncoder, HasElmType)
@@ -11,7 +10,8 @@ import Magic.ElmDeriving
 import Relude
 
 newtype Latitude = LatitudeDegrees Double
-  deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
     via ElmType "Api.Geo.Latitude" Latitude
@@ -20,7 +20,8 @@ degreesLatitude :: Latitude -> Double
 degreesLatitude (LatitudeDegrees x) = x
 
 newtype Longitude = LongitudeDegrees Double
-  deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
     via ElmType "Api.Geo.Longitude" Longitude
@@ -29,7 +30,8 @@ degreesLongitude :: Longitude -> Double
 degreesLongitude (LongitudeDegrees x) = x
 
 newtype Elevation = ElevationMeters Double
-  deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
     via ElmType "Api.Geo.Elevation" Elevation
@@ -38,7 +40,8 @@ metersElevation :: Elevation -> Double
 metersElevation (ElevationMeters x) = x
 
 newtype Direction = DirectionDegrees Int32
-  deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
     via ElmType "Api.Geo.Direction" Direction
@@ -47,7 +50,8 @@ degreesDirection :: Direction -> Int32
 degreesDirection (DirectionDegrees x) = x
 
 newtype Distance = DistanceMeters Double
-  deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
     via ElmType "Api.Geo.Distance" Distance
@@ -70,12 +74,13 @@ instance GeoPosition (HorizontalPosition a) where
   longitude = LongitudeDegrees . Geodetic.decimalLongitude
 
 roundN :: (RealFrac a, Integral b) => b -> a -> a
-roundN n x = (fromIntegral . round $ x * f) / f
+roundN n x = ((fromIntegral @Integer) . round $ x * f) / f
   where
+    f :: (RealFrac a) => a
     f = 10 ^ n
 
 -- Degrees Decimal Minutes (DDM) to Decimal Degrees (DD)
 ddmTodd :: (RealFrac b) => Int -> Int -> Int -> b
 ddmTodd deg minutes decMin =
   -- since the maximum precision of the input is 0.001' ~ 0.000017° we round to 6 decimal places
-  roundN 6 $ fromIntegral deg + fromIntegral minutes / 60 + fromIntegral decMin / 60000
+  (roundN @_ @Integer) 6 $ fromIntegral deg + fromIntegral minutes / 60 + fromIntegral decMin / 60000

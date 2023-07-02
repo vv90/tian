@@ -34,7 +34,6 @@ library
       Env
       FlightTask
       FlightTrack
-      FlightTrack.Conduit
       FlightTrack.Parser
       Geo
       Geo.Utils

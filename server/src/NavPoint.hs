@@ -1,23 +1,13 @@
 module NavPoint where
 
 import Data.Aeson qualified as Aeson
--- import Data.Geo.Jord.Angle (Angle, decimalDegrees)
--- import Data.Geo.Jord.Length (Length, metres)
--- import Data.Geo.Jord.Geodetic (Position, latLongHeightPos)
--- import Data.Geo.Jord.Models (WGS84 (WGS84))
-import Data.Char (digitToInt)
-import Data.Int (Int32)
-import Data.Text (Text, pack, unpack)
-import GHC.Generics (Generic)
 import Generics.SOP qualified as SOP
 import Geo (Direction (..), Distance (..), Elevation (..), GeoPosition (..), Latitude (..), Longitude (..), ddmTodd)
 import Language.Haskell.To.Elm (HasElmDecoder, HasElmEncoder, HasElmType)
 import Magic.ElmDeriving (ElmType)
 import Relude
-import Text.Parsec (Parsec, alphaNum, between, choice, count, digit, eof, letter, many1, noneOf, oneOf, option, optionMaybe, parserTrace, parserTraced, sepEndBy1, string)
-import Text.Parsec.Char (char, digit)
-import Text.Parsec.Pos (updatePosChar, updatePosString)
-import Text.Parsec.Prim (token, tokenPrim, tokens, (<?>))
+import Text.Parsec (Parsec, between, choice, count, digit, eof, letter, many1, noneOf, oneOf, option, optionMaybe, sepEndBy1, string)
+import Text.Parsec.Char (char)
 
 data WaypointStyle
   = Unknown
@@ -38,7 +28,8 @@ data WaypointStyle
   | PowerPlant
   | Castle
   | Intersection
-  deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
     via ElmType "Api.NavPoint.WaypointStyle" WaypointStyle
@@ -57,7 +48,8 @@ data NavPoint = NavPoint
     freq :: Maybe Text,
     desc :: Text
   }
-  deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
     via ElmType "Api.NavPoint.NavPoint" NavPoint
@@ -149,13 +141,13 @@ navPointStyleParser =
     matchIdParser "15" = pure PowerPlant
     matchIdParser "16" = pure Castle
     matchIdParser "17" = pure Intersection
-    matchIdParser id = fail $ "Failed to parse waypoint style. Unknown style: " <> id
+    matchIdParser npid = fail $ "Failed to parse waypoint style. Unknown style: " <> npid
 
 navPointLatParser :: Parsec Text () Latitude
 navPointLatParser = do
   deg <- readEither <$> count 2 digit
-  min <- readEither <$> count 2 digit
-  char '.'
+  minutes <- readEither <$> count 2 digit
+  void $ char '.'
   decMin <- readEither <$> count 3 digit
   adjustForHemisphereFn <-
     choice
@@ -163,15 +155,15 @@ navPointLatParser = do
         negate <$ char 'S' -- need to negate the value for southern hemisphere
       ]
 
-  case ddmTodd <$> deg <*> min <*> decMin of
+  case ddmTodd <$> deg <*> minutes <*> decMin of
     Right x -> pure $ LatitudeDegrees $ adjustForHemisphereFn x
     Left e -> fail $ "Failed to parse latitude: " ++ toString e
 
 navPointLonParser :: Parsec Text () Longitude
 navPointLonParser = do
   deg <- readEither <$> count 3 digit
-  min <- readEither <$> count 2 digit
-  char '.'
+  minutes <- readEither <$> count 2 digit
+  void $ char '.'
   decMin <- readEither <$> count 3 digit
   adjustForHemisphereFn <-
     choice
@@ -179,7 +171,7 @@ navPointLonParser = do
         negate <$ char 'W' -- need to negate the value for western hemisphere
       ]
 
-  case ddmTodd <$> deg <*> min <*> decMin of
+  case ddmTodd <$> deg <*> minutes <*> decMin of
     Right x -> pure $ LongitudeDegrees $ adjustForHemisphereFn x
     Left e -> fail $ "Failed to parse longitude: " ++ toString e
 
@@ -213,6 +205,7 @@ navPointRwlenParser = do
 
   pure $ DistanceMeters $ unit len
   where
+    ml :: Parsec Text u (Double -> Double)
     ml = (* 1609.344) <$ string "l" -- statute miles
 
 navPointFreqParser :: Parsec Text () Text

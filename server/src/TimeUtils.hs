@@ -11,17 +11,20 @@ diffTimeToMillis t =
 
 millisToDiffTime :: Int -> DiffTime
 millisToDiffTime t =
-  let picos = fromIntegral t * 1000000000
+  let picos :: Integer
+      picos = fromIntegral t * 1000000000
    in picosecondsToDiffTime picos
 
 diffTimeToHours :: DiffTime -> Double
 diffTimeToHours t =
   let millis = diffTimeToMillis t
+      hours :: Double
       hours = fromIntegral millis / 3600000
    in hours
 
 diffTimeToSeconds :: DiffTime -> Double
 diffTimeToSeconds t =
   let millis = diffTimeToMillis t
+      seconds :: Double
       seconds = fromIntegral millis / 1000
    in seconds

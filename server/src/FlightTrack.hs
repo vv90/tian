@@ -9,4 +9,4 @@ data FlightTrack = FlightTrack
     compId :: Text,
     points :: NonEmpty TrackPoint
   }
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)

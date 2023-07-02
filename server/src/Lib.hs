@@ -1,39 +1,12 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Lib
-  ( startApp,
-    app,
-  )
-where
-
--- import Servant.Multipart
+module Lib (startApp, app) where
 
 import Conduit (ConduitT, ResourceT)
 import Control.Arrow (ArrowChoice (left))
 import Control.Exception (try)
-import Control.Monad.Error.Class (liftEither)
-import Control.Monad.Except (catchError, mapExcept, mapExceptT, withExceptT)
-import Control.Monad.IO.Class
-  ( MonadIO (liftIO),
-  )
-import Control.Monad.Logger (NoLoggingT)
-import Data.Aeson (FromJSON, ToJSON, defaultOptions)
-import Data.Aeson.TH (deriveJSON)
-import Data.ByteString (unpack)
-import Data.ByteString.Lazy qualified as LBS
-import Data.Char (toUpper)
+import Control.Monad.Except (withExceptT)
 import Data.List.NonEmpty qualified as NE (cons, reverse)
-import Data.Sequence (mapWithIndex)
-import Data.Text.Lazy (pack)
 import Data.Time (UTCTime (UTCTime))
 import Data.Time.Calendar (fromGregorian)
 import Data.Vector (Vector)
@@ -43,29 +16,24 @@ import Demo.NameMatch (NameMatch, loadNames)
 import Entity (Entity (..))
 import FlightTask (FlightTask)
 import FlightTrack (FlightTrack (..))
-import FlightTrack.Parser (FlightInfo, buildFlightTrack, flightInfoParser, flightInfoParserAll)
-import GHC.Generics (Generic)
+import FlightTrack.Parser (buildFlightTrack, flightInfoParserAll)
 import Geo (Elevation (..), Latitude, Longitude)
-import GeoTiff.Tiff (readElevations, readTiff)
+import GeoTiff.Tiff (readElevations)
 import Hasql.Connection qualified as Connection
 import Hasql.Session qualified as Session
 import Map (MapTile)
 import NavPoint (NavPoint, name, navPointLinesParser)
-import Network.HTTP.Types.Method (methodDelete, methodGet, methodOptions, methodPost, methodPut)
-import Network.Wai (Application, Middleware)
 import Network.Wai.Handler.Warp (Port, run)
-import Network.Wai.Middleware.Cors (cors, corsIgnoreFailures, corsMethods, corsRequestHeaders, simpleCors, simpleCorsResourcePolicy)
-import ProgressPoint (ProgressPoint, ProgressPointDto)
+import ProgressPoint (ProgressPointDto)
 import Relude
 import Servant
 import Servant.API.WebSocketConduit (WebSocketSource)
-import Servant.Multipart (FileData (fdFileCType, fdFileName, fdPayload), FromMultipart (fromMultipart), Mem, MultipartData (files), MultipartForm)
+import Servant.Multipart (FileData (fdFileName, fdPayload), FromMultipart (fromMultipart), Mem, MultipartData (files), MultipartForm)
 import Session (deleteDuplicateNavPointsSession, getAllFlightTasksSession, getFlightTaskSession, getNavPointsSession, saveFlightTaskSession, saveNavPointsSession)
-import Statement (saveNavPointsStatement)
 import System.Environment (getEnv)
 import TaskProgress (TaskProgressDto, toDto)
-import TaskProgressUtils (progress, progressAdvance, progressInit, taskStartLine)
-import Text.Parsec (ParseError, Parsec, parse)
+import TaskProgressUtils (progress, taskStartLine)
+import Text.Parsec (Parsec, parse)
 import TrackPoint (FixValidity (..), TrackPoint (..))
 
 data LibError
@@ -73,7 +41,11 @@ data LibError
   | QueryError Session.QueryError
   | FormatError Text
   | EnvironmentError Text
-  deriving (Show)
+  deriving stock (Show)
+
+instance ToLText LibError where
+  toLText :: LibError -> LText
+  toLText = show
 
 -- catchLiftIO :: IO a -> ExceptT LibError IO a
 -- catchLiftIO = withExceptT EnvironmentError . ExceptT . try
@@ -153,13 +125,14 @@ navPoints :: Handler (Vector NavPoint)
 navPoints = do
   result <- liftIO $ runExceptT getNavPoints
   case result of
-    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . pack . show) e}
+    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
     Right v -> pure v
 
-parseFile :: Parsec Text () a -> FileData Mem -> Either String a
+parseFile :: forall a. Parsec Text () a -> FileData Mem -> Either String a
 parseFile parser fileData =
-  let fileName = fdFileName fileData
-      parseContent = left show . parse parser (toString fileName)
+  let fileName = toString $ fdFileName fileData
+      parseContent :: Text -> Either String a
+      parseContent = left show . parse parser fileName
    in parseContent . decodeUtf8 . fdPayload $ fileData
 
 instance FromMultipart Mem [NavPoint] where
@@ -174,19 +147,19 @@ instance FromMultipart Mem [FlightTrack] where
      in sequence flightTrackResults
 
 uploadNavPoints :: [NavPoint] -> Handler (Int, Int64, Int64)
-uploadNavPoints navPoints = do
-  result <- liftIO $ runExceptT $ saveNavPoints $ fromList navPoints
+uploadNavPoints pts = do
+  result <- liftIO $ runExceptT $ saveNavPoints $ fromList pts
   case result of
-    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . pack . show) e}
-    Right (d, a) -> pure (length navPoints, d, a)
+    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
+    Right (d, a) -> pure (length pts, d, a)
 
 uploadFlightTrack :: Int32 -> [FlightTrack] -> Handler [TaskProgressDto]
 uploadFlightTrack taskId tracks = do
   flightTask <- liftIO $ runExceptT $ getFlightTask taskId
 
   case flightTask of
-    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . pack . show) e}
-    Right Nothing -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . pack . show) "Task not found"}
+    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
+    Right Nothing -> throwError $ err400 {errBody = "Error: " <> encodeUtf8 ("Task not found" :: LText)}
     Right (Just ft) -> do
       pure $ toDto . progress ft <$> tracks
 
@@ -198,25 +171,25 @@ testStartLine taskId = do
       $ runExceptT
       $ getFlightTask taskId
   case flightTask of
-    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . pack . show) e}
+    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
     Right (Entity _ ft) -> pure $ taskStartLine ft
 
 flightTasks :: Handler [Entity Int32 FlightTask]
 flightTasks = do
   result <- liftIO $ runExceptT getAllFlightTasks
   case result of
-    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . pack . show) e}
+    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
     Right v -> pure v
 
 saveTask :: FlightTask -> Handler Int64
 saveTask flightTask = do
   result <- liftIO $ runExceptT $ saveFlightTask flightTask
   case result of
-    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . pack . show) e}
+    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
     Right x -> pure x
 
 testTaskProgress :: Int32 -> NonEmpty (Latitude, Longitude) -> Handler TaskProgressDto
-testTaskProgress taskId (first :| points) =
+testTaskProgress taskId (pt :| points) =
   let toTrackPoint t (lat, lon) =
         TrackPoint
           { time = t,
@@ -227,12 +200,12 @@ testTaskProgress taskId (first :| points) =
             altitudeGps = ElevationMeters 1000
           }
 
-      date = UTCTime (fromGregorian 2020 1 1) 0
+      _date = UTCTime (fromGregorian 2020 1 1) 0
       pts =
         fst
           $ foldl'
             (\(b, i) a -> (NE.cons (toTrackPoint (i + 1) a) b, i + 1))
-            (toTrackPoint 1 first :| [], 1)
+            (toTrackPoint 1 pt :| [], 1)
             points
       track =
         FlightTrack
@@ -241,7 +214,7 @@ testTaskProgress taskId (first :| points) =
             points = NE.reverse pts
           }
 
-      unwrapTaskMaybe =
+      _unwrapTaskMaybe =
         maybeToRight (FormatError "Task not found")
    in do
         flightTask <-
@@ -253,7 +226,7 @@ testTaskProgress taskId (first :| points) =
         let res = progress <$> flightTask <*> pure track
 
         case res of
-          Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . pack . show) e}
+          Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
           Right x -> pure $ toDto x
 
 type API =
@@ -301,7 +274,7 @@ progressDemo = do
   case ft of
     Right (Entity _ x) -> do
       -- chan <- liftIO getChan
-      print "Init demo..."
+      putStrLn "Init demo..."
       demoC x
     -- resultC chan
 
@@ -336,7 +309,7 @@ demoTask = do
   nameMatch <- liftIO $ runExceptT loadNames
 
   case (,) <$> flightTask <*> nameMatch of
-    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . pack . show) e}
+    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
     Right (Entity _ ft, nm) -> pure (ft, nm)
 
 elevationPoints :: [MapTile] -> Handler [Vector Int]

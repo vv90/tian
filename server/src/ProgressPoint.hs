@@ -1,17 +1,23 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 module ProgressPoint where
 
 import Data.Aeson qualified as Aeson
 import Data.Time (DiffTime)
 import Generics.SOP qualified as SOP
 import Geo (Distance, Elevation, GeoPosition (..), GeoPosition3d (..), Latitude, Longitude, RecordedGeoPosition (..), metersDistance)
-import Language.Elm.Expression qualified as Expression
-import Language.Haskell.To.Elm (HasElmDecoder (elmDecoder), HasElmEncoder (elmEncoder), HasElmType (elmType))
+import Language.Haskell.To.Elm (HasElmDecoder, HasElmEncoder, HasElmType)
 import Magic.ElmDeriving
 import NavPoint (NavPoint, name)
 import Relude
-import Relude.Extra (bimapF)
+  ( Double,
+    Eq,
+    Generic,
+    Int,
+    Maybe,
+    Read,
+    Show,
+    Text,
+    (<$>),
+  )
 import TimeUtils (diffTimeToMillis)
 
 -- instance HasElmType DiffTime where
@@ -33,7 +39,7 @@ data ProgressPoint = ProgressPoint
     distance :: Distance,
     speed :: Maybe Double
   }
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 instance GeoPosition ProgressPoint where
   latitude x = x.lat
@@ -55,7 +61,8 @@ data ProgressPointDto = ProgressPointDto
     distance :: Double,
     speed :: Maybe Double
   }
-  deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
     via ElmType "Api.TaskProgress.ProgressPoint" ProgressPointDto

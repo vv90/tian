@@ -1,12 +1,8 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-
 module Entity where
 
 import Data.Aeson qualified as Aeson
 import Generics.SOP qualified as SOP
+import Language.Elm.Definition (Definition)
 import Language.Elm.Expression qualified as Expression
 import Language.Elm.Type qualified as Type
 import Language.Haskell.To.Elm
@@ -18,17 +14,17 @@ import Language.Haskell.To.Elm
     deriveElmJSONEncoder,
     deriveElmTypeDefinition,
   )
-import Magic.ElmDeriving (ElmType)
-import NavPoint (NavPoint (..))
 import Relude
 
 data Entity k a = Entity
   { key :: k,
     entity :: a
   }
-  deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
 
 instance HasElmType Entity where
+  elmDefinition :: Maybe Definition
   elmDefinition =
     Just $ deriveElmTypeDefinition @Entity defaultOptions "Api.Entity.Entity"
 

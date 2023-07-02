@@ -1,28 +1,11 @@
-{-# LANGUAGE BinaryLiterals #-}
-
 module GeoTiff.LZW where
 
-import Conduit (ConduitT, await, runConduit, sinkList, sinkVector, yield, yieldMany, (.|))
-import Data.Binary (Word16, Word8)
+import Conduit (ConduitT, await, runConduit, sinkVector, yield, yieldMany, (.|))
 import Data.Bits (shiftL, shiftR, (.&.), (.|.))
-import Data.List (elemIndex, tails)
-import Data.Map.Strict (Map)
-import Data.Map.Strict qualified as Map
-import Data.Maybe (fromJust)
 import Data.Vector (Vector, (!?))
 import Data.Vector qualified as Vector
 import GHC.ByteOrder (ByteOrder (..))
 import Relude
-
-takeBits :: Int -> [Word8] -> (Word16, [Word8])
-takeBits n (c0 : c1 : stream) =
-  let chunk :: Word16
-      chunk = (fromIntegral c0 `shiftL` 8) .|. fromIntegral c1
-
-      mask = (0xFF :: Word16) `shiftR` (16 - n)
-   in ( (fromIntegral chunk `shiftL` (16 - n)) .&. mask,
-        stream
-      )
 
 bitsC :: (Monad m) => ConduitT Word8 Word8 m ()
 bitsC = do
@@ -53,8 +36,8 @@ decodeC =
             return . Just $ foldl' (\acc bit -> (acc `shiftL` 1) .|. fromIntegral bit) (0 :: Int) bs
           Nothing -> do
             -- pure ()
-            print $ "Table size: " <> show s
-            print $ "bits: " <> show bits
+            putStrLn $ "Table size: " <> show s
+            putStrLn $ "bits: " <> show bits
             -- fail $ "Not enough bits in the input stream. Need " <> show n <> " , got " <> show (filter isJust bits & length)
             return Nothing
 
@@ -69,27 +52,28 @@ decodeC =
         -- print $ "code " <> show code
         -- print $ "table size " <> show (Vector.length table)
         case (code, code >>= (table !?)) of
-          (Nothing, _) -> pure ()
+          (Nothing, _) -> pass
           (Just 256, _) -> do
             -- print "start"
             start
-          (Just 257, _) -> pure ()
-          (Just c, Just val) -> do
+          (Just 257, _) -> pass
+          (Just _c, Just val) -> do
             yieldMany val
-            let newVal = lastVal <> (fromIntegral (head val) :| [])
+            let newVal = lastVal <> (head val :| [])
             consumeCode (Vector.snoc table newVal) val
-          (Just c, Nothing) -> do
+          (Just _c, Nothing) -> do
             let res = lastVal <> (head lastVal :| [])
             yieldMany res
             consumeCode (Vector.snoc table res) res
 
+      start :: (MonadIO m, MonadFail m) => ConduitT Word8 Word8 m ()
       start = do
         code <- awaitBits (9, Vector.length initTable)
         case (code, code >>= (initTable !?)) of
-          (Nothing, _) -> pure ()
+          (Nothing, _) -> pass
           (Just 256, _) -> start
-          (Just 257, _) -> pure ()
-          (Just c, Just val) -> do
+          (Just 257, _) -> pass
+          (Just _c, Just val) -> do
             yieldMany val
             consumeCode initTable val
           (Just c, Nothing) -> do
@@ -127,6 +111,6 @@ packWordsC byteOrder = do
     (BigEndian, Just b0', Just b1') -> do
       yield $ fromIntegral b0' `shiftL` 8 .|. fromIntegral b1'
       packWordsC byteOrder
-    (_, Just b0', Nothing) ->
+    (_, Just _b0', Nothing) ->
       fail "Odd number of bytes in the input stream"
-    _ -> pure ()
+    _ -> pass

@@ -8,25 +8,21 @@ import Data.Geo.Jord.Geodetic qualified as Geodetic
 import Data.Geo.Jord.GreatCircle qualified as GreatCircle
 import Data.Geo.Jord.Length qualified as Length
 import Data.Geo.Jord.Models (S84)
-import Data.Geo.Jord.Polygon qualified as Polygon
 import Data.List.NonEmpty (cons)
-import Data.Time (DiffTime, diffTimeToPicoseconds, picosecondsToDiffTime)
+import Data.Time (DiffTime)
 import Entity (Entity (..))
 import FlightTask (FlightTask, TaskFinish (..), TaskStart (..), Turnpoint (..))
 import FlightTask qualified
 import FlightTrack (FlightTrack (FlightTrack))
-import FlightTrack qualified
 import Geo (Distance (..), Elevation, GeoPosition (..), GeoPosition3d (..), Latitude (..), Longitude (..), RecordedGeoPosition (..))
 import Geo.Utils (perpendicular, s84position)
 import NavPoint (NavPoint)
-import NavPoint qualified
 import ProgressPoint (ProgressPoint (ProgressPoint))
 import ProgressPoint qualified
 import Relude
 import TaskProgress (TaskProgress (TaskProgress))
-import TaskProgress qualified
-import TimeUtils (diffTimeToHours, diffTimeToSeconds)
-import TrackPoint (TrackPoint (TrackPoint))
+import TimeUtils (diffTimeToSeconds)
+import TrackPoint (TrackPoint)
 import TrackPoint qualified
 
 distanceToTarget :: (GeoPosition a) => NavPoint -> a -> Distance
@@ -134,7 +130,7 @@ startLineCrossed ft lastPos currTp =
       trackLine =
         GreatCircle.minorArc lastPosition currPosition
 
-      startLineSide line p =
+      _startLineSide line p =
         GreatCircle.side
           p
           (GreatCircle.minorArcStart line)
@@ -154,12 +150,12 @@ startLineCrossed ft lastPos currTp =
           (\_ -> checkCrossingDirection sl targetPosition (GreatCircle.minorArcStart tl) (GreatCircle.minorArcEnd tl))
           (GreatCircle.intersection sl tl)
 
-      toResult pos =
+      _toResult pos =
         ( LatitudeDegrees $ Angle.toDecimalDegrees $ Geodetic.latitude pos,
           LongitudeDegrees $ Angle.toDecimalDegrees $ Geodetic.longitude pos
         )
 
-      distance = distanceToTarget startNp currTp
+      _distance = distanceToTarget startNp currTp
    in startLineCrossing
         <$> (startBearing >>= startLine)
         <*> trackLine
@@ -174,7 +170,7 @@ startLineCrossed ft lastPos currTp =
           ) -- toProgressPoint (Just targetNp) distance Nothing currTp)
 
 turnpointCrossed :: (GeoPosition3d a, RecordedGeoPosition a) => NavPoint -> a -> (NavPoint, Turnpoint) -> Maybe TpCrossing
-turnpointCrossed targetNp currTp (np, Cylinder radius) =
+turnpointCrossed _targetNp currTp (np, Cylinder radius) =
   let (DistanceMeters npDistance) = distanceToTarget np currTp
    in if npDistance <= radius
         then -- Just $ toProgressPoint (Just targetNp) currTp
@@ -189,7 +185,7 @@ turnpointCrossed targetNp currTp (np, Cylinder radius) =
         else Nothing
 
 finishCrossed :: (GeoPosition a) => (NavPoint, TaskFinish) -> NavPoint -> a -> TrackPoint -> Maybe TpCrossing
-finishCrossed (np, FinishCylinder radius) prevNp lastPos currTp =
+finishCrossed (np, FinishCylinder radius) _prevNp _lastPos currTp =
   let (DistanceMeters npDistance) = distanceToTarget np currTp
    in if npDistance <= radius
         then -- Just $ toProgressPoint Nothing currTp
@@ -203,39 +199,39 @@ finishCrossed (np, FinishCylinder radius) prevNp lastPos currTp =
               }
         else Nothing
 finishCrossed (np, FinishLine radius) prevNp lastPos currTp =
-  let reversedFinishBearing =
+  let _reversedFinishBearing =
         GreatCircle.initialBearing
           (s84position np)
           (s84position prevNp)
-      finishPosition =
+      _finishPosition =
         s84position np
 
-      lastPosition =
+      _lastPosition =
         s84position lastPos
 
-      currPosition =
+      _currPosition =
         s84position currTp
 
-      trackLine =
-        GreatCircle.minorArc lastPosition currPosition
+      _trackLine =
+        GreatCircle.minorArc _lastPosition _currPosition
 
-      finishLine fb =
+      _finishLine fb =
         GreatCircle.minorArc
           ( GreatCircle.destination
-              finishPosition
+              _finishPosition
               (Angle.subtract (Angle.decimalDegrees 90) fb)
               (Length.metres radius)
           )
           ( GreatCircle.destination
-              finishPosition
+              _finishPosition
               (Angle.add (Angle.decimalDegrees 90) fb)
               (Length.metres radius)
           )
 
-      finishCrossed =
+      _finishCrossed =
         GreatCircle.intersection
-          <$> (reversedFinishBearing >>= finishLine)
-          <*> trackLine
+          <$> (_reversedFinishBearing >>= _finishLine)
+          <*> _trackLine
           -- >>= fmap (\_ -> toProgressPoint Nothing currTp)
           >>= fmap
             ( const
@@ -304,17 +300,17 @@ progressAdvance ft prevState tp =
         uncons prevState.unfinishedTps
           >>= checkTurnpoint
 
-      sumFinishedLegsDistance (tp : tps) =
+      sumFinishedLegsDistance (_tp : tps) =
         snd
           $ foldl'
             (\(b, d) a -> (a, Length.add (GreatCircle.distance a b) d))
-            (tp, Length.zero)
+            (_tp, Length.zero)
             tps
       sumFinishedLegsDistance [] =
         Length.zero
 
-      calcSpeed dist time =
-        (\st -> dist / diffTimeToSeconds (time - st)) <$> prevState.startTime
+      calcSpeed dist _time =
+        (\st -> dist / diffTimeToSeconds (_time - st)) <$> prevState.startTime
    in -- currentLegDistance lastTp nextTp =
       --     GreatCircle.minorArc (lastTpPos prevState) (s84position $ target lastPos)
 
@@ -411,10 +407,10 @@ progressAdvance ft prevState tp =
 progress :: Entity Int32 FlightTask -> FlightTrack -> TaskProgress
 progress (Entity taskId ft) (FlightTrack date compId points) =
   let p :| ps = points
-      state = foldl' (progressAdvance ft) (progressInit ft p) ps
+      taskState = foldl' (progressAdvance ft) (progressInit ft p) ps
    in TaskProgress
         taskId
         date
         compId
-        (reverse $ toList state.progressPoints)
-        state.finishedTps
+        (reverse $ toList taskState.progressPoints)
+        taskState.finishedTps

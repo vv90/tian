@@ -7,7 +7,7 @@ import Relude
 data FixValidity
   = Gps3D
   | Baro2D
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 data TrackPoint = TrackPoint
   { time :: DiffTime,
@@ -17,7 +17,7 @@ data TrackPoint = TrackPoint
     altitudeBaro :: Elevation,
     altitudeGps :: Elevation
   }
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 instance GeoPosition TrackPoint where
   latitude x = x.lat

@@ -2,21 +2,18 @@ module FlightTrack.Parser where
 
 import Data.Time
 import FlightTrack (FlightTrack (..))
-import Geo (Elevation (..), GeoPosition (..), Latitude (..), Longitude (..), ddmTodd)
+import Geo (Elevation (..), Latitude (..), Longitude (..), ddmTodd)
 import Relude
 import Text.Parsec
   ( Parsec,
     alphaNum,
-    anyChar,
     char,
     choice,
     count,
     digit,
     eof,
     many1,
-    manyTill,
     noneOf,
-    oneOf,
     sepEndBy1,
     string,
     try,
@@ -28,7 +25,7 @@ data FlightInfo
   | CompId Text
   | Fix TrackPoint
   | UnknownRecord
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 buildFlightTrack :: String -> [FlightInfo] -> Either String FlightTrack
 buildFlightTrack name flightInfoItems = do
@@ -54,7 +51,7 @@ buildFlightTrack name flightInfoItems = do
     compId :: [FlightInfo] -> Either String (Text, [FlightInfo])
     compId infoItems =
       case infoItems of
-        (CompId id) : rest -> Right (id, rest)
+        (CompId cid) : rest -> Right (cid, rest)
         _ : rest -> compId rest
         [] -> Left (name <> ": Missing or invalid location for Competition ID info")
 
@@ -78,7 +75,7 @@ trackDateParser = do
   month <- readEither <$> count 2 digit
   year <- fmap (+ 2000) . readEither <$> count 2 digit
 
-  many (noneOf "\n")
+  void $ many (noneOf "\n")
 
   case fromGregorian <$> year <*> month <*> day of
     Right x -> pure $ FlightDate $ UTCTime x 0
@@ -101,18 +98,18 @@ trackPointIdentifier =
 
 trackPointTimeParser :: Parsec Text () DiffTime
 trackPointTimeParser = do
-  hour <- readEither <$> count 2 digit
-  minute <- readEither <$> count 2 digit
-  second <- readEither <$> count 2 digit
+  hours <- readEither <$> count 2 digit
+  minutes <- readEither <$> count 2 digit
+  seconds <- readEither <$> count 2 digit
 
-  case (\h m s -> secondsToDiffTime $ 3600 * h + 60 * m + s) <$> hour <*> minute <*> second of
+  case (\h m s -> secondsToDiffTime $ 3600 * h + 60 * m + s) <$> hours <*> minutes <*> seconds of
     Right x -> pure x
     Left e -> fail $ "Failed to parse track point time: " <> show e
 
 trackPointLatitudeParser :: Parsec Text () Latitude
 trackPointLatitudeParser = do
   deg <- readEither <$> count 2 digit
-  min <- readEither <$> count 2 digit
+  minutes <- readEither <$> count 2 digit
   decMin <- readEither <$> count 3 digit
   adjustForHemisphereFn <-
     choice
@@ -120,14 +117,14 @@ trackPointLatitudeParser = do
         negate <$ char 'S' -- need to negate the value for southern hemisphere
       ]
 
-  case ddmTodd <$> deg <*> min <*> decMin of
+  case ddmTodd <$> deg <*> minutes <*> decMin of
     Right x -> pure $ LatitudeDegrees $ adjustForHemisphereFn x
     Left e -> fail $ "Failed to parse latitude: " ++ toString e
 
 trackPointLongitudeParser :: Parsec Text () Longitude
 trackPointLongitudeParser = do
   deg <- readEither <$> count 3 digit
-  min <- readEither <$> count 2 digit
+  minutes <- readEither <$> count 2 digit
   decMin <- readEither <$> count 3 digit
   adjustForHemisphereFn <-
     choice
@@ -135,7 +132,7 @@ trackPointLongitudeParser = do
         negate <$ char 'W' -- need to negate the value for western hemisphere
       ]
 
-  case ddmTodd <$> deg <*> min <*> decMin of
+  case ddmTodd <$> deg <*> minutes <*> decMin of
     Right x -> pure $ LongitudeDegrees $ adjustForHemisphereFn x
     Left e -> fail $ "Failed to parse longitude: " ++ toString e
 

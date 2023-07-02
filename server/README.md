@@ -54,3 +54,9 @@ stack test --file-watch --fast
   ```sh
   elm make
   ```
+
+### Formatting
+
+```sh
+bash -c "ormolu --mode inplace \$(find app codegen seed src test -name '*.hs')"
+```

@@ -6,4 +6,4 @@ data RwLenUnits
   = Meters
   | NauticalMiles
   | StatuteMiles
-  deriving (Eq, Show, Read)
+  deriving stock (Eq, Show, Read)

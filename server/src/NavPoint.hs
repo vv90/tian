@@ -1,71 +1,70 @@
-
-
 module NavPoint where
 
-import Relude
-import qualified Data.Aeson as Aeson
-import GHC.Generics ( Generic )
-import Data.Int (Int32)
-import Data.Text (Text, pack, unpack)
-import Text.Parsec (Parsec, oneOf, digit, many1, count, between, alphaNum, choice, string, letter, optionMaybe, option, noneOf, sepEndBy1, parserTrace, parserTraced, eof)
-import Text.Parsec.Char (char, digit)
+import Data.Aeson qualified as Aeson
 -- import Data.Geo.Jord.Angle (Angle, decimalDegrees)
 -- import Data.Geo.Jord.Length (Length, metres)
 -- import Data.Geo.Jord.Geodetic (Position, latLongHeightPos)
 -- import Data.Geo.Jord.Models (WGS84 (WGS84))
 import Data.Char (digitToInt)
-import Text.Parsec.Pos (updatePosString, updatePosChar)
-import Text.Parsec.Prim (tokenPrim, token, tokens, (<?>))
-import qualified Generics.SOP as SOP
-import Language.Haskell.To.Elm (HasElmEncoder, HasElmDecoder, HasElmType)
-import Magic.ElmDeriving ( ElmType )
-import Geo (Latitude (..), Longitude (..), Elevation (..), Direction (..), Distance (..), GeoPosition(..), ddmTodd)
+import Data.Int (Int32)
+import Data.Text (Text, pack, unpack)
+import GHC.Generics (Generic)
+import Generics.SOP qualified as SOP
+import Geo (Direction (..), Distance (..), Elevation (..), GeoPosition (..), Latitude (..), Longitude (..), ddmTodd)
+import Language.Haskell.To.Elm (HasElmDecoder, HasElmEncoder, HasElmType)
+import Magic.ElmDeriving (ElmType)
+import Relude
+import Text.Parsec (Parsec, alphaNum, between, choice, count, digit, eof, letter, many1, noneOf, oneOf, option, optionMaybe, parserTrace, parserTraced, sepEndBy1, string)
+import Text.Parsec.Char (char, digit)
+import Text.Parsec.Pos (updatePosChar, updatePosString)
+import Text.Parsec.Prim (token, tokenPrim, tokens, (<?>))
 
 data WaypointStyle
-    = Unknown
-    | Waypoint
-    | AirfieldGrass
-    | Outlanding
-    | AirfieldGliding
-    | AirfieldSolid
-    | MountainPass
-    | MountainTop
-    | TransmitterMast
-    | VOR
-    | NDB
-    | CoolingTower
-    | Dam
-    | Tunnel
-    | Bridge
-    | PowerPlant
-    | Castle
-    | Intersection
-    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
-    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-        via ElmType "Api.NavPoint.WaypointStyle" WaypointStyle
-
+  = Unknown
+  | Waypoint
+  | AirfieldGrass
+  | Outlanding
+  | AirfieldGliding
+  | AirfieldSolid
+  | MountainPass
+  | MountainTop
+  | TransmitterMast
+  | VOR
+  | NDB
+  | CoolingTower
+  | Dam
+  | Tunnel
+  | Bridge
+  | PowerPlant
+  | Castle
+  | Intersection
+  deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving
+    (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
+    via ElmType "Api.NavPoint.WaypointStyle" WaypointStyle
 
 data NavPoint = NavPoint
-    { name :: Text
-    , code :: Text
-    , country :: Maybe Text
+  { name :: Text,
+    code :: Text,
+    country :: Maybe Text,
     -- , position :: Position WGS84
-    , lat :: Latitude
-    , lon :: Longitude
-    , elev :: Elevation
-    , style :: WaypointStyle
-    , rwdir :: Maybe Direction
-    , rwlen :: Maybe Distance
-    , freq :: Maybe Text
-    , desc :: Text
-    } 
-    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
-    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-        via ElmType "Api.NavPoint.NavPoint" NavPoint
+    lat :: Latitude,
+    lon :: Longitude,
+    elev :: Elevation,
+    style :: WaypointStyle,
+    rwdir :: Maybe Direction,
+    rwlen :: Maybe Distance,
+    freq :: Maybe Text,
+    desc :: Text
+  }
+  deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving
+    (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
+    via ElmType "Api.NavPoint.NavPoint" NavPoint
 
 instance GeoPosition NavPoint where
-    latitude = lat
-    longitude = lon
+  latitude = lat
+  longitude = lon
 
 -- navPointPositionParser :: Parsec String () (Position WGS84)
 -- navPointPositionParser =
@@ -81,11 +80,11 @@ instance GeoPosition NavPoint where
 
 navPointLinesParser :: Parsec Text () [NavPoint]
 navPointLinesParser =
-    sepEndBy1 navPointParser (many1 $ choice [char '\n', char '\r', char ' ']) <* eof
+  sepEndBy1 navPointParser (many1 $ choice [char '\n', char '\r', char ' ']) <* eof
 
 navPointParser :: Parsec Text () NavPoint
 navPointParser =
-    NavPoint
+  NavPoint
     <$> navPointNameParser
     <* char ','
     <*> navPointCodeParser
@@ -110,150 +109,145 @@ navPointParser =
 
 navPointNameParser :: Parsec Text () Text
 navPointNameParser =
-    toText <$> inQuotations (many1 $ noneOf ['"'])
+  toText <$> inQuotations (many1 $ noneOf ['"'])
 
 navPointCodeParser :: Parsec Text () Text
 navPointCodeParser =
-    toText <$> choice
-        [ inQuotations (many1 $ noneOf ['"'])
-        , many1 $ noneOf [',']
-        ]
+  toText
+    <$> choice
+      [ inQuotations (many1 $ noneOf ['"']),
+        many1 $ noneOf [',']
+      ]
 
 navPointCountryParser :: Parsec Text () (Maybe Text)
 navPointCountryParser =
-    optionMaybe $ toText <$> many1 letter
+  optionMaybe $ toText <$> many1 letter
 
 navPointStyleParser :: Parsec Text () WaypointStyle
 navPointStyleParser =
-    (<>) <$> digitAsString <*> option "" digitAsString >>= matchIdParser
-    where
-        digitAsString :: Parsec Text () String
-        digitAsString = one <$> digit
+  (<>) <$> digitAsString <*> option "" digitAsString >>= matchIdParser
+  where
+    digitAsString :: Parsec Text () String
+    digitAsString = one <$> digit
 
-        matchIdParser :: String -> Parsec Text () WaypointStyle
-        matchIdParser "0" = pure Unknown
-        matchIdParser "1" = pure Waypoint
-        matchIdParser "2" = pure AirfieldGrass
-        matchIdParser "3" = pure Outlanding
-        matchIdParser "4" = pure AirfieldGliding
-        matchIdParser "5" = pure AirfieldSolid
-        matchIdParser "6" = pure MountainPass
-        matchIdParser "7" = pure MountainTop
-        matchIdParser "8" = pure TransmitterMast
-        matchIdParser "9" = pure VOR
-        matchIdParser "10" = pure NDB
-        matchIdParser "11" = pure CoolingTower
-        matchIdParser "12" = pure Dam
-        matchIdParser "13" = pure Tunnel
-        matchIdParser "14" = pure Bridge
-        matchIdParser "15" = pure PowerPlant
-        matchIdParser "16" = pure Castle
-        matchIdParser "17" = pure Intersection
-        matchIdParser id = fail $ "Failed to parse waypoint style. Unknown style: " <> id
-
+    matchIdParser :: String -> Parsec Text () WaypointStyle
+    matchIdParser "0" = pure Unknown
+    matchIdParser "1" = pure Waypoint
+    matchIdParser "2" = pure AirfieldGrass
+    matchIdParser "3" = pure Outlanding
+    matchIdParser "4" = pure AirfieldGliding
+    matchIdParser "5" = pure AirfieldSolid
+    matchIdParser "6" = pure MountainPass
+    matchIdParser "7" = pure MountainTop
+    matchIdParser "8" = pure TransmitterMast
+    matchIdParser "9" = pure VOR
+    matchIdParser "10" = pure NDB
+    matchIdParser "11" = pure CoolingTower
+    matchIdParser "12" = pure Dam
+    matchIdParser "13" = pure Tunnel
+    matchIdParser "14" = pure Bridge
+    matchIdParser "15" = pure PowerPlant
+    matchIdParser "16" = pure Castle
+    matchIdParser "17" = pure Intersection
+    matchIdParser id = fail $ "Failed to parse waypoint style. Unknown style: " <> id
 
 navPointLatParser :: Parsec Text () Latitude
 navPointLatParser = do
-    deg <- readEither <$> count 2 digit
-    min <- readEither <$> count 2 digit
-    char '.'
-    decMin <- readEither <$> count 3 digit
-    adjustForHemisphereFn <-
-        choice
-            [ id <$ char 'N'
-            , negate <$ char 'S' -- need to negate the value for southern hemisphere
-            ]
+  deg <- readEither <$> count 2 digit
+  min <- readEither <$> count 2 digit
+  char '.'
+  decMin <- readEither <$> count 3 digit
+  adjustForHemisphereFn <-
+    choice
+      [ id <$ char 'N',
+        negate <$ char 'S' -- need to negate the value for southern hemisphere
+      ]
 
-    case ddmTodd <$> deg <*> min <*> decMin of
-        Right x -> pure $ LatitudeDegrees $ adjustForHemisphereFn x
-        Left e -> fail $ "Failed to parse latitude: " ++ toString e
+  case ddmTodd <$> deg <*> min <*> decMin of
+    Right x -> pure $ LatitudeDegrees $ adjustForHemisphereFn x
+    Left e -> fail $ "Failed to parse latitude: " ++ toString e
 
-    
 navPointLonParser :: Parsec Text () Longitude
 navPointLonParser = do
-    deg <- readEither <$> count 3 digit
-    min <- readEither <$> count 2 digit
-    char '.'
-    decMin <- readEither <$> count 3 digit
-    adjustForHemisphereFn <-
-        choice
-            [ id <$ char 'E'
-            , negate <$ char 'W' -- need to negate the value for western hemisphere
-            ]
+  deg <- readEither <$> count 3 digit
+  min <- readEither <$> count 2 digit
+  char '.'
+  decMin <- readEither <$> count 3 digit
+  adjustForHemisphereFn <-
+    choice
+      [ id <$ char 'E',
+        negate <$ char 'W' -- need to negate the value for western hemisphere
+      ]
 
-    case ddmTodd <$> deg <*> min <*> decMin of
-        Right x -> pure $ LongitudeDegrees $ adjustForHemisphereFn x
-        Left e -> fail $ "Failed to parse longitude: " ++ toString e
-    
+  case ddmTodd <$> deg <*> min <*> decMin of
+    Right x -> pure $ LongitudeDegrees $ adjustForHemisphereFn x
+    Left e -> fail $ "Failed to parse longitude: " ++ toString e
+
 navPointElevationParser :: Parsec Text () Elevation
 navPointElevationParser = do
-    elev <- doubleParser
-    unitConversionFn <-
-        choice
-            [ id <$ char 'm' -- meters
-            , (/3.2808) <$ string "ft" -- feet
-            ]
+  elev <- doubleParser
+  unitConversionFn <-
+    choice
+      [ id <$ char 'm', -- meters
+        (/ 3.2808) <$ string "ft" -- feet
+      ]
 
-    pure $ ElevationMeters $ unitConversionFn elev
-
+  pure $ ElevationMeters $ unitConversionFn elev
 
 navPointRwdirParser :: Parsec Text () Direction
 navPointRwdirParser = do
-    dir <- readEither <$> count 1 (oneOf ['0', '1', '2', '3']) <> count 2 digit
+  dir <- readEither <$> count 1 (oneOf ['0', '1', '2', '3']) <> count 2 digit
 
-    case dir of
-        Right x -> pure $ DirectionDegrees x
-        Left e -> fail $ "Failed to parse rwdir: " ++ toString e
+  case dir of
+    Right x -> pure $ DirectionDegrees x
+    Left e -> fail $ "Failed to parse rwdir: " ++ toString e
 
 navPointRwlenParser :: Parsec Text () Distance
 navPointRwlenParser = do
-    len <- doubleParser
-    unit <-
-        choice
-            [ char 'm' >> option id ml  -- meters 'm' or statute miles 'ml'
-            , (* 1852) <$ string "nm" -- nautical miles
-            ]
+  len <- doubleParser
+  unit <-
+    choice
+      [ char 'm' >> option id ml, -- meters 'm' or statute miles 'ml'
+        (* 1852) <$ string "nm" -- nautical miles
+      ]
 
-    pure $ DistanceMeters $ unit len
-
-    where
-        ml = (* 1609.344) <$ string "l" -- statute miles
+  pure $ DistanceMeters $ unit len
+  where
+    ml = (* 1609.344) <$ string "l" -- statute miles
 
 navPointFreqParser :: Parsec Text () Text
 navPointFreqParser =
-    toText <$> choice [inQuotations freq, freq]
-    where
-        freq :: Parsec Text () String
-        freq =
-            count 1 (char '1')
-            <> count 1 (oneOf ['1', '2', '3'])
-            <> count 1 digit
-            <> count 1 (char '.')
-            <> count 2 digit
-            <> count 1 (oneOf ['0', '5'])
+  toText <$> choice [inQuotations freq, freq]
+  where
+    freq :: Parsec Text () String
+    freq =
+      count 1 (char '1')
+        <> count 1 (oneOf ['1', '2', '3'])
+        <> count 1 digit
+        <> count 1 (char '.')
+        <> count 2 digit
+        <> count 1 (oneOf ['0', '5'])
 
 intParser :: Parsec Text () Int
 intParser = do
-    res <- readEither <$> many1 digit
-    case res of
-        Right i -> pure i
-        Left e -> fail $ "Failed to parse int: " ++ toString e
+  res <- readEither <$> many1 digit
+  case res of
+    Right i -> pure i
+    Left e -> fail $ "Failed to parse int: " ++ toString e
 
 fractionParser :: Parsec Text u String
 fractionParser = count 1 (char '.') <> many1 digit
 
 doubleParser :: Parsec Text () Double
 doubleParser = do
-    sign <- optionMaybe $ string "-"
-    integral <- Just <$> many1 digit
-    fractional <- optionMaybe fractionParser
+  sign <- optionMaybe $ string "-"
+  integral <- Just <$> many1 digit
+  fractional <- optionMaybe fractionParser
 
-    case readEither $ fold $ sign <> integral <> fractional of
-        Right x -> pure x
-        Left e -> fail $ "Failed to parse double: " ++ toString e
-
+  case readEither $ fold $ sign <> integral <> fractional of
+    Right x -> pure x
+    Left e -> fail $ "Failed to parse double: " ++ toString e
 
 inQuotations :: Parsec Text () a -> Parsec Text () a
 inQuotations =
-    between (char '"') (char '"')
-
+  between (char '"') (char '"')

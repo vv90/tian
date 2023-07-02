@@ -1,24 +1,26 @@
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
+
 module Main (main) where
 
-import Relude
 -- import Lib (app)
+
+import AprsMessageSpec qualified
+import FlightTrackSpec qualified
+import NavPointSpec qualified
+import Relude
+import TaskProgressSpec qualified
 import Test.Hspec
-import qualified NavPointSpec
-import qualified FlightTrackSpec
-import qualified TaskProgressSpec
-import qualified AprsMessageSpec
 
 main :: IO ()
 main = hspec $ do
-    -- describe "Default" spec
-    describe "NavPoint" NavPointSpec.spec
-    describe "FlightTrack" FlightTrackSpec.spec
-    describe "TaskProgress" TaskProgressSpec.spec
-    describe "AprsMessage" AprsMessageSpec.spec
+  -- describe "Default" spec
+  describe "NavPoint" NavPointSpec.spec
+  describe "FlightTrack" FlightTrackSpec.spec
+  describe "TaskProgress" TaskProgressSpec.spec
+  describe "AprsMessage" AprsMessageSpec.spec
 
--- spec :: Spec 
+-- spec :: Spec
 -- spec = do
 --     it "runs correctly" $ do
 --         10 `shouldBe` (10 :: Int)

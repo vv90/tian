@@ -8,7 +8,7 @@ import Relude
 
 loadDemoTask :: ExceptT String IO (Entity Int32 FlightTask)
 loadDemoTask =
-  withExceptT (mappend "Failed to load task: ") $
-    fmap (\x -> Entity 0 x :: Entity Int32 FlightTask) $
-      ExceptT $
-        eitherDecodeFileStrict' "./demo/task.json"
+  withExceptT (mappend "Failed to load task: ")
+    $ fmap (\x -> Entity 0 x :: Entity Int32 FlightTask)
+    $ ExceptT
+    $ eitherDecodeFileStrict' "./demo/task.json"

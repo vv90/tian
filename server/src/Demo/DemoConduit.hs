@@ -36,9 +36,9 @@ findTrackFiles filePath =
         (,fp) <$> parse trackFileInfoParser "" (toText $ takeFileName fp)
    in do
         files <- rightToMaybe . parseTrackFileInfo <<$>> getDirectoryContents filePath
-        putStrLn $
-          show (length $ catMaybes files)
-            <> " recognized track files"
+        putStrLn
+          $ show (length $ catMaybes files)
+          <> " recognized track files"
 
         pure $ catMaybes files
 
@@ -58,8 +58,8 @@ demoAprsSource info path = do
     toAprsMessage msgId fi =
       case fi of
         Fix tp ->
-          Just $
-            AprsMessage
+          Just
+            $ AprsMessage
               { source = msgId,
                 time = tp.time,
                 lat = tp.lat,
@@ -106,8 +106,8 @@ mergeSourcesOn f sources =
         pure (q, c)
 
       feedSinkQueue q c =
-        runConduitRes $
-          bracketP
+        runConduitRes
+          $ bracketP
             pass
             (\_ -> atomically $ closeTBMQueue q) -- make sure to close the queue when the conduit is done
             (\_ -> c .| sinkTBMQueue q) -- feed the queue with data from the conduit
@@ -184,12 +184,13 @@ testDemoConduit =
    in -- r =  toAprsSource <<$>> findTrackFiles "./demo/"
       do
         sources <- toAprsSource <<$>> findTrackFiles "./demo/"
-        runConduitRes $
+        runConduitRes
+          $
           --     -- demoC "./demo/"
           --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
           --     -- .| printC
           -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
           mergeSourcesOn (\m -> m.time) sources
-            -- .| playbackC 10
-            .| mapC (\x -> (x.source, x.time))
-            .| printC
+          -- .| playbackC 10
+          .| mapC (\x -> (x.source, x.time))
+          .| printC

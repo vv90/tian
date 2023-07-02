@@ -7,7 +7,7 @@ import Language.Haskell.To.Elm (HasElmDecoder, HasElmEncoder, HasElmType)
 import Magic.ElmDeriving
 import Relude
 
-data NameMatch =  NameMatch
+data NameMatch = NameMatch
   { compId :: Text,
     name :: Text
   }
@@ -19,6 +19,6 @@ data NameMatch =  NameMatch
 
 loadNames :: ExceptT String IO [NameMatch]
 loadNames =
-  withExceptT (mappend "Failed to load names: ") $
-    ExceptT $
-      Aeson.eitherDecodeFileStrict' "./demo/names.json"
+  withExceptT (mappend "Failed to load names: ")
+    $ ExceptT
+    $ Aeson.eitherDecodeFileStrict' "./demo/names.json"

@@ -1,9 +1,9 @@
 module Main where
 
-import Relude 
+import Relude
 
 main :: IO ()
 main = do
-    print "seeding data..."
+  print "seeding data..."
 
-    pure ()
+  pure ()

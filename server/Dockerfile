@@ -1,11 +1,19 @@
 FROM ubuntu:22.04
 
+# If we don't set locale this way and try to print emoji to stdout, the server will crash.
+ENV LANG=C.UTF-8
 
-RUN apt-get update 
-RUN apt-get -y install libpq-dev
+# ARG SOME_VERSION
 
-# COPY /root/.local/bin/server-exe /app/server
-COPY --from=bin_path_context server-exe /app/server
+# Note: 
+# ca-certificates solves an issue with some SSL certificates 
+# libtinfo5 makes the binary ever run
+# curl for healthcheck (temporary dirty solution)
+RUN apt-get update && apt-get install -y ca-certificates libtinfo5 curl
+RUN update-ca-certificates
+
+COPY server /app/server
+# RUN bash -c "echo $SOME_VERSION > /app/version"
 
 WORKDIR /app
 

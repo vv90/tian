@@ -29,9 +29,9 @@ jobs:
       - name: Setup haskell
         uses: haskell/actions/setup@v2
         with:
-          ghc-version: '9.2.5'
+          ghc-version: '9.4.5'
           enable-stack: true
-          stack-version: 'latest'
+          stack-version: '2.9.3'
 
       - name: Stack cache
         uses: freckle/stack-cache-action@v2

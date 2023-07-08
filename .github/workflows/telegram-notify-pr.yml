@@ -20,5 +20,5 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }}
           format: markdown
           message: | 
-            *${{ github.event.pull_request.title }}*, ${{github.actor}}
+            🚀 *${{ github.event.pull_request.title }}*, ${{github.actor}}
             https://github.com/vv90/marauders-radar/pull/${{ github.event.number }}

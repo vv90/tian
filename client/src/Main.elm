@@ -119,12 +119,14 @@ init flags =
             Map.init
                 (withSidebarOffset flags.windowSize)
                 9
-                ( LatitudeDegrees 52.030558, LongitudeDegrees 39.662962 )
+                -- ( LatitudeDegrees 52.030558, LongitudeDegrees 39.662962 )
+                ( LatitudeDegrees 45.208451, LongitudeDegrees 5.726031 )
 
         ( map3dModel, m3dCmd ) =
             Map3d.init
                 (withSidebarOffset flags.windowSize)
-                ( LatitudeDegrees 52.030558, LongitudeDegrees 39.662962 )
+                -- ( LatitudeDegrees 52.030558, LongitudeDegrees 39.662962 )
+                ( LatitudeDegrees 45.208451, LongitudeDegrees 5.726031 )
     in
     ( { mapModel = mapModel
       , map3dModel = map3dModel

@@ -6,6 +6,11 @@ author:              "Author name here"
 maintainer:          "example@example.com"
 copyright:           "2022 Author name here"
 
+# Complete list: https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/control.html
+language: GHC2021
+
+
+
 extra-source-files:
 - README.md
 - ChangeLog.md
@@ -19,27 +24,69 @@ extra-source-files:
 # common to point users to the README.md file.
 description:         Please see the README on GitHub at <https://github.com/githubuser/server#readme>
 
-default-extensions:
-- DataKinds
-- DeriveAnyClass
-- DerivingStrategies
-- DerivingVia
-- LambdaCase
-- NoImplicitPrelude
-# - NoMonomorphismRestriction # TODO: Разобраться, https://github.com/VladimirLogachev/wolf/issues/405
-- OverloadedStrings
-- OverloadedRecordDot
-- DuplicateRecordFields
 
-#ghc2021 defaults:
-- DeriveGeneric  
-- NamedFieldPuns
-- TupleSections  
-- ImportQualifiedPost
+default-extensions:
+  #
+  # Note on Monomorphism Restriction:
+  # - Суть: ограничивает полиморфизм для ВСЕХ определений,
+  #   для которых не указана сигнатур типов и которые не "выглядят как функции" (не имеют связывания слева от = )
+  # - Неудобство: приводит к неинтуитивным результатам вывода типов – менее полиморфным, чем ожидалось
+  # - Удобство: увеличивает производительность и уменьшает использование памяти
+  #   Подробнее – здесь: https://www.youtube.com/watch?v=zpBua3Mql18
+  # - Присутствует в спецификации Haskell, а не просто в GHC
+  # - Отключен по умолчанию в GHC 9.4 (через NoMonomorphismRestriction)
+  # - Но включен по умолчанию в наборе расширений GHC2021 (через MonomorphismRestriction)
+  # - Вместо того, чтобы отключать monomorphism restriction посредством `NoMonomorphismRestriction`,
+  #   мы пользуемся включенным ворнингом `Wmonomorphism-restriction` (включён в `Weverything`),
+  #   и ворнинг заставляет нас расставлять сигнатуры типов там, где monomorphism restriction применяется.
+  #   И в процессе расстановки типов мы уже решаем, оставить там полиморфизм или конкретный тип,
+  #   и поведение всегда будет ожидаемым.
+  #
+  - NoImplicitPrelude # Note: Ради Relude
+  - NoPolyKinds # Note: Ломает инстансы Elm для параметризованных типов. Не очень-то и хотелось, RolyPolyKinds
+  - DataKinds
+  - DeriveAnyClass
+  - DerivingStrategies
+  - DerivingVia
+  - DuplicateRecordFields
+  - LambdaCase
+  - OverloadedRecordDot
+  - OverloadedStrings
+
 
 ghc-options:
-- -j8
-- -Wno-implicit-prelude
+  # Use up to 8 cores for compilation https://ghc.gitlab.haskell.org/ghc/doc/users_guide/using.html?highlight=j#ghc-flag--j[%E2%9F%A8n%E2%9F%A9]
+  - -j8
+    # Set up rts options for GHC itself https://ghc.gitlab.haskell.org/ghc/doc/users_guide/runtime_control.html#setting-rts-options
+  - +RTS -A32m -RTS
+    # Optimization level:
+    # -O0 produces a non-optimized binary (significantly reduces Seq performance), but builds fast.
+    # -O2 produces a heavily optimized binary, but builds ~ 2 times slower.
+    # Note: Stack reuses existing binaries instead of rebuilding if the source code hasn't changed.
+    # We build optimized binaries by default and turn optimizations off by `--fast` flag.
+  - -O2
+    # Enables local documentation
+  - -haddock
+    # Enable all possible warnings as errors (Werror is provided manually in dockerfile for production builds and CI)
+  - -Weverything
+    # Complains about imported functions
+  - -Wno-all-missed-specialisations
+    # Complains about imported functions
+  - -Wno-missed-specialisations
+    # Requires signatures for all local definitions
+  - -Wno-missing-local-signatures
+    # Requires explicitly list exports for all modules
+  - -Wno-missing-export-lists
+    # Requires to mark unsafe modules as unsafe
+  - -Wno-unsafe
+    # Requires separate lists of dependencies per executable. But can really catch some unused packages.
+  - -Wno-unused-packages
+    # Requires kind signature for every newtype.
+  - -Wno-missing-kind-signatures
+    # A lot of modules modules are still not "safe haskell".
+  - -Wno-missing-safe-haskell-mode
+    # Requires import lists for all record fields and all value constructors
+  - -Wno-missing-import-lists
 
 dependencies:
 - base >= 4.7 && < 5
@@ -80,12 +127,16 @@ dependencies:
 - hasql-transaction
 - profunctors
 - vector
+# data structures like IntMap, IntSet, Graph, etc.
+# - containers
 # statically checked physical dimensions
 # - dimensional
 # Parser combinators
 - parsec
 # Geographical Position Calculations
 - jord
+# for working with binary data
+- binary
 # for elm codegen
 - haskell-to-elm
 - elm-syntax
@@ -113,7 +164,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - base
+    # - base
     - server
 
   codegen: 
@@ -126,6 +177,19 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
 
+  seed: 
+    main: Main.hs
+    source-dirs: seed
+
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+
+    dependencies:
+    # - base
+    - server
+
 tests:
   server-test:
     main:                Spec.hs
@@ -135,7 +199,7 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - base
+    # - base
     - server
     - hspec
     - hspec-wai

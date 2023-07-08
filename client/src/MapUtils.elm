@@ -50,6 +50,13 @@ type alias TileKey =
     ( Int, Int, Int )
 
 
+type alias Tile =
+    { x : Int
+    , y : Int
+    , zoom : ZoomLevel
+    }
+
+
 type MarkerType
     = Glider
 
@@ -442,74 +449,78 @@ zoomInt zoom =
             20
 
 
-zoomLevel : Int -> Maybe ZoomLevel
+zoomLevel : Int -> ZoomLevel
 zoomLevel zoom =
     case zoom of
         0 ->
-            Just Z0
+            Z0
 
         1 ->
-            Just Z1
+            Z1
 
         2 ->
-            Just Z2
+            Z2
 
         3 ->
-            Just Z3
+            Z3
 
         4 ->
-            Just Z4
+            Z4
 
         5 ->
-            Just Z5
+            Z5
 
         6 ->
-            Just Z6
+            Z6
 
         7 ->
-            Just Z7
+            Z7
 
         8 ->
-            Just Z8
+            Z8
 
         9 ->
-            Just Z9
+            Z9
 
         10 ->
-            Just Z10
+            Z10
 
         11 ->
-            Just Z11
+            Z11
 
         12 ->
-            Just Z12
+            Z12
 
         13 ->
-            Just Z13
+            Z13
 
         14 ->
-            Just Z14
+            Z14
 
         15 ->
-            Just Z15
+            Z15
 
         16 ->
-            Just Z16
+            Z16
 
         17 ->
-            Just Z17
+            Z17
 
         18 ->
-            Just Z18
+            Z18
 
         19 ->
-            Just Z19
+            Z19
 
         20 ->
-            Just Z20
+            Z20
 
-        _ ->
-            Nothing
+        z ->
+            if z < 0 then
+                Z0
+
+            else
+                Z20
 
 
 tileLength : Latitude -> ZoomLevel -> Float

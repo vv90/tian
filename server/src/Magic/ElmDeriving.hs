@@ -1,10 +1,5 @@
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
+
 -- |
 -- This module is a Special Boilerplate to define ElmType and reduce boilerplate
 module Magic.ElmDeriving (ElmType) where
@@ -40,11 +35,11 @@ instance
   E.HasElmType (ElmType name a)
   where
   elmDefinition =
-    Just $
-      E.deriveElmTypeDefinition @a E.defaultOptions {E.fieldLabelModifier = dropWhile (== '_')} $
-        fromString $
-          symbolVal $
-            SOP.Proxy @name
+    Just
+      $ E.deriveElmTypeDefinition @a E.defaultOptions {E.fieldLabelModifier = dropWhile (== '_')}
+      $ fromString
+      $ symbolVal
+      $ SOP.Proxy @name
 
 instance
   (SOP.HasDatatypeInfo a, E.HasElmType a, SOP.All2 (E.HasElmDecoder Aeson.Value) (SOP.Code a), E.HasElmType (ElmType name a), KnownSymbol name) =>
@@ -57,7 +52,8 @@ instance
         E.defaultOptions {E.fieldLabelModifier = dropWhile (== '_')}
         Aeson.defaultOptions {Aeson.fieldLabelModifier = dropWhile (== '_')}
       $ Name.Qualified moduleName
-      $ lowerName <> "Decoder"
+      $ lowerName
+      <> "Decoder"
     where
       Name.Qualified moduleName name = fromString $ symbolVal $ SOP.Proxy @name
       lowerName = T.toLower (T.take 1 name) <> T.drop 1 name
@@ -73,7 +69,8 @@ instance
         E.defaultOptions {E.fieldLabelModifier = dropWhile (== '_')}
         Aeson.defaultOptions {Aeson.fieldLabelModifier = dropWhile (== '_')}
       $ Name.Qualified moduleName
-      $ lowerName <> "Encoder"
+      $ lowerName
+      <> "Encoder"
     where
       Name.Qualified moduleName name = fromString $ symbolVal $ SOP.Proxy @name
       lowerName = T.toLower (T.take 1 name) <> T.drop 1 name

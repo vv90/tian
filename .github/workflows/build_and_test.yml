@@ -1,0 +1,53 @@
+name: Build and test
+
+on: 
+  push:
+    branches: 
+      - main
+  pull_request: 
+    types: 
+      - opened
+      # "synchronize" means new commits pushed to the HEAD of the pull request branch
+      - synchronize
+
+permissions: read-all
+
+jobs: 
+  cancel-previous:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.11.0
+
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - run: npm install -g elm-format
+
+      - uses: actions/checkout@v2
+
+      - name: Setup haskell
+        uses: haskell/actions/setup@v2
+        with:
+          ghc-version: '9.4.5'
+          enable-stack: true
+          stack-version: '2.9.3'
+
+      - name: Stack cache
+        uses: freckle/stack-cache-action@v2
+        with:
+          working-directory: server
+
+      - name: Build executables and run codegen
+      # TODO: enable pedantic flag https://github.com/vv90/contest-viewer/issues/10
+        run: | 
+          cd server
+          stack clean
+          stack build
+          stack run codegen
+          stack test
+
+      # TODO: add frontend build https://github.com/vv90/contest-viewer/issues/11
+
+          
+

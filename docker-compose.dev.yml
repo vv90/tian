@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  nginx:
+    image: nginx:1.23-alpine
+    # networks:
+    #   - localNetwork
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/conf.d/default.conf
+
+    # # fixes issue where containerized nginx cannot resolve 'host.docker.internal' on Linux 
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+  
+  db:
+    image: postgres:13.4-alpine3.14
+    restart: always
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: cvdb
+    volumes:
+      # Scripts only run if data directory is empty (from official docs)
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql

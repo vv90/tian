@@ -1,41 +1,47 @@
 module FlightTask where
 
-import Relude
-import NavPoint (NavPoint(..))
-import Generics.SOP qualified as SOP
 import Data.Aeson qualified as Aeson
-import Language.Haskell.To.Elm (HasElmType, HasElmEncoder, HasElmDecoder)
+import Generics.SOP qualified as SOP
+import Language.Haskell.To.Elm (HasElmDecoder, HasElmEncoder, HasElmType)
 import Magic.ElmDeriving (ElmType)
+import NavPoint (NavPoint (..))
+import Relude
 
+newtype Turnpoint
+  = Cylinder Double
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving
+    (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
+    via ElmType "Api.FlightTask.Turnpoint" Turnpoint
 
-newtype Turnpoint =
-    Cylinder Double
-    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
-    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-        via ElmType "Api.FlightTask.Turnpoint" Turnpoint
+newtype TaskStart
+  = StartLine Double
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving
+    (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
+    via ElmType "Api.FlightTask.TaskStart" TaskStart
 
-newtype TaskStart =
-    StartLine Double
-    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
-    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-        via ElmType "Api.FlightTask.TaskStart" TaskStart
+data TaskFinish
+  = FinishLine Double
+  | FinishCylinder Double
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving
+    (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
+    via ElmType "Api.FlightTask.TaskFinish" TaskFinish
 
-data TaskFinish =
-    FinishLine Double | FinishCylinder Double
-    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
-    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-        via ElmType "Api.FlightTask.TaskFinish" TaskFinish
-
-data FlightTask =
-    FlightTask
-        { start :: (NavPoint, TaskStart)
-        , turnpoints :: [(NavPoint, Turnpoint)]
-        , finish :: (NavPoint, TaskFinish)
-        }
-    deriving (Show, Read, Eq, Generic, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
-    deriving (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-        via ElmType "Api.FlightTask.FlightTask" FlightTask
-
+data FlightTask = FlightTask
+  { start :: (NavPoint, TaskStart),
+    turnpoints :: [(NavPoint, Turnpoint)],
+    finish :: (NavPoint, TaskFinish)
+  }
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving
+    (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
+    via ElmType "Api.FlightTask.FlightTask" FlightTask
 
 -- makeFlightTask :: [NavPoint] -> (Text, TaskStart) -> [(Text, Turnpoint)] -> (Text, TaskFinish) -> Either Text FlightTask
 -- makeFlightTask navPoints (startName, startLine) turnpointItems (finishName, finishLine) = do
@@ -49,13 +55,11 @@ data FlightTask =
 --         , finish = (finishPoint, finishLine)
 --         }
 --     where
---         findNavPoint name = 
---             maybeToRight 
---                 ("NavPoint " <> name <> " not found") 
+--         findNavPoint name =
+--             maybeToRight
+--                 ("NavPoint " <> name <> " not found")
 --                 (find (\NavPoint {name = n} -> n == name) navPoints)
-        
---         makeTp :: (Text, Turnpoint) -> Either Text (NavPoint, Turnpoint)
---         makeTp (name, tp) = 
---             (,tp) <$> findNavPoint name
-        
 
+--         makeTp :: (Text, Turnpoint) -> Either Text (NavPoint, Turnpoint)
+--         makeTp (name, tp) =
+--             (,tp) <$> findNavPoint name

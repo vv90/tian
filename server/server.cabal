@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.0.
+-- This file has been generated from package.yaml by hpack version 0.35.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -26,53 +26,57 @@ source-repository head
 library
   exposed-modules:
       Aprs.AprsMessage
+      Aprs.Utils
       Codegen
       Demo.DemoConduit
       Demo.DemoTask
       Demo.NameMatch
-      Demo.Playback
       Entity
       Env
       FlightTask
       FlightTrack
-      FlightTrack.Conduit
       FlightTrack.Parser
       Geo
       Geo.Utils
+      GeoTiff.LZW
+      GeoTiff.Tiff
+      GeoTiff.Utils
       Lib
       Magic.ElmDeriving
+      Map
       NavPoint
+      Persistence.Connection
+      Persistence.Session
+      Persistence.Statement
       ProgressPoint
       RwLenUnits
-      Session
-      Statement
+      Seed.Utils
       TaskProgress
       TaskProgressUtils
       TimeUtils
       TrackPoint
+      Utils
   other-modules:
       Paths_server
   hs-source-dirs:
       src
   default-extensions:
+      NoImplicitPrelude
+      NoPolyKinds
       DataKinds
       DeriveAnyClass
       DerivingStrategies
       DerivingVia
-      LambdaCase
-      NoImplicitPrelude
-      OverloadedStrings
-      OverloadedRecordDot
       DuplicateRecordFields
-      DeriveGeneric
-      NamedFieldPuns
-      TupleSections
-      ImportQualifiedPost
-  ghc-options: -j8 -Wno-implicit-prelude
+      LambdaCase
+      OverloadedRecordDot
+      OverloadedStrings
+  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Weverything -Wno-all-missed-specialisations -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists
   build-depends:
       aeson
     , async
     , base >=4.7 && <5
+    , binary
     , conduit
     , conduit-extra
     , directory
@@ -106,7 +110,7 @@ library
     , wai
     , wai-cors
     , warp
-  default-language: Haskell2010
+  default-language: GHC2021
 
 executable codegen
   main-is: Main.hs
@@ -115,24 +119,22 @@ executable codegen
   hs-source-dirs:
       codegen
   default-extensions:
+      NoImplicitPrelude
+      NoPolyKinds
       DataKinds
       DeriveAnyClass
       DerivingStrategies
       DerivingVia
-      LambdaCase
-      NoImplicitPrelude
-      OverloadedStrings
-      OverloadedRecordDot
       DuplicateRecordFields
-      DeriveGeneric
-      NamedFieldPuns
-      TupleSections
-      ImportQualifiedPost
-  ghc-options: -j8 -Wno-implicit-prelude -threaded -rtsopts -with-rtsopts=-N
+      LambdaCase
+      OverloadedRecordDot
+      OverloadedStrings
+  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Weverything -Wno-all-missed-specialisations -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , async
     , base >=4.7 && <5
+    , binary
     , conduit
     , conduit-extra
     , directory
@@ -167,7 +169,66 @@ executable codegen
     , wai
     , wai-cors
     , warp
-  default-language: Haskell2010
+  default-language: GHC2021
+
+executable seed
+  main-is: Main.hs
+  other-modules:
+      Paths_server
+  hs-source-dirs:
+      seed
+  default-extensions:
+      NoImplicitPrelude
+      NoPolyKinds
+      DataKinds
+      DeriveAnyClass
+      DerivingStrategies
+      DerivingVia
+      DuplicateRecordFields
+      LambdaCase
+      OverloadedRecordDot
+      OverloadedStrings
+  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Weverything -Wno-all-missed-specialisations -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , async
+    , base >=4.7 && <5
+    , binary
+    , conduit
+    , conduit-extra
+    , directory
+    , elm-syntax
+    , filepath
+    , fmt
+    , generics-sop
+    , haskell-to-elm
+    , hasql
+    , hasql-th
+    , hasql-transaction
+    , http-types
+    , jord
+    , monad-logger
+    , mtl
+    , parsec
+    , prettyprinter
+    , process
+    , profunctors
+    , relude
+    , servant-multipart
+    , servant-server
+    , servant-websockets
+    , server
+    , stm
+    , stm-chans
+    , stm-conduit
+    , text
+    , time
+    , unordered-containers
+    , vector
+    , wai
+    , wai-cors
+    , warp
+  default-language: GHC2021
 
 executable server-exe
   main-is: Main.hs
@@ -176,24 +237,22 @@ executable server-exe
   hs-source-dirs:
       app
   default-extensions:
+      NoImplicitPrelude
+      NoPolyKinds
       DataKinds
       DeriveAnyClass
       DerivingStrategies
       DerivingVia
-      LambdaCase
-      NoImplicitPrelude
-      OverloadedStrings
-      OverloadedRecordDot
       DuplicateRecordFields
-      DeriveGeneric
-      NamedFieldPuns
-      TupleSections
-      ImportQualifiedPost
-  ghc-options: -j8 -Wno-implicit-prelude -threaded -rtsopts -with-rtsopts=-N
+      LambdaCase
+      OverloadedRecordDot
+      OverloadedStrings
+  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Weverything -Wno-all-missed-specialisations -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , async
-    , base
+    , base >=4.7 && <5
+    , binary
     , conduit
     , conduit-extra
     , directory
@@ -228,7 +287,7 @@ executable server-exe
     , wai
     , wai-cors
     , warp
-  default-language: Haskell2010
+  default-language: GHC2021
 
 test-suite server-test
   type: exitcode-stdio-1.0
@@ -238,29 +297,28 @@ test-suite server-test
       FlightTrackSpec
       NavPointSpec
       TaskProgressSpec
+      TiffUtilsSpec
       Utils
       Paths_server
   hs-source-dirs:
       test
   default-extensions:
+      NoImplicitPrelude
+      NoPolyKinds
       DataKinds
       DeriveAnyClass
       DerivingStrategies
       DerivingVia
-      LambdaCase
-      NoImplicitPrelude
-      OverloadedStrings
-      OverloadedRecordDot
       DuplicateRecordFields
-      DeriveGeneric
-      NamedFieldPuns
-      TupleSections
-      ImportQualifiedPost
-  ghc-options: -j8 -Wno-implicit-prelude -threaded -rtsopts -with-rtsopts=-N
+      LambdaCase
+      OverloadedRecordDot
+      OverloadedStrings
+  ghc-options: -j8 +RTS -A32m -RTS -O2 -haddock -Weverything -Wno-all-missed-specialisations -Wno-missed-specialisations -Wno-missing-local-signatures -Wno-missing-export-lists -Wno-unsafe -Wno-unused-packages -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-missing-import-lists -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , async
-    , base
+    , base >=4.7 && <5
+    , binary
     , conduit
     , conduit-extra
     , directory
@@ -298,4 +356,4 @@ test-suite server-test
     , wai
     , wai-cors
     , warp
-  default-language: Haskell2010
+  default-language: GHC2021

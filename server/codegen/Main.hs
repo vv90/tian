@@ -1,7 +1,7 @@
 module Main where
 
-import Relude
 import Codegen (runCodegen)
+import Relude
 
 main :: IO ()
 main = runCodegen

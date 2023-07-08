@@ -1,217 +1,196 @@
 module Demo.DemoConduit where
 
-import Relude
-import Text.Parsec (Parsec, many1, alphaNum, char, string, parse)
-import System.FilePath (takeFileName)
-import System.Directory (getDirectoryContents)
-import Conduit (ConduitT, decodeUtf8LenientC, (.|), linesUnboundedC, mapOutputMaybe, sinkNull, ResourceT, runConduitRes, await, printC, mapC, yield, sourceDirectory, leftover, takeWhileC, takeC, headC, peekC, dropC, yieldMany, bracketP)
-import Aprs.AprsMessage (AprsMessage(..))
-import FlightTrack.Parser (FlightInfo (..), flightInfoParser)
-import TrackPoint (TrackPoint(..))
+import Aprs.AprsMessage (AprsMessage (..))
+import Conduit (ConduitT, ResourceT, await, bracketP, decodeUtf8LenientC, leftover, linesUnboundedC, mapC, mapOutputMaybe, printC, runConduitRes, yield, (.|))
+import Control.Concurrent (forkIO, killThread, threadDelay)
+import Control.Concurrent.STM.TBMQueue (closeTBMQueue, newTBMQueue, readTBMQueue)
 import Data.Conduit.Combinators (sourceFile)
-import Data.Time (DiffTime)
-import TimeUtils (millisToDiffTime, diffTimeToMillis)
-import Control.Concurrent (threadDelay, forkIO, killThread)
-import Control.Concurrent.STM.TBMQueue (TBMQueue, newTBMQueueIO, newTBMQueue, readTBMQueue, peekTBMQueue, closeTBMQueue)
-import Data.Conduit (sequenceSources)
-import Data.Semigroup (Min(Min, getMin))
-import Data.Conduit.Internal (ConduitT(..))
 import Data.Conduit.TQueue (sinkTBMQueue)
-import Control.Concurrent.STM (TBQueue, newTBQueue)
-import Control.Concurrent.Async (mapConcurrently_, concurrently_, withAsync, wait)
 import FlightTask (FlightTask)
-import TaskProgressUtils (TaskState(progressPoints), progressAdvance, progressInit)
-import ProgressPoint (ProgressPoint, toDto, ProgressPointDto(time))
+import FlightTrack.Parser (FlightInfo (..), flightInfoParser)
+import ProgressPoint (ProgressPoint, ProgressPointDto (time), toDto)
+import Relude
+import System.Directory (getDirectoryContents)
+import System.FilePath (takeFileName)
+import TaskProgressUtils (TaskState (progressPoints), progressAdvance, progressInit)
+import Text.Parsec (Parsec, alphaNum, char, many1, parse, string)
+import TrackPoint (TrackPoint (..))
 
 data TrackFileInfo = TrackFileInfo
-    { dateStr :: Text
-    , callsign :: Text 
-    } 
-    deriving (Show)
+  { dateStr :: Text,
+    callsign :: Text
+  }
+  deriving stock (Show)
 
 trackFileInfoParser :: Parsec Text () TrackFileInfo
-trackFileInfoParser = 
-    TrackFileInfo 
+trackFileInfoParser =
+  TrackFileInfo
     <$> (toText <$> many1 alphaNum)
     <* char '_'
     <*> (toText <$> many1 alphaNum)
     <* string ".igc"
 
 findTrackFiles :: FilePath -> IO [(TrackFileInfo, FilePath)]
-findTrackFiles path = 
-    let 
-        parseTrackFileInfo path = 
-            ( ,path) <$> parse trackFileInfoParser "" (toText $ takeFileName path)
-    in do
-        files <- rightToMaybe . parseTrackFileInfo <<$>> getDirectoryContents path
-        print $ 
-            show (length $ catMaybes files) 
-            <> " recognized track files"
+findTrackFiles filePath =
+  let parseTrackFileInfo fp =
+        (,fp) <$> parse trackFileInfoParser "" (toText $ takeFileName fp)
+   in do
+        files <- rightToMaybe . parseTrackFileInfo <<$>> getDirectoryContents filePath
+        putStrLn
+          $ show (length $ catMaybes files)
+          <> " recognized track files"
 
         pure $ catMaybes files
 
 demoAprsSource :: TrackFileInfo -> FilePath -> ConduitT () AprsMessage (ResourceT IO) ()
 demoAprsSource info path = do
-    sourceFile path
-        .| decodeUtf8LenientC
-        .| mapOutputMaybe 
-            (toFlightInfo (show path) >=> toAprsMessage info.callsign) 
-            linesUnboundedC
-    where
-        toFlightInfo :: Text -> Text -> Maybe FlightInfo
-        toFlightInfo id =
-            rightToMaybe . parse flightInfoParser (show id)
+  sourceFile path
+    .| decodeUtf8LenientC
+    .| mapOutputMaybe
+      (toFlightInfo (show path) >=> toAprsMessage info.callsign)
+      linesUnboundedC
+  where
+    toFlightInfo :: Text -> Text -> Maybe FlightInfo
+    toFlightInfo compId =
+      rightToMaybe . parse flightInfoParser (show compId)
 
-        toAprsMessage :: Text -> FlightInfo -> Maybe AprsMessage
-        toAprsMessage id fi = 
-            case fi of 
-                Fix tp -> 
-                    Just $
-                        AprsMessage 
-                            { source = id
-                            , time = tp.time
-                            , lat = tp.lat
-                            , lon = tp.lon
-                            , alt = tp.altitudeGps
-                            }
+    toAprsMessage :: Text -> FlightInfo -> Maybe AprsMessage
+    toAprsMessage msgId fi =
+      case fi of
+        Fix tp ->
+          Just
+            $ AprsMessage
+              { source = msgId,
+                time = tp.time,
+                lat = tp.lat,
+                lon = tp.lon,
+                alt = tp.altitudeGps
+              }
+        _ -> Nothing
 
-                _ -> Nothing
+playbackC :: (MonadIO m) => (a -> Int) -> Int -> ConduitT a a m ()
+playbackC getTime speed =
+  let stepMillis = 100 :: Int
 
-playbackC :: (MonadIO m) =>(a -> Int) -> Int -> ConduitT a a m ()
-playbackC getTime speed = 
-    let 
-        stepMillis = 100
-
-        play time =
-            whenJustM await $ \msg -> 
-                if time >= getTime msg
-                then do
-                    yield msg
-                    play time
-                else do
-                    leftover msg
-                    liftIO $ threadDelay (1000 * stepMillis) 
-                    play $ time + (stepMillis * speed)
-    in
-    whenJustM await $ \msg -> 
+      play time =
+        whenJustM await $ \msg ->
+          if time >= getTime msg
+            then do
+              yield msg
+              play time
+            else do
+              leftover msg
+              liftIO $ threadDelay (1000 * stepMillis)
+              play $ time + (stepMillis * speed)
+   in whenJustM await $ \msg ->
         yield msg >> play (getTime msg)
 
 extractSmallest :: (Ord b) => (a -> b) -> NonEmpty a -> (a, [a])
 extractSmallest f (x :| xs) =
-    let 
-        extract :: (Ord b) => (a -> b) -> [a] -> a -> [a] -> (a, [a])
-        extract f [] x xs = 
-            (x, xs)
-
-        extract f (y:ys) x xs =
-            if f y < f x
-            then extract f ys y (x:xs)
-            else extract f ys x (y:xs)
-    in 
-        extract f xs x []
-
+  let extract [] x' xs' =
+        (x', xs')
+      extract (y : ys) z zs =
+        if f y < f z
+          then extract ys y (z : zs)
+          else extract ys z (y : zs)
+   in extract xs x []
 
 mergeSourcesOn :: (Ord b) => (a -> b) -> [ConduitT () a (ResourceT IO) ()] -> ConduitT () a (ResourceT IO) ()
-mergeSourcesOn f sources = 
-    let 
-        makeSinkQueue c = do
-            q <- atomically $ newTBMQueue 100
-            pure (q, c)
-        
-        feedSinkQueue q c =
-            runConduitRes $ 
-                bracketP 
-                    pass
-                    (\_ -> atomically $ closeTBMQueue q)
-                    (\_ -> c .| sinkTBMQueue q)
+mergeSourcesOn f sources =
+  -- we have a list of data conduits where data in each conduit is sorted
+  -- but the they are not sorted with respect to each other
 
+  -- we need to merge them into a single conduit where data is sorted
+  let makeSinkQueue c = do
+        q <- atomically $ newTBMQueue 100
+        pure (q, c)
 
-        readQ q = do
-            v <- atomically $ readTBMQueue q
-            pure $ (,q) <$> v
-        
-        consumeQueues qs = do
-            let m = viaNonEmpty (extractSmallest (\(v, q) -> f v)) qs
-            whenJust m $ \((v, q), rest) -> do
-                yield v
-                next <- readQ q
-                case next of
-                    Just x -> do
-                        consumeQueues $ x : rest
-                    Nothing -> do
-                        consumeQueues rest
-    in do
+      feedSinkQueue q c =
+        runConduitRes
+          $ bracketP
+            pass
+            (\_ -> atomically $ closeTBMQueue q) -- make sure to close the queue when the conduit is done
+            (\_ -> c .| sinkTBMQueue q) -- feed the queue with data from the conduit
+      readQ q = do
+        v <- atomically $ readTBMQueue q
+        pure $ (,q) <$> v
+
+      consumeQueues qs = do
+        -- the structure is (`last extracted value`, `queue containing the rest of the values`)
+        -- pick the smallest of the extracted values with it's corresponding queue
+        let m = viaNonEmpty (extractSmallest (\(v, _q) -> f v)) qs
+        whenJust m $ \((v, q), rest) -> do
+          yield v
+          -- read the next value from the queue which produced the smallest value last time
+          next <- readQ q
+          case next of
+            Just x -> do
+              consumeQueues $ x : rest
+            Nothing -> do
+              consumeQueues rest
+   in do
+        -- make a list of tuples (queue, conduit)
         qs <- traverse (liftIO . makeSinkQueue) sources
 
-        bracketP 
-            (liftIO $ traverse (forkIO . uncurry feedSinkQueue) qs)
-            (liftIO . traverse_ killThread)
-            (\tids -> do 
-                qs' <- catMaybes <$> traverse readQ (fst <$> qs)
-                consumeQueues qs'
-            )
+        bracketP
+          (liftIO $ traverse (forkIO . uncurry feedSinkQueue) qs) -- fork a thread for each conduit to feed it's queue
+          (liftIO . traverse_ killThread) -- kill the threads when the conduit is done
+          ( \_tids -> do
+              qs' <- catMaybes <$> traverse readQ (fst <$> qs) -- read the first value from each queue
+              consumeQueues qs'
+          )
 
 progressAdvanceC :: (Monad m) => FlightTask -> TaskState -> ConduitT AprsMessage ProgressPoint m ()
 progressAdvanceC ft st = do
-    item <- await
+  item <- await
 
-    case item of 
-        Just msg -> do
-            let 
-                newSt = progressAdvance ft st msg
+  case item of
+    Just msg -> do
+      let newSt = progressAdvance ft st msg
 
-            yield $ head newSt.progressPoints
+      yield $ head newSt.progressPoints
 
-            progressAdvanceC ft newSt
-
-        Nothing -> pass
+      progressAdvanceC ft newSt
+    Nothing -> pass
 
 progressC :: (Monad m) => FlightTask -> ConduitT AprsMessage ProgressPoint m ()
 progressC ft = do
-    item <- await
+  item <- await
 
-    case item of
-        Just msg -> do
-            let st = progressInit ft msg
-            yield $ head st.progressPoints
+  case item of
+    Just msg -> do
+      let st = progressInit ft msg
+      yield $ head st.progressPoints
 
-            progressAdvanceC ft st
-
-        Nothing -> pass
-
+      progressAdvanceC ft st
+    Nothing -> pass
 
 demoC :: FlightTask -> ConduitT () (Text, ProgressPointDto) (ResourceT IO) ()
-demoC ft = 
-    let 
-        toProgressSource (info, p) = 
-            demoAprsSource info ("./demo/" <> p) 
-                .| progressC ft
-                .| mapC (\p -> (info.callsign, toDto p))
-    in do
-    sources <- liftIO $ toProgressSource <<$>> findTrackFiles "./demo/" 
+demoC ft =
+  let toProgressSource (info, p) =
+        demoAprsSource info ("./demo/" <> p)
+          .| progressC ft
+          .| mapC (\p' -> (info.callsign, toDto p'))
+   in do
+        sources <- liftIO $ toProgressSource <<$>> findTrackFiles "./demo/"
 
-    mergeSourcesOn (\(_, p) -> p.time) sources
-        .| playbackC (\(_, p) -> p.time) 10
-
+        mergeSourcesOn (\(_, p) -> p.time) sources
+          .| playbackC (\(_, p) -> p.time) 10
 
 testDemoConduit :: IO ()
 testDemoConduit =
-    let 
-        toAprsSource (info, p) = 
-            demoAprsSource info ("./demo/" <> p)
-        r =  toAprsSource <<$>> findTrackFiles "./demo/"
-    in do
+  let toAprsSource (info, p) =
+        demoAprsSource info ("./demo/" <> p)
+   in -- r =  toAprsSource <<$>> findTrackFiles "./demo/"
+      do
         sources <- toAprsSource <<$>> findTrackFiles "./demo/"
-        runConduitRes $ 
-        --     -- demoC "./demo/"
-        --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
-        --     -- .| printC
-            -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
-            mergeSourcesOn (\m -> m.time) sources
-           
-            -- .| playbackC 10
-            .| mapC (\x -> (x.source, x.time))
-            .| printC
-
-    
-        
+        runConduitRes
+          $
+          --     -- demoC "./demo/"
+          --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
+          --     -- .| printC
+          -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
+          mergeSourcesOn (\m -> m.time) sources
+          -- .| playbackC 10
+          .| mapC (\x -> (x.source, x.time))
+          .| printC

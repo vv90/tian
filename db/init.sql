@@ -47,3 +47,8 @@ CREATE TABLE IF NOT EXISTS track_points (
   "altitudeBaro" numeric not null,
   "altitudeGps" numeric not null
 );
+
+CREATE TABLE IF NOT EXISTS elevations (
+  "elevation" int not null,
+  "location" geography(Point, 4326) not null
+)

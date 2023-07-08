@@ -1,14 +1,26 @@
 module Map3dUtils exposing (..)
 
 import Api.Geo exposing (Distance(..), Elevation, Latitude(..), Longitude(..))
+import Color exposing (Color)
 import Common.GeoUtils exposing (GeoPoint, metersDistance)
 import Dict exposing (Dict)
+import Direction3d
 import Frame2d exposing (Frame2d)
-import Length exposing (Meters)
-import MapUtils exposing (TileKey, ZoomLevel(..), earthCircumference, fromMercatorWeb, metersPerPixel, tileLength, tileSize, toMercatorWeb, zoomInt)
+import Length exposing (Length, Meters)
+import List.Extra as ListX
+import MapUtils exposing (Tile, TileKey, ZoomLevel(..), earthCircumference, fromMercatorWeb, metersPerPixel, tileLength, tileSize, toMercatorWeb, zoomInt, zoomLevel)
 import Point2d exposing (Point2d)
+import Point3d exposing (Point3d)
 import Quantity exposing (Quantity(..), Rate)
+import Scene3d.Material exposing (Texture)
+import Scene3d.Mesh as Mesh exposing (Mesh)
+import SketchPlane3d exposing (SketchPlane3d)
+import TriangularMesh exposing (TriangularMesh)
 import Vector2d exposing (Vector2d)
+
+
+
+-- import Scene3d.Mesh as Mesh
 
 
 type Map3dItem
@@ -77,6 +89,10 @@ type PlaneCoords
     = PlaneCoords
 
 
+type SomeCoords
+    = SomeCoords
+
+
 
 -- mercatorToMeters : Latitude -> Quantity Float MercatorUnit -> Quantity Float Meters
 -- mercatorToMeters lat (Quantity n) =
@@ -135,7 +151,7 @@ mercatorRate lat =
     Quantity.rate (Length.meters (tileLength lat Z0)) (mercatorUnit 1)
 
 
-mercatorFrame : GeoPoint -> Frame2d MercatorUnit WorldCoords { defines : MercatorCoords }
+mercatorFrame : GeoPoint -> Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
 mercatorFrame center =
     let
         rate =
@@ -145,17 +161,17 @@ mercatorFrame center =
             toMercatorWeb center
 
         -- translating the frame so that the `center` point coordinates become (0, 0) in the rendered world coordinates
-        transVector : Vector2d MercatorUnit WorldCoords
+        transVector : Vector2d MercatorUnit PlaneCoords
         transVector =
             Vector2d.xy (mercatorUnit cx) (mercatorUnit (negate cy))
                 |> Vector2d.reverse
 
-        flatWorldFrame : Frame2d Meters WorldCoords { defines : PlaneCoords }
+        flatWorldFrame : Frame2d Meters PlaneCoords {}
         flatWorldFrame =
             Frame2d.atOrigin
 
         -- in mercator coordinates the Y axis is reversed
-        mFrame : Frame2d MercatorUnit WorldCoords { defines : MercatorCoords }
+        mFrame : Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
         mFrame =
             Frame2d.at_ rate flatWorldFrame
                 |> Frame2d.translateBy transVector
@@ -171,12 +187,12 @@ mercatorFrame center =
 
 
 makeTiles :
-    (Point2d Meters WorldCoords -> Bool)
-    -> Frame2d MercatorUnit WorldCoords { defines : MercatorCoords }
+    (Point2d Meters PlaneCoords -> Bool)
+    -> Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
     -> Quantity Float (Rate Meters MercatorUnit)
-    -> Point2d Meters WorldCoords
+    -> Point2d Meters PlaneCoords
     -> ZoomLevel
-    -> List ( TileKey, ( Point2d Meters WorldCoords, Point2d Meters WorldCoords ) )
+    -> List ( TileKey, ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords ) )
 makeTiles isInView mFrame mRate focalPoint zoom =
     let
         numTiles =
@@ -193,7 +209,7 @@ makeTiles isInView mFrame mRate focalPoint zoom =
             , zoomInt zoom
             )
 
-        tileCoords : TileKey -> ( Point2d Meters WorldCoords, Point2d Meters WorldCoords )
+        tileCoords : TileKey -> ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords )
         tileCoords ( kx, ky, kz ) =
             ( Point2d.xyIn
                 mFrame
@@ -213,14 +229,14 @@ makeTiles isInView mFrame mRate focalPoint zoom =
                 |> Point2d.relativeTo mFrame
                 |> containingTile
 
-        isCoordsInView : ( Point2d Meters WorldCoords, Point2d Meters WorldCoords ) -> Bool
+        isCoordsInView : ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords ) -> Bool
         isCoordsInView ( p0, p1 ) =
             isInView p0
                 || isInView p1
                 || isInView (Point2d.xy (Point2d.xCoordinate p0) (Point2d.yCoordinate p1))
                 || isInView (Point2d.xy (Point2d.xCoordinate p1) (Point2d.yCoordinate p0))
 
-        expandTiles : Dict TileKey ( Point2d Meters WorldCoords, Point2d Meters WorldCoords ) -> TileKey -> Dict TileKey ( Point2d Meters WorldCoords, Point2d Meters WorldCoords )
+        expandTiles : Dict TileKey ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords ) -> TileKey -> Dict TileKey ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords )
         expandTiles dict ( x, y, z ) =
             [ ( x - 1, y + 1, z )
             , ( x, y + 1, z )
@@ -251,6 +267,71 @@ makeTiles isInView mFrame mRate focalPoint zoom =
         (Dict.singleton firstTile (tileCoords firstTile))
         firstTile
         |> Dict.toList
+
+
+tileMesh :
+    SketchPlane3d Meters WorldCoords { defines : PlaneCoords }
+    -> Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
+    -> Quantity Float (Rate Meters MercatorUnit)
+    -> List Int
+    -> Tile
+    -> Mesh.Textured WorldCoords
+tileMesh xyPlane mFrame mRate elevValues tile =
+    let
+        numTiles =
+            2 ^ zoomInt tile.zoom
+
+        ( xCount, yCount ) =
+            ( 10, 10 )
+
+        ( xStart, yStart ) =
+            ( toFloat tile.x / toFloat numTiles
+            , toFloat tile.y / toFloat numTiles
+            )
+
+        ( xEnd, yEnd ) =
+            ( toFloat (tile.x + 1) / toFloat numTiles
+            , toFloat (tile.y + 1) / toFloat numTiles
+            )
+
+        ( xStep, yStep ) =
+            ( (xEnd - xStart) / xCount
+            , (yEnd - yStart) / yCount
+            )
+
+        elevAt i j =
+            elevValues
+                |> ListX.getAt (i * xCount + j)
+                |> Maybe.map (toFloat >> Length.meters)
+
+        -- |> Point3d.on xyPlane
+        -- |> Point3d.translateIn Direction3d.positiveZ elev
+        in3d elev p =
+            case elev of
+                Just z ->
+                    Point3d.on xyPlane p
+                        |> Point3d.translateIn Direction3d.positiveZ z
+
+                Nothing ->
+                    Point3d.on xyPlane p
+
+        withRelativeCoords ( dx, dy ) p =
+            { position = p
+            , uv = ( dx, dy )
+            }
+
+        pointAt i j =
+            Point2d.xyIn
+                mFrame
+                (mercatorUnit <| xStart + toFloat i * xStep)
+                -- invert the y axis to match the texture orientation
+                (mercatorUnit <| yEnd - toFloat j * yStep)
+                |> Point2d.at mRate
+                |> in3d (elevAt i j)
+                |> withRelativeCoords ( toFloat i / xCount, toFloat j / yCount )
+    in
+    TriangularMesh.indexedGrid 10 10 pointAt
+        |> Mesh.texturedFacets
 
 
 

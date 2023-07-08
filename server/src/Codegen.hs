@@ -1,54 +1,51 @@
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE RankNTypes #-}
-
 module Codegen where
 
-import Relude
 import Data.HashMap.Lazy qualified as HashMap
 import Data.Text qualified as Text
+import Demo.NameMatch (NameMatch)
+import Entity (Entity)
+import FlightTask (FlightTask, TaskFinish, TaskStart, Turnpoint)
+import Geo (Direction, Distance, Elevation, Latitude, Longitude)
 import Language.Elm.Definition (Definition)
 import Language.Elm.Name (Module)
 import Language.Elm.Pretty qualified as Pretty
 import Language.Elm.Simplification qualified as Simplification
 import Language.Haskell.To.Elm (jsonDefinitions)
+import Map (MapTile)
+import NavPoint (NavPoint, WaypointStyle)
 import Prettyprinter (Doc)
 import Prettyprinter.Render.Text (hPutDoc)
-import NavPoint (WaypointStyle, NavPoint)
+import ProgressPoint (ProgressPointDto)
+import Relude
 import System.Directory (createDirectoryIfMissing, doesDirectoryExist, findExecutable, removeDirectoryRecursive)
 import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath.Posix (takeDirectory)
 import System.Process (readProcessWithExitCode)
-import FlightTask (Turnpoint, TaskStart, TaskFinish, FlightTask (FlightTask))
-import Entity (Entity(Entity))
-import Geo (Latitude, Elevation, Direction, Longitude, Distance)
-import Data.Time (DiffTime)
-import ProgressPoint (ProgressPointDto)
 import TaskProgress (TaskProgressDto)
-import Demo.NameMatch (NameMatch(NameMatch))
 
 typeDefinitions :: [Definition]
 typeDefinitions =
-    concat
-        [ jsonDefinitions @WaypointStyle
-        , jsonDefinitions @Latitude
-        , jsonDefinitions @Longitude
-        , jsonDefinitions @Elevation
-        , jsonDefinitions @Direction
-        , jsonDefinitions @Distance
-        , jsonDefinitions @NavPoint
-        , jsonDefinitions @Turnpoint
-        , jsonDefinitions @TaskStart
-        , jsonDefinitions @TaskFinish
-        , jsonDefinitions @FlightTask
-        , jsonDefinitions @Entity
-        , jsonDefinitions @ProgressPointDto
-        , jsonDefinitions @TaskProgressDto
-        , jsonDefinitions @NameMatch
-        ]
+  concat
+    [ jsonDefinitions @WaypointStyle,
+      jsonDefinitions @Latitude,
+      jsonDefinitions @Longitude,
+      jsonDefinitions @Elevation,
+      jsonDefinitions @Direction,
+      jsonDefinitions @Distance,
+      jsonDefinitions @NavPoint,
+      jsonDefinitions @Turnpoint,
+      jsonDefinitions @TaskStart,
+      jsonDefinitions @TaskFinish,
+      jsonDefinitions @FlightTask,
+      jsonDefinitions @Entity,
+      jsonDefinitions @ProgressPointDto,
+      jsonDefinitions @TaskProgressDto,
+      jsonDefinitions @NameMatch,
+      jsonDefinitions @MapTile
+    ]
 
 elmSrcPath :: FilePath
 elmSrcPath = "../client/src/"
-
 
 writeContentsToFile :: forall ann. Module -> Doc ann -> IO ()
 writeContentsToFile moduleName contents = do

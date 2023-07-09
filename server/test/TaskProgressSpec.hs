@@ -6,10 +6,9 @@ import Data.Geo.Jord.GreatCircle qualified as GreatCircle
 import Data.Geo.Jord.Length qualified as Length
 import Entity (Entity (..))
 import FlightTask
-import FlightTask qualified
 import FlightTrack
 import FlightTrack.Parser
-import Geo (Elevation (..), Latitude (..), Longitude (..), degreesLatitude, degreesLongitude, metersElevation)
+import Geo (Elevation (..), Latitude (..), Longitude (..), metersElevation)
 import Geo.Utils (perpendicular)
 import NavPoint
 import ProgressPoint (ProgressPoint (altitude, target))
@@ -21,6 +20,7 @@ import Text.Parsec (parse)
 import TrackPoint (FixValidity (..), TrackPoint (..))
 import Utils (within)
 
+startNavPoint :: NavPoint
 startNavPoint =
   NavPoint
     { name = "Start",
@@ -36,6 +36,7 @@ startNavPoint =
       desc = ""
     }
 
+finishNavPoint :: NavPoint
 finishNavPoint =
   NavPoint
     { name = "Finish",
@@ -51,6 +52,7 @@ finishNavPoint =
       desc = ""
     }
 
+flightTask :: FlightTask
 flightTask =
   FlightTask
     { start = (startNavPoint, StartLine 3000),
@@ -64,8 +66,8 @@ spec = do
     it "perpendicular" $ do
       let start = Geodetic.s84Pos 0 0
           finish = Geodetic.s84Pos 0 1
-          tp1 = Geodetic.s84Pos 0 (-0.0001)
-          tp2 = Geodetic.s84Pos 0 0.0001
+          -- tp1 = Geodetic.s84Pos 0 (-0.0001)
+          -- tp2 = Geodetic.s84Pos 0 0.0001
 
           startLine = do
             bearing <- GreatCircle.initialBearing start finish
@@ -166,7 +168,6 @@ spec = do
           pinit = progressInit flightTask trackPoint1
 
       (fmap name . target . head) pinit.progressPoints `shouldBe` Just "Start"
-      0 `shouldBe` 0
 
   context "progressAdvance" $ do
     it "produces correct track point before start" $ do
@@ -237,7 +238,7 @@ spec = do
             \B0722125201562N03940404EV0008700165500118\n\
             \B0722165201562N03940404EA0008700166066060\n\
             \B0722205201562N03940404EA0008700167000046\n\
-            \B0722245201562N03940404EA0008700168000048"
+            \B0722245201562N03940404EA0008700168000048"::Text
           -- Either Error FlightInfo
           result = parse flightInfoParserAll "" input
           flightTrack = left show result >>= buildFlightTrack ""

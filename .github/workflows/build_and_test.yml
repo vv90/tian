@@ -61,7 +61,7 @@ jobs:
 
       - name: Codegen
         working-directory: server
-        run: ./target/codegen
+        run: ./target/codegen-exe
 
       - name: Install elm-format (for codegen)
         run: npm install -g elm-format 

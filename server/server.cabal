@@ -297,7 +297,6 @@ test-suite server-test
       FlightTrackSpec
       NavPointSpec
       TaskProgressSpec
-      TiffUtilsSpec
       Utils
       Paths_server
   hs-source-dirs:

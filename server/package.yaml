@@ -156,7 +156,7 @@ library:
   source-dirs: src
 
 executables:
-  server-exе:
+  server-exe:
     main:                Main.hs
     source-dirs:         app
     ghc-options:

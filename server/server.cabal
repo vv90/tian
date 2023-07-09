@@ -230,7 +230,7 @@ executable seed-exe
     , warp
   default-language: GHC2021
 
-executable server-exе
+executable server-exe
   main-is: Main.hs
   other-modules:
       Paths_server

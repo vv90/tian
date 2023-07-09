@@ -10,7 +10,17 @@ on:
       # "synchronize" means new commits pushed to the HEAD of the pull request branch
       - synchronize
 
-permissions: read-all
+env:
+  REGISTRY: ghcr.io
+  # What tags does:
+  # - always tag with sha
+  # - always tag with branch name
+  # - if a release tag is 'v1.0.0', then tag 'latest' and '1.0.0'
+  # More info: https://github.com/docker/metadata-action#tags-input
+  TAGS: |
+    type=sha
+    type=ref,event=branch
+    type=semver,pattern={{major}}.{{minor}}.{{patch}}
 
 jobs: 
   cancel-previous:
@@ -22,32 +32,90 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-      - run: npm install -g elm-format
-
       - uses: actions/checkout@v2
 
-      - name: Setup haskell
-        uses: haskell/actions/setup@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          ghc-version: '9.4.5'
-          enable-stack: true
-          stack-version: '2.9.3'
+          node-version: 18.16.1
 
-      - name: Stack cache
-        uses: freckle/stack-cache-action@v2
+      - name: Server Build and test
+        uses: freckle/stack-action@v4
+        id: stack
         with:
           working-directory: server
+          fast: false
+          pedantic: true
+          test: true
+          cache-prefix: lts-21.1
+          stack-arguments: --copy-bins --local-bin-path target
 
-      - name: Build executables and run codegen
-      # TODO: enable pedantic flag https://github.com/vv90/contest-viewer/issues/10
-        run: | 
-          cd server
-          stack clean
-          stack build
-          stack run codegen
-          stack test
+      - uses: haskell/actions/hlint-setup@v2
 
-      # TODO: add frontend build https://github.com/vv90/contest-viewer/issues/11
+      - uses: haskell/actions/hlint-run@v2
 
-          
+      - name: Remove generated frontend code (so that it fails without codegen)
+        working-directory: client
+        run: rm -r src/Api
 
+      - name: Install elm-format (called by codegen executable)
+        run: npm install -g elm-format
+
+      - name: Codegen
+        working-directory: server
+        run: ./target/codegen-exe
+        
+      - name: Client install, check and build
+        working-directory: client
+        run: |
+          npm ci
+          npm run check 
+          npm run build
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Prepare tags and labels (backend)
+        id: meta-server
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/vv90/marauders-radar-server
+          tags: ${{ env.TAGS }}
+      
+      - name: Build and push Docker image (backend)
+        uses: docker/build-push-action@v4
+        with:
+          context: server/target
+          file: server/Dockerfile
+          push: true
+          tags: ${{ steps.meta-server.outputs.tags}}
+          labels: ${{ steps.meta-server.outputs.labels}}
+          # build-args: SOME_VERSION=${{ steps.vars.outputs.SOME_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Prepare tags and labels (client)
+        id: meta-client
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/vv90/marauders-radar-client
+          tags: ${{ env.TAGS }}
+
+      - name: Build and push Docker image (client)
+        uses: docker/build-push-action@v4
+        with:
+          context: client
+          file: client/Dockerfile
+          push: true
+          # build-args: WOLF_VERSION=${{ steps.vars.outputs.SOME_VERSION }}
+          tags: ${{ steps.meta-client.outputs.tags }}
+          labels: ${{ steps.meta-client.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

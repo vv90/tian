@@ -167,7 +167,7 @@ executables:
     # - base
     - server
 
-  codegen: 
+  codegen-exe: 
     main: Main.hs
     source-dirs: codegen
     dependencies: 
@@ -177,7 +177,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
 
-  seed: 
+  seed-exe: 
     main: Main.hs
     source-dirs: seed
 

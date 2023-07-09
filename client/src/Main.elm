@@ -31,8 +31,8 @@ import Http
 import Json.Decode as D
 import List.Extra as ListX
 import List.Nonempty as NE exposing (Nonempty(..))
-import Map as Map exposing (..)
-import Map3d as Map3d exposing (..)
+import Map exposing (..)
+import Map3d exposing (..)
 import MapUtils exposing (..)
 import Maybe.Extra as MaybeX
 import Page.Demo as Demo
@@ -202,22 +202,19 @@ update msg model =
                         (NE.fromList ps)
             in
             ( { model | mapModel = nextModel }
-            , Cmd.batch
-                [ Cmd.map MapMsg cmd
-
-                -- for debugging
-                -- , Maybe.map3
-                --     (\p ps tid ->
-                --         Cmd.map TestProgressMsg <|
-                --             TestProgress.updateProgressCmd
-                --                 tid
-                --                 (appendPoint ps p)
-                --     )
-                --     point
-                --     selectedPoints
-                --     selectedTaskId
-                --     |> Maybe.withDefault Cmd.none
-                ]
+            , Cmd.map MapMsg cmd
+              -- for debugging
+              -- , Maybe.map3
+              --     (\p ps tid ->
+              --         Cmd.map TestProgressMsg <|
+              --             TestProgress.updateProgressCmd
+              --                 tid
+              --                 (appendPoint ps p)
+              --     )
+              --     point
+              --     selectedPoints
+              --     selectedTaskId
+              --     |> Maybe.withDefault Cmd.none
             )
 
         Map3dMsg m3dMsg ->

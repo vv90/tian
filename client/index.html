@@ -2,18 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Competition Tracking</title>
-    <meta name="description" content="description text" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=PT+Mono&display=swap"
-      rel="stylesheet"
-    />
+    <title>Marauder's Radar</title>
+    <meta name="description" content="Glider Tracking App" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -24,69 +17,13 @@
       href="https://fonts.googleapis.com/css2?family=Roboto+Mono"
       rel="stylesheet"
     />
-    <link inline rel="stylesheet" href="/assets/reset.css" />
-    <script inline type="text/javascript" src="/assets/bundle.js"></script>
+    <link rel="stylesheet" href="/assets/styles/reset.css" />
   </head>
 
+  <!-- TODO: consider removing `overflow: hidden` -->
   <body style="overflow: hidden">
     <noscript> You need to enable JavaScript to run this app. </noscript>
-    <div id="elm-node"></div>
-    <!-- <script src="https://unpkg.com/elm-canvas@2.2/elm-canvas.js"></script> -->
-    <script>
-      const app = Elm.Main.init({
-        flags: {
-          windowSize: {
-            height: window.innerHeight,
-            width: window.innerWidth,
-          },
-        },
-        node: document.getElementById("elm-node"),
-      });
-
-      app.ports.startDemo.subscribe(function () {
-        // Create your WebSocket.
-
-        const socket = new WebSocket(`ws://${location.host}:8081/demo`);
-
-        // When a command goes to the `sendMessage` port, we pass the message
-        // along to the WebSocket.
-        // app.ports.sendMessage.subscribe(function (message) {
-        //   socket.send(message);
-        // });
-
-        // When a message comes into our WebSocket, we pass the message along
-        // to the `messageReceiver` port.
-        socket.addEventListener("message", function (event) {
-          if (event.data instanceof Blob) {
-            reader = new FileReader();
-
-            reader.onload = () => {
-              console.log("Result: " + reader.result);
-            };
-
-            reader.readAsText(event.data);
-          } else {
-            console.log("Result: " + event.data);
-          }
-          // console.log("Received message from server:", event.data);
-          app.ports.messageReceiver.send(event.data);
-        });
-        socket.addEventListener("open", function (event) {
-          console.log("Connected to server: ", event);
-          // socket.send(
-          //   `user test99123 pass -1 vers testsoftware 1.0_05 filter r/33.25/-96.5/50`
-          // );
-          // app.ports.socketConnected.send(event.data);
-        });
-        socket.addEventListener("error", function (event) {
-          console.log("Error: ", event);
-          // app.ports.socketError.send(event.data);
-        });
-        socket.addEventListener("close", function (event) {
-          console.log("Closed: ", event);
-          // app.ports.socketClosed.send(event);
-        });
-      });
-    </script>
+    <div id="app"><div></div></div>
+    <script type="module" src="/init.ts"></script>
   </body>
 </html>

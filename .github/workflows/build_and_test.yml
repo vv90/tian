@@ -76,7 +76,7 @@ jobs:
           elm-version: 0.19.1
         
       - name: Frontend Install dependencies
-        working-directory: frontend
+        working-directory: client
         run: npm ci
 
       - name: Frontend Test

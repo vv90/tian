@@ -38,6 +38,16 @@ jobs:
 
       - uses: actions/checkout@v2
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.16.1
+
+      - name: Setup Elm
+        uses: jorelali/setup-elm@v5
+        with:
+          elm-version: 0.19.1
+
       - name: Server Build and test
         uses: freckle/stack-action@v4
         id: stack
@@ -49,7 +59,26 @@ jobs:
           cache-prefix: lts-21.1
           stack-arguments: --copy-bins --local-bin-path target
 
-      
+      - name: Codegen
+        working-directory: server
+        run: ./target/codegen
+
+      - name: Install elm-format (for codegen)
+        run: npm install -g elm-format 
+
+      - name: Remove generated frontend code (so that it fails without codegen)
+        working-directory: client
+        run: rm -r src/Api
+
+      - name: Setup Elm
+        uses: jorelali/setup-elm@v5
+        with:
+          elm-version: 0.19.1
+
+      - name: Frontend Test
+        working-directory: client
+        run: npm test
+
       # - name: Build executables and run codegen
       # # TODO: enable pedantic flag https://github.com/vv90/contest-viewer/issues/10
       #   run: | 
@@ -87,5 +116,17 @@ jobs:
       #     tags: ${{ steps.meta-server.outputs.tags}}
       #     labels: ${{ steps.meta-server.outputs.labels}}
       #     # build-args: SOME_VERSION=${{ steps.vars.outputs.SOME_VERSION }}
+      #     cache-from: type=gha
+      #     cache-to: type=gha,mode=max
+
+      # - name: Build and push Docker image (frontend)
+      #   uses: docker/build-push-action@v4
+      #   with:
+      #     context: frontend
+      #     file: frontend/Dockerfile
+      #     push: true
+      #     build-args: WOLF_VERSION=${{ steps.vars.outputs.WOLF_VERSION }}
+      #     tags: ${{ steps.meta-frontend.outputs.tags }}
+      #     labels: ${{ steps.meta-frontend.outputs.labels }}
       #     cache-from: type=gha
       #     cache-to: type=gha,mode=max

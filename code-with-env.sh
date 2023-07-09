@@ -1,1 +1,1 @@
-bash -c 'export $(cat server/.env.example | sed "s/#.*//g" | xargs) && code ./contest-viewer.code-workspace'
+bash -c 'export $(cat server/.env.example | sed "s/#.*//g" | xargs) && code ./marauders-radar.code-workspace'

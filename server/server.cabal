@@ -112,7 +112,7 @@ library
     , warp
   default-language: GHC2021
 
-executable codegen
+executable codegen-exe
   main-is: Main.hs
   other-modules:
       Paths_server
@@ -171,7 +171,7 @@ executable codegen
     , warp
   default-language: GHC2021
 
-executable seed
+executable seed-exe
   main-is: Main.hs
   other-modules:
       Paths_server
@@ -230,7 +230,7 @@ executable seed
     , warp
   default-language: GHC2021
 
-executable server-exe
+executable server-exе
   main-is: Main.hs
   other-modules:
       Paths_server

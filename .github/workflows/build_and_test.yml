@@ -59,16 +59,16 @@ jobs:
           cache-prefix: lts-21.1
           stack-arguments: --copy-bins --local-bin-path target
 
-      - name: Codegen
-        working-directory: server
-        run: ./target/codegen-exe
-
       - name: Install elm-format (for codegen)
         run: npm install -g elm-format 
 
       - name: Remove generated frontend code (so that it fails without codegen)
         working-directory: client
         run: rm -r src/Api
+
+      - name: Codegen
+        working-directory: server
+        run: ./target/codegen-exe
 
       - name: Setup Elm
         uses: jorelali/setup-elm@v5

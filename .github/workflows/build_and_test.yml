@@ -57,7 +57,10 @@ jobs:
       - name: Remove generated frontend code (so that it fails without codegen)
         working-directory: client
         run: rm -r src/Api
-        
+
+      - name: Install elm-format (called by codegen executable)
+        run: npm install -g elm-format
+
       - name: Codegen
         working-directory: server
         run: ./target/codegen-exe

@@ -12,7 +12,7 @@ ENV LANG=C.UTF-8
 RUN apt-get update && apt-get install -y ca-certificates libtinfo5 curl
 RUN update-ca-certificates
 
-COPY server /app/server
+COPY server-exe /app/server
 # RUN bash -c "echo $SOME_VERSION > /app/version"
 
 WORKDIR /app

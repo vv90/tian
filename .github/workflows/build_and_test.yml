@@ -32,19 +32,12 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-      - run: npm install -g elm-format
-
       - uses: actions/checkout@v2
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18.16.1
-
-      - name: Setup Elm
-        uses: jorelali/setup-elm@v5
-        with:
-          elm-version: 0.19.1
 
       - name: Server Build and test
         uses: freckle/stack-action@v4
@@ -57,9 +50,6 @@ jobs:
           cache-prefix: lts-21.1
           stack-arguments: --copy-bins --local-bin-path target
 
-      - name: Install elm-format (for codegen)
-        run: npm install -g elm-format 
-
       - name: Remove generated frontend code (so that it fails without codegen)
         working-directory: client
         run: rm -r src/Api
@@ -68,30 +58,12 @@ jobs:
         working-directory: server
         run: ./target/codegen-exe
 
-      - name: Setup Elm
-        uses: jorelali/setup-elm@v5
-        with:
-          elm-version: 0.19.1
-        
-      - name: Frontend Install dependencies
-        working-directory: client
-        run: npm ci
+      - name: Client install, check and build
+        run: |
+          npm ci
+          npm run check 
+          npm run build
 
-      - name: Frontend Test
-        working-directory: client
-        run: npm test
-
-      # - name: Build executables and run codegen
-      # # TODO: enable pedantic flag https://github.com/vv90/contest-viewer/issues/10
-      #   run: | 
-      #     cd server
-      #     stack clean
-      #     stack build
-      #     stack run codegen
-      #     stack test
-      
-      # TODO: add frontend build https://github.com/vv90/contest-viewer/issues/11
-      
       - name: Log in to the Container registry
         uses: docker/login-action@v2
         with:
@@ -121,14 +93,21 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # - name: Build and push Docker image (frontend)
-      #   uses: docker/build-push-action@v4
-      #   with:
-      #     context: frontend
-      #     file: frontend/Dockerfile
-      #     push: true
-      #     build-args: WOLF_VERSION=${{ steps.vars.outputs.WOLF_VERSION }}
-      #     tags: ${{ steps.meta-frontend.outputs.tags }}
-      #     labels: ${{ steps.meta-frontend.outputs.labels }}
-      #     cache-from: type=gha
-      #     cache-to: type=gha,mode=max
+      - name: Prepare tags and labels (client)
+        id: meta-client
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/vv90/marauders-radar-client
+          tags: ${{ env.TAGS }}
+
+      - name: Build and push Docker image (client)
+        uses: docker/build-push-action@v4
+        with:
+          context: client
+          file: client/Dockerfile
+          push: true
+          # build-args: WOLF_VERSION=${{ steps.vars.outputs.SOME_VERSION }}
+          tags: ${{ steps.meta-client.outputs.tags }}
+          labels: ${{ steps.meta-client.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

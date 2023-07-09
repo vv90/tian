@@ -57,13 +57,10 @@ map3dItems tasks model =
     let
         task =
             ListX.find (\{ key } -> key == model.taskId) tasks
-
-        taskItems =
-            task
-                |> Maybe.map (.entity >> taskToMap3dItems)
-                |> Maybe.withDefault []
     in
-    taskItems
+    task
+        |> Maybe.map (.entity >> taskToMap3dItems)
+        |> Maybe.withDefault []
 
 
 withPendingTaskProgress : Model -> Model

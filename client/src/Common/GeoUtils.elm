@@ -2,17 +2,11 @@ module Common.GeoUtils exposing
     ( Bearing
     , GeoPoint
     , bearing
-    , bearingDifference
-    , degreesDirection
     , degreesLatitude
     , degreesLongitude
-    , destination
-    , distance
-    , earthRadius
     , linePerpendicularToBearing
     , metersDistance
     , metersElevation
-    , normalizedBearing
     )
 
 import Api.Geo exposing (..)

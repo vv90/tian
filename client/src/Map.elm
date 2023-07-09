@@ -10,7 +10,7 @@ import Canvas exposing (Point, Renderable, clear, group, rect, shapes, texture)
 import Canvas.Settings exposing (fill)
 import Canvas.Settings.Advanced exposing (scale, transform, translate)
 import Canvas.Texture as Texture exposing (..)
-import Color as Color exposing (..)
+import Color exposing (..)
 import Common.GeoUtils exposing (GeoPoint)
 import Dict exposing (Dict)
 import Flags exposing (WindowSize)
@@ -508,12 +508,16 @@ renderCircle mapView point (DistanceMeters radius) =
         ( LatitudeDegrees lat, LongitudeDegrees lon ) =
             point
 
-        scaleCoefficient =
-            scaleFromZoom mapView.zoom
-
         rPixels =
             metersPerPixel (floor mapView.zoom)
-                |> Maybe.map (\(DistanceMeters m) -> radius / (cos (degrees lat) * m / scaleCoefficient))
+                |> Maybe.map
+                    (\(DistanceMeters m) ->
+                        let
+                            scaleCoefficient =
+                                scaleFromZoom mapView.zoom
+                        in
+                        radius / (cos (degrees lat) * m / scaleCoefficient)
+                    )
                 |> MaybeX.unpack (always 5) identity
     in
     Svg.circle
@@ -585,7 +589,7 @@ renderPolygon mapView points =
 --             , style "position" "absolute"
 --             , style "top" (String.fromFloat (y - 20) ++ "px")
 --             , style "left" (String.fromFloat (x - 20) ++ "px")
---             , attribute "data-src" "assets/glider.svg"
+--             , attribute "data-src" <| VitePluginHelper.asset "/assets/images/glider.svg"
 --             ]
 --             []
 
@@ -601,7 +605,7 @@ renderMarker mapView point label =
 
         -- markerSrc =
         --   case marker.markerType of
-        --     Glider -> "assets/glider.svg"
+        --     Glider -> VitePluginHelper.asset "/assets/images/glider.svg"
         ( x, y ) =
             geoPointToViewCoords mapView point
     in

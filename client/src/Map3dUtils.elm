@@ -169,15 +169,10 @@ mercatorFrame center =
         flatWorldFrame : Frame2d Meters PlaneCoords {}
         flatWorldFrame =
             Frame2d.atOrigin
-
-        -- in mercator coordinates the Y axis is reversed
-        mFrame : Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
-        mFrame =
-            Frame2d.at_ rate flatWorldFrame
-                |> Frame2d.translateBy transVector
-                |> Frame2d.reverseY
     in
-    mFrame
+    Frame2d.at_ rate flatWorldFrame
+        |> Frame2d.translateBy transVector
+        |> Frame2d.reverseY
 
 
 

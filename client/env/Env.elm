@@ -1,4 +1,4 @@
-module Env exposing (..)
+module Env exposing (apiUrl)
 
 
 apiUrl : String -> String

@@ -2,7 +2,6 @@ module Common.Effect exposing
     ( EffectSet
     , applyAll
     , applyMapAll
-    , batch
     , effect
     , none
     )

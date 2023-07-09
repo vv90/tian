@@ -1,4 +1,4 @@
-module Example exposing (..)
+module ExampleTest exposing (..)
 
 import Api.Geo exposing (Latitude(..), Longitude(..))
 import Expect exposing (FloatingPointTolerance(..))

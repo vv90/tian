@@ -590,19 +590,15 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    let
-        dragSubs =
-            case model.dragState of
-                Static ->
-                    Sub.none
+    case model.dragState of
+        Static ->
+            Sub.none
 
-                MovingFrom _ ->
-                    Sub.batch
-                        [ BE.onMouseMove (D.map2 DragMove decodeButtons decodePosition)
-                        , BE.onMouseUp (D.map DragStop decodePosition)
-                        ]
-    in
-    dragSubs
+        MovingFrom _ ->
+            Sub.batch
+                [ BE.onMouseMove (D.map2 DragMove decodeButtons decodePosition)
+                , BE.onMouseUp (D.map DragStop decodePosition)
+                ]
 
 
 mapItemView : Model -> Map3dItem -> ( Svg Msg, Scene3d.Entity WorldCoords )

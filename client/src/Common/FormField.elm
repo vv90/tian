@@ -2,9 +2,7 @@ module Common.FormField exposing
     ( FormField
     , getRaw
     , getVal
-    , initFormField
     , initFormFieldRaw
-    , isDirty
     , updateFormField
     )
 

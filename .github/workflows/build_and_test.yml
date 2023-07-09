@@ -50,15 +50,20 @@ jobs:
           cache-prefix: lts-21.1
           stack-arguments: --copy-bins --local-bin-path target
 
+      - uses: haskell/actions/hlint-setup@v2
+
+      - uses: haskell/actions/hlint-run@v2
+
       - name: Remove generated frontend code (so that it fails without codegen)
         working-directory: client
         run: rm -r src/Api
-
+        
       - name: Codegen
         working-directory: server
         run: ./target/codegen-exe
-
+        
       - name: Client install, check and build
+        working-directory: client
         run: |
           npm ci
           npm run check 

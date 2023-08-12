@@ -1,7 +1,7 @@
 module Api.Entity exposing
     ( Entity
-    , entityDecoder
     , entityEncoder
+    , entityDecoder
     )
 
 import Json.Decode
@@ -15,11 +15,11 @@ type alias Entity a b =
 
 entityEncoder : (a -> Json.Encode.Value) -> (b -> Json.Encode.Value) -> Entity a b -> Json.Encode.Value
 entityEncoder a b c =
-    Json.Encode.object [ ( "key", a c.key ), ( "entity", b c.entity ) ]
+    Json.Encode.object [("key" , a c.key), ("entity" , b c.entity)]
 
 
 entityDecoder : Json.Decode.Decoder a -> Json.Decode.Decoder b -> Json.Decode.Decoder (Entity a b)
 entityDecoder a b =
-    Json.Decode.succeed Entity
-        |> Json.Decode.Pipeline.required "key" a
-        |> Json.Decode.Pipeline.required "entity" b
+    Json.Decode.succeed Entity |>
+    Json.Decode.Pipeline.required "key" a |>
+    Json.Decode.Pipeline.required "entity" b

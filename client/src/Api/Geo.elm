@@ -1,26 +1,26 @@
 module Api.Geo exposing
-    ( Direction(..)
-    , Distance(..)
-    , Elevation(..)
-    , Latitude(..)
-    , Longitude(..)
-    , directionDecoder
-    , directionEncoder
-    , distanceDecoder
-    , distanceEncoder
-    , elevationDecoder
-    , elevationEncoder
-    , latitudeDecoder
+    ( Latitude(..)
     , latitudeEncoder
-    , longitudeDecoder
+    , latitudeDecoder
+    , Longitude(..)
     , longitudeEncoder
+    , longitudeDecoder
+    , Elevation(..)
+    , elevationEncoder
+    , elevationDecoder
+    , Direction(..)
+    , directionEncoder
+    , directionDecoder
+    , Distance(..)
+    , distanceEncoder
+    , distanceDecoder
     )
 
 import Json.Decode
 import Json.Encode
 
 
-type Latitude
+type Latitude 
     = LatitudeDegrees Float
 
 
@@ -36,7 +36,7 @@ latitudeDecoder =
     Json.Decode.map LatitudeDegrees Json.Decode.float
 
 
-type Longitude
+type Longitude 
     = LongitudeDegrees Float
 
 
@@ -52,7 +52,7 @@ longitudeDecoder =
     Json.Decode.map LongitudeDegrees Json.Decode.float
 
 
-type Elevation
+type Elevation 
     = ElevationMeters Float
 
 
@@ -68,7 +68,7 @@ elevationDecoder =
     Json.Decode.map ElevationMeters Json.Decode.float
 
 
-type Direction
+type Direction 
     = DirectionDegrees Int
 
 
@@ -84,7 +84,7 @@ directionDecoder =
     Json.Decode.map DirectionDegrees Json.Decode.int
 
 
-type Distance
+type Distance 
     = DistanceMeters Float
 
 

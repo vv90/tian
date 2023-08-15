@@ -9,7 +9,8 @@ ENV LANG=C.UTF-8
 # ca-certificates solves an issue with some SSL certificates 
 # libtinfo5 makes the binary ever run
 # curl for healthcheck (temporary dirty solution)
-RUN apt-get update && apt-get install -y ca-certificates libtinfo5 curl
+
+RUN apt-get update && apt-get install -y ca-certificates libtinfo5 curl libpq-dev
 RUN update-ca-certificates
 
 COPY server-exe /app/server

@@ -10,11 +10,11 @@ import Data.Vector qualified as Vector
 import GHC.ByteOrder (ByteOrder (..))
 import GHC.IO.Handle (hSeek)
 import Geo (Latitude (..), Longitude (..))
+import GeoTiff.ElevationPoint (ElevationPoint (ElevationPoint))
 import GeoTiff.LZW (decodeLZW)
 import Map (toMercatorWeb)
 import Relude
 import System.IO (SeekMode (AbsoluteSeek), hPutStrLn, hTell, openBinaryFile, withBinaryFile)
-import GeoTiff.ElevationPoint (ElevationPoint (ElevationPoint))
 
 data DataType
   = Byte Word8 -- 1
@@ -29,7 +29,6 @@ data DataType
   | SRational (Int32, Int32) -- 10
   | Float Float -- 11
   | Double Double -- 12
-
 
 -- data Tag
 --     = BitsPerSample Int -- 258
@@ -102,15 +101,17 @@ data SampleFormat = UnsignedInteger | SignedInteger -- 339
   deriving stock (Show)
 
 type PixelScale = (Double, Double, Double)
--- This tag may be used to specify the size of raster pixel spacing in the model space units, 
+
+-- This tag may be used to specify the size of raster pixel spacing in the model space units,
 -- when the raster space can be embedded in the model space coordinate system without rotation, and consists of the following 3 values:
 -- ModelPixelScaleTag = (ScaleX, ScaleY, ScaleZ)
--- where ScaleX and ScaleY give the horizontal and vertical spacing of raster pixels. 
+-- where ScaleX and ScaleY give the horizontal and vertical spacing of raster pixels.
 -- The ScaleZ is primarily used to map the pixel value of a digital elevation model into the correct Z-scale, and so for most other purposes this value should be zero (since most model spaces are 2-D, with Z=0).
 newtype ModelPixelScale = ModelPixelScale PixelScale -- 33550
   deriving stock (Show)
 
 type TiePoint = (Double, Double, Double, Double, Double, Double)
+
 -- This tag stores raster->model tiepoint pairs in the order
 -- ModelTiepointTag = (...,I,J,K, X,Y,Z...)
 -- where (I,J,K) is the point at location (I,J) in raster space with pixel-value K, and (X,Y,Z) is a vector in model space
@@ -157,7 +158,6 @@ data TiffConfig = TiffConfig
     modelTiePoint :: ModelTiePoint
   }
   deriving stock (Show)
-
 
 -- readElevationPoints :: [MapTile] -> ExceptT String IO [[Int]]
 -- readElevationPoints tiles = do
@@ -353,7 +353,6 @@ readConfig bo h =
         <*> (readTag modelPixelScale >>= readModelPixelScaleData)
         <*> (readTag modelTiePoint >>= readModelTilePointData)
 
-
 readTileElevations :: ByteOrder -> Handle -> (Integer, Integer) -> ExceptT String IO (Vector Word16)
 readTileElevations byteOrder h (offset, len) = do
   liftIO $ hSeek h AbsoluteSeek offset
@@ -378,7 +377,7 @@ readTiffElevationData filePath =
         ImageHeight imageHeight = config.imageHeight
         TileWidth tileWidth = config.tileWidth
         TileHeight tileHeight = config.tileHeight
-        ModelTiePoint _tiePoint@(_px, _py, _pz, mLon, mLat, _mz) = config.modelTiePoint 
+        ModelTiePoint _tiePoint@(_px, _py, _pz, mLon, mLat, _mz) = config.modelTiePoint
         ModelPixelScale _pixelScale@(xScale, yScale, _zScale) = config.modelPixelScale
 
         -- width of the image in tiles (rounded up to cover the whole image)
@@ -407,38 +406,34 @@ readTiffElevationData filePath =
         -- the coordinates of the tile pixel in the image
         pixelImageCoord :: Int -> Int -> (Int, Int)
         pixelImageCoord tile pixel =
-          ( tileImageCol tile * tileWidth + pixelTileCol pixel
-          , tileImageRow tile * tileHeight + pixelTileRow pixel
+          ( tileImageCol tile * tileWidth + pixelTileCol pixel,
+            tileImageRow tile * tileHeight + pixelTileRow pixel
           )
 
         pixelToElevationPoint :: Int -> Int -> Word16 -> Maybe ElevationPoint
         pixelToElevationPoint tile pixel elevation =
-          let 
-            (pixelCol, pixelRow) = pixelImageCoord tile pixel
-          in
-          if pixelCol >= imageWidth || pixelRow >= imageHeight
-          then 
-            Nothing
-          else 
-            Just $ ElevationPoint
-              ( fromIntegral elevation )
-              ( LongitudeDegrees $ fromIntegral pixelCol * xScale + mLon )
-              ( LatitudeDegrees $ fromIntegral pixelRow * yScale + mLat )
-               
+          let (pixelCol, pixelRow) = pixelImageCoord tile pixel
+           in if pixelCol >= imageWidth || pixelRow >= imageHeight
+                then Nothing
+                else
+                  Just
+                    $ ElevationPoint
+                      (fromIntegral elevation)
+                      (LongitudeDegrees $ fromIntegral pixelCol * xScale + mLon)
+                      (LatitudeDegrees $ fromIntegral pixelRow * yScale + mLat)
 
         readTile :: Int -> (Integer, Integer) -> ExceptT String IO (Vector ElevationPoint)
-        readTile tileIndex (offset, tileLength) = 
+        readTile tileIndex (offset, tileLength) =
           do
             liftIO $ hSeek h AbsoluteSeek offset
 
-            r <- readWord8Many (fromIntegral tileLength) h >>= decodeLZW byteOrder 
+            r <- readWord8Many (fromIntegral tileLength) h >>= decodeLZW byteOrder
 
             pure $ Vector.imapMaybe (pixelToElevationPoint tileIndex) r
 
-        -- pixelCoords :: Int -> Int -> Maybe (Double, Double)
-        -- pixelCoords tile pixel =
-        --   if tile + 
-          
+    -- pixelCoords :: Int -> Int -> Maybe (Double, Double)
+    -- pixelCoords tile pixel =
+    --   if tile +
 
     -- print tiePoint
     -- print pixelScale
@@ -764,7 +759,6 @@ convertElevationData _byteOrder _h config =
         print $ "xScale: " ++ show xScale ++ ", yScale: " ++ show yScale
         print $ "xStart: " ++ show xStart ++ ", yStart: " ++ show yStart
         pure []
-
 
 decodeHeader :: LBS.ByteString -> Either String (ByteOrder, Integer)
 decodeHeader = runGetOrError $ do

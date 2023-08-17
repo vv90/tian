@@ -18,7 +18,7 @@ spec :: Spec
 spec = do
   context "navPointParser" $ do
     it "parses waypoint example" $ do
-      let input = "\"Cross Hands\",\"CSS\",UK,5147.809N,00405.003W,525m,1,,,,\"Turn Point, A48/A476,Between Cross Hands and Gorslas, 9 NMl ESE of Camarthen.\""::Text
+      let input = "\"Cross Hands\",\"CSS\",UK,5147.809N,00405.003W,525m,1,,,,\"Turn Point, A48/A476,Between Cross Hands and Gorslas, 9 NMl ESE of Camarthen.\"" :: Text
       let result = parse navPointParser "" input
 
       name <$> result `shouldBe` Right "Cross Hands"
@@ -34,13 +34,13 @@ spec = do
       desc <$> result `shouldBe` Right "Turn Point, A48/A476,Between Cross Hands and Gorslas, 9 NMl ESE of Camarthen."
 
     it "parses waypoint example without quotes around code" $ do
-      let input = "\"Cross Hands\",CSS,UK,5147.809N,00405.003W,525m,1,,,,\"Turn Point, A48/A476,Between Cross Hands and Gorslas, 9 NMl ESE of Camarthen.\""::Text
+      let input = "\"Cross Hands\",CSS,UK,5147.809N,00405.003W,525m,1,,,,\"Turn Point, A48/A476,Between Cross Hands and Gorslas, 9 NMl ESE of Camarthen.\"" :: Text
       let result = parse navPointParser "" input
 
       code <$> result `shouldBe` Right "CSS"
 
     it "parses airport example" $ do
-      let input = "\"Lesce\",\"LJBL\",SI,4621.379N,01410.467E,504.0m,5,144,1130.0m,123.500,\"Home Airfield\""::Text
+      let input = "\"Lesce\",\"LJBL\",SI,4621.379N,01410.467E,504.0m,5,144,1130.0m,123.500,\"Home Airfield\"" :: Text
       let result = parse navPointParser "" input
 
       name <$> result `shouldBe` Right "Lesce"

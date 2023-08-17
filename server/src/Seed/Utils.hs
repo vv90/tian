@@ -1,10 +1,10 @@
 module Seed.Utils where
 
 import Control.Monad.Except (withExceptT)
+import GeoTiff.Tiff (readTiffElevationData)
 import Hasql.Session qualified as Session
 import Persistence.Connection (getConnection)
 import Persistence.Session (saveElevationPointsSession)
-import GeoTiff.Tiff (readTiffElevationData)
 import Relude
 
 seed :: ExceptT String IO ()

@@ -1,29 +1,30 @@
 module Persistence.Session where
 
-import Data.Vector qualified as Vector
 import Data.Vector (Vector)
+import Data.Vector qualified as Vector
 import Entity (Entity (..))
 import FlightTask (FlightTask)
+-- saveElevationPointStatement,
+
+import Geo (degreesLatitude, degreesLongitude, latitude, longitude)
+import GeoTiff.ElevationPoint (ElevationPoint (elevByte))
 import Hasql.Session (Session, statement)
 import Hasql.Transaction qualified as Transaction
 import Hasql.Transaction.Sessions (IsolationLevel (Serializable), Mode (Write), transaction)
 import NavPoint (NavPoint)
-import Persistence.Statement (
-  deleteDuplicateNavPointsStatement, 
-  getAllFlightTasksStatement, 
-  getFlightTaskStatement, 
-  getNavPointsStatement, 
-  -- saveElevationPointStatement, 
-  saveSingleElevationPointStatement,
-  checkImportedFileStatement,
-  saveImportedFileStatement,
-  saveFlightTaskStatement, 
-  saveFlightTaskTurnpointsStatement, 
-  saveNavPointsStatement )
-
+import Persistence.Statement
+  ( checkImportedFileStatement,
+    deleteDuplicateNavPointsStatement,
+    getAllFlightTasksStatement,
+    getFlightTaskStatement,
+    getNavPointsStatement,
+    saveFlightTaskStatement,
+    saveFlightTaskTurnpointsStatement,
+    saveImportedFileStatement,
+    saveNavPointsStatement,
+    saveSingleElevationPointStatement,
+  )
 import Relude
-import GeoTiff.ElevationPoint (ElevationPoint (elevByte))
-import Geo (latitude, longitude, degreesLongitude, degreesLatitude)
 
 getNavPointsSession :: Session (Vector NavPoint)
 getNavPointsSession =
@@ -36,7 +37,6 @@ deleteDuplicateNavPointsSession names =
 saveNavPointsSession :: Vector NavPoint -> Session Int64
 saveNavPointsSession nps =
   statement nps saveNavPointsStatement
-
 
 saveFlightTaskSession :: FlightTask -> Session Int64
 saveFlightTaskSession ft =
@@ -53,23 +53,20 @@ getFlightTaskSession taskId =
   statement taskId getFlightTaskStatement
 
 saveElevationPointsSession :: Text -> [Vector ElevationPoint] -> Session Int64
-saveElevationPointsSession fileName points = 
-  let 
-    -- saveGroup = flip Transaction.statement saveElevationPointStatement
-    savePoint = flip Transaction.statement saveSingleElevationPointStatement
+saveElevationPointsSession fileName points =
+  let -- saveGroup = flip Transaction.statement saveElevationPointStatement
+      savePoint = flip Transaction.statement saveSingleElevationPointStatement
 
-    pointToTuple :: ElevationPoint -> (Int16, Double, Double)
-    pointToTuple p = (p.elevByte, degreesLongitude $ longitude p, degreesLatitude $ latitude p)
+      pointToTuple :: ElevationPoint -> (Int16, Double, Double)
+      pointToTuple p = (p.elevByte, degreesLongitude $ longitude p, degreesLatitude $ latitude p)
+   in transaction Serializable Write $ do
+        existingFile <- Transaction.statement fileName checkImportedFileStatement
 
-  in 
-  transaction Serializable Write $ do
-    existingFile <- Transaction.statement fileName checkImportedFileStatement
+        case existingFile of
+          Nothing -> do
+            pts <- traverse (savePoint . pointToTuple) $ Vector.concat points
+            _ <- Transaction.statement fileName saveImportedFileStatement
 
-    case existingFile of
-      Nothing -> do
-        pts <- traverse (savePoint . pointToTuple) $ Vector.concat points
-        _ <- Transaction.statement fileName saveImportedFileStatement
-        
-        pure $ Vector.sum pts
-      Just _ ->
-        pure 0
+            pure $ Vector.sum pts
+          Just _ ->
+            pure 0

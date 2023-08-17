@@ -238,7 +238,8 @@ spec = do
             \B0722125201562N03940404EV0008700165500118\n\
             \B0722165201562N03940404EA0008700166066060\n\
             \B0722205201562N03940404EA0008700167000046\n\
-            \B0722245201562N03940404EA0008700168000048"::Text
+            \B0722245201562N03940404EA0008700168000048" ::
+              Text
           -- Either Error FlightInfo
           result = parse flightInfoParserAll "" input
           flightTrack = left show result >>= buildFlightTrack ""

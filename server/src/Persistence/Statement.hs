@@ -24,12 +24,8 @@ import Geo (
 
 import Hasql.Statement (Statement, refineResult)
 import Hasql.TH (rowsAffectedStatement, singletonStatement, maybeStatement, vectorStatement)
-import Hasql.Decoders qualified as Decoders
-import Hasql.Encoders qualified as Encoders
 import NavPoint (NavPoint (NavPoint, name, code, country, elev, style, rwdir, rwlen, freq, desc))
-import GeoTiff.ElevationPoint (ElevationPoint (elevByte))
 import Relude
-import Fmt ((+|), (|+))
 
 newtype NavPointId = NavPointId Int32
 

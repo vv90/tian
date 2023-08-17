@@ -17,7 +17,6 @@ import FlightTask (FlightTask)
 import FlightTrack (FlightTrack (..))
 import FlightTrack.Parser (buildFlightTrack, flightInfoParserAll)
 import Geo (Elevation (..), Latitude, Longitude)
-import GeoTiff.Tiff (readElevations)
 import Hasql.Session qualified as Session
 import Map (MapTile)
 import NavPoint (NavPoint, name, navPointLinesParser)
@@ -313,7 +312,8 @@ demoTask = do
 elevationPoints :: [MapTile] -> Handler [Vector Int]
 elevationPoints tiles = do
   -- pts <- liftIO $ runExceptT $ readTiff "./demo/ASTGTMV003_N52E039_dem.tif" tiles
-  liftIO $ readElevations tiles
+  -- liftIO $ readElevations tiles
+  pure []
 
 -- case pts of
 --     Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }

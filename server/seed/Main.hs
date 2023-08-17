@@ -1,13 +1,13 @@
 module Main where
 
 import Relude
-import Seed.Utils (seedPointNemo)
+import Seed.Utils (seed)
 
 main :: IO ()
 main = do
   putStrLn "seeding data..."
 
-  runExceptT seedPointNemo >>= \case
+  runExceptT seed >>= \case
     Left err -> print $ "error: " <> err
     Right _ -> putStrLn "seeding successful"
 

@@ -1,10 +1,10 @@
 version: "3.8"
 
-services: 
-  db: 
+services:
+  db:
     image: postgres:13.4-alpine3.14
     restart: always
-    ports: 
+    ports:
       - "5433:5432"
     environment:
       POSTGRES_USER: admin
@@ -14,21 +14,20 @@ services:
       # Scripts only run if data directory is empty (from official docs)
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
 
-  server: 
-    image: ghcr.io/vv90/contest-viewer-server:master
+  server:
+    image: ghcr.io/vv90/marauders-radar-server:main
+    platform: linux/x86_64
     environment:
       - DB_HOST=db
       - DB_PORT=5432
       - DB_USER=admin
       - DB_PASS=admin
       - DB_NAME=cvdb
-    ports: 
-      - "8081:8081"
-    volumes: 
-      - ./server/demo:/app/demo
-    
-
-  client:
-    image: ghcr.io/vv90/contest-viewer-client:master
     ports:
-      - "80:80"
+      - "8081:8081"
+    volumes:
+      - ./server/demo:/app/demo
+  # client:
+  #   image: ghcr.io/vv90/contest-viewer-client:main
+  #   ports:
+  #     - "80:80"

@@ -8,11 +8,28 @@ import Data.Vector (Vector)
 import Data.Vector as V (foldl, fromList, indexed)
 import Entity (Entity (..))
 import FlightTask (FlightTask (..), TaskFinish (..), TaskStart (..), Turnpoint (..))
-import Geo (Direction (..), Distance (..), Elevation (..), Latitude (..), Longitude (..), degreesDirection, degreesLatitude, degreesLongitude, metersDistance, metersElevation)
+import Geo (
+  Direction (..),
+  Distance (..),
+  Elevation (..),
+  Latitude (..),
+  Longitude (..),
+  degreesDirection,
+  degreesLatitude,
+  degreesLongitude,
+  metersDistance,
+  metersElevation,
+  latitude,
+  longitude )
+
 import Hasql.Statement (Statement, refineResult)
-import Hasql.TH (rowsAffectedStatement, singletonStatement, vectorStatement)
-import NavPoint (NavPoint (..))
+import Hasql.TH (rowsAffectedStatement, singletonStatement, maybeStatement, vectorStatement)
+import Hasql.Decoders qualified as Decoders
+import Hasql.Encoders qualified as Encoders
+import NavPoint (NavPoint (NavPoint, name, code, country, elev, style, rwdir, rwlen, freq, desc))
+import GeoTiff.ElevationPoint (ElevationPoint (elevByte))
 import Relude
+import Fmt ((+|), (|+))
 
 newtype NavPointId = NavPointId Int32
 
@@ -94,8 +111,8 @@ saveNavPointsStatement =
       let names = toText . name <$> nps
           codes = toText . code <$> nps
           countries = fmap toText . country <$> nps
-          latitudes = degreesLatitude . lat <$> nps
-          longitudes = degreesLongitude . lon <$> nps
+          latitudes = degreesLatitude . latitude <$> nps
+          longitudes = degreesLongitude . longitude <$> nps
           elevations = metersElevation . elev <$> nps
           styles = (show @Text) . style <$> nps
           rwdirs = fmap degreesDirection . rwdir <$> nps
@@ -104,11 +121,57 @@ saveNavPointsStatement =
           descs = toText . desc <$> nps
        in (names, codes, countries, latitudes, longitudes, elevations, styles, rwdirs, rwlens, freqs, descs)
 
-saveElevationPointsStatement :: Statement (Int32, Double, Double) Int64
-saveElevationPointsStatement =
+saveSingleElevationPointStatement :: Statement (Int16, Double, Double) Int64
+saveSingleElevationPointStatement =
   [rowsAffectedStatement|
-    insert into elevations (elevation, location) values ($1 :: int4, ST_GeogFromText('SRID=4326;POINT(' || $2 :: float8 || ' ' || $3 :: float8 || ')'))
+    insert into elevations (elevation, location) values ($1 :: int2, ST_GeogFromText('SRID=4326;POINT(' || $2 :: float8 || ' ' || $3 :: float8 || ')'))
   |]
+
+-- saveElevationPointStatement :: Statement (Vector ElevationPoint) Int64
+-- saveElevationPointStatement = 
+--   lmap 
+--     nest
+--     [rowsAffectedStatement| 
+--       insert into elevations (elevation, location)
+--       select * from unnest ($1 :: int2[], ST_GeogFromText(' || $2 :: float8[] || '))
+--     |]
+--   where 
+--     -- sql = 
+--     --   "insert into elevations (elevation, location)
+--     --     select * from unnest ($1 :: int2[], 'SRID=4326;POINT($2 :: float8[], $3 :: float8[])')
+--     --   "
+--     -- showLon :: ElevationPoint -> Text
+--     -- showLon = show . degreesLongitude . longitude
+
+--     -- showLat :: ElevationPoint -> Text
+--     -- showLat = show . degreesLatitude . latitude
+
+--     nest eps = 
+--       let elevs = elevByte <$> eps
+--           lons = degreesLongitude . longitude <$> eps
+--           lats = degreesLatitude . latitude <$> eps 
+
+--           pts :: Vector Text
+--           pts = (\x -> "SRID=4326;POINT(" +| x.lon |+ " " +| x.lat |+ ")") <$> eps  --'SRID=4326;POINT(' || $2 :: float8[] || ' ' || $3 :: float8[] || ')'
+--       in (elevs, lons)
+
+checkImportedFileStatement :: Statement Text (Maybe Text)
+checkImportedFileStatement =
+  [maybeStatement|
+    select id :: text from imported_files where id = ($1 :: text)
+  |] 
+
+saveImportedFileStatement :: Statement Text Int64
+saveImportedFileStatement =
+  [rowsAffectedStatement|
+    insert into imported_files (id) values ($1 :: text)
+  |]
+
+-- saveElevationPointsStatement :: Statement (Int32, Double, Double) Int64
+-- saveElevationPointsStatement =
+--   [rowsAffectedStatement|
+--     insert into elevations (elevation, location) values ($1 :: int4, ST_GeogFromText('SRID=4326;POINT(' || $2 :: float8 || ' ' || $3 :: float8 || ')'))
+--   |]
 
 encodeStartType :: TaskStart -> Text
 encodeStartType = \case

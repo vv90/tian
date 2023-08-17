@@ -115,7 +115,7 @@ dependencies:
 - monad-logger
 # for efficient strings
 - text
-# for composing strings
+# for formatting strings
 - fmt
 # for UTCTime
 - time

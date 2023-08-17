@@ -310,7 +310,7 @@ demoTask = do
     Right (Entity _ ft, nm) -> pure (ft, nm)
 
 elevationPoints :: [MapTile] -> Handler [Vector Int]
-elevationPoints tiles = do
+elevationPoints _tiles = do
   -- pts <- liftIO $ runExceptT $ readTiff "./demo/ASTGTMV003_N52E039_dem.tif" tiles
   -- liftIO $ readElevations tiles
   pure []

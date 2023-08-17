@@ -5,16 +5,15 @@ import Control.Monad.Except (liftEither)
 import Data.Binary.Get (Get, getDoublebe, getDoublele, getWord16be, getWord16le, getWord32be, getWord32le, getWord8, runGetOrFail)
 import Data.Binary.Put (Put, putWord16be, putWord16le, runPut)
 import Data.ByteString.Lazy qualified as LBS
-import Data.Vector (Vector, (!), (!?), (//))
+import Data.Vector (Vector, (!), (!?))
 import Data.Vector qualified as Vector
 import GHC.ByteOrder (ByteOrder (..))
-import GHC.IO (bracket)
 import GHC.IO.Handle (hSeek)
 import Geo (Latitude (..), Longitude (..))
 import GeoTiff.LZW (decodeLZW)
-import Map (MapTile (..), tileCoords, toMercatorWeb)
+import Map (toMercatorWeb)
 import Relude
-import System.IO (SeekMode (AbsoluteSeek), hClose, hPrint, hPutStrLn, hTell, openBinaryFile, withBinaryFile)
+import System.IO (SeekMode (AbsoluteSeek), hPutStrLn, hTell, openBinaryFile, withBinaryFile)
 import GeoTiff.ElevationPoint (ElevationPoint (ElevationPoint))
 
 data DataType
@@ -379,8 +378,8 @@ readTiffElevationData filePath =
         ImageHeight imageHeight = config.imageHeight
         TileWidth tileWidth = config.tileWidth
         TileHeight tileHeight = config.tileHeight
-        ModelTiePoint tiePoint@(px, py, _pz, mLon, mLat, _mz) = config.modelTiePoint 
-        ModelPixelScale pixelScale@(xScale, yScale, _zScale) = config.modelPixelScale
+        ModelTiePoint _tiePoint@(_px, _py, _pz, mLon, mLat, _mz) = config.modelTiePoint 
+        ModelPixelScale _pixelScale@(xScale, yScale, _zScale) = config.modelPixelScale
 
         -- width of the image in tiles (rounded up to cover the whole image)
         tilesCountRow :: Int

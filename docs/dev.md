@@ -5,7 +5,7 @@ cd backend &&
   stack clean &&
   stack build --fast --pedantic --test &&
   stack run codegen &&
-  cd ../frontend &&
+  cd ../client &&
   npm run precommit-fix &&
   cd ..
 ```

@@ -15,7 +15,7 @@ services:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   server:
-    image: ghcr.io/vv90/marauders-radar-server:main
+    image: ghcr.io/vv90/tian-server:main
     platform: linux/x86_64
     environment:
       - DB_HOST=db
@@ -27,7 +27,7 @@ services:
       - "8081:8081"
     volumes:
       - ./server/demo:/app/demo
-  # client:
-  #   image: ghcr.io/vv90/contest-viewer-client:main
-  #   ports:
-  #     - "80:80"
+  client:
+    image: ghcr.io/vv90/tian-client:main
+    ports:
+      - "80:80"

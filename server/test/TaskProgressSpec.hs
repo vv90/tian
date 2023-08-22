@@ -101,7 +101,7 @@ spec = do
               (Geodetic.s84Pos 0 0.0001)
 
           intersection =
-            GreatCircle.intersection <$> line1 <*> line2 >>= id
+            join (GreatCircle.intersection <$> line1 <*> line2)
 
       Geodetic.decimalLatitude <$> intersection `shouldBe` Just 0
       Geodetic.decimalLongitude <$> intersection `shouldBe` Just 0
@@ -135,7 +135,7 @@ spec = do
             TrackPoint
               { time = 0,
                 lat = LatitudeDegrees 0,
-                lon = LongitudeDegrees (0.0001),
+                lon = LongitudeDegrees 0.0001,
                 fixValidity = Gps3D,
                 altitudeBaro = ElevationMeters 1000,
                 altitudeGps = ElevationMeters 1000
@@ -212,7 +212,7 @@ spec = do
             TrackPoint
               { time = 3,
                 lat = LatitudeDegrees 0,
-                lon = LongitudeDegrees (0.0001),
+                lon = LongitudeDegrees 0.0001,
                 fixValidity = Gps3D,
                 altitudeBaro = ElevationMeters 1000,
                 altitudeGps = ElevationMeters 1000

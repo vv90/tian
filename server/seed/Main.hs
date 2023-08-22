@@ -11,4 +11,4 @@ main = do
     Left err -> print $ "error: " <> err
     Right _ -> putStrLn "seeding successful"
 
-  pure ()
+  pass

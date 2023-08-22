@@ -51,7 +51,7 @@ spec = do
       within 1e-5 504 . metersElevation . elev <$> result `shouldBe` Right True
       style <$> result `shouldBe` Right AirfieldSolid
       fmap degreesDirection . rwdir <$> result `shouldBe` Right (Just 144)
-      fmap (within 1e-5 1130 . metersDistance) . rwlen <$> result `shouldBe` Right (Just $ True)
+      fmap (within 1e-5 1130 . metersDistance) . rwlen <$> result `shouldBe` Right (Just True)
       freq <$> result `shouldBe` Right (Just "123.500")
       desc <$> result `shouldBe` Right "Home Airfield"
 

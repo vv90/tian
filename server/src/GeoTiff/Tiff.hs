@@ -100,7 +100,13 @@ newtype TileByteCounts = TileByteCounts (Vector Integer) -- 325
 data SampleFormat = UnsignedInteger | SignedInteger -- 339
   deriving stock (Show)
 
-type PixelScale = (Double, Double, Double)
+type ScaleX = Double
+
+type ScaleY = Double
+
+type ScaleZ = Double
+
+type PixelScale = (ScaleX, ScaleY, ScaleZ)
 
 -- This tag may be used to specify the size of raster pixel spacing in the model space units,
 -- when the raster space can be embedded in the model space coordinate system without rotation, and consists of the following 3 values:
@@ -110,7 +116,19 @@ type PixelScale = (Double, Double, Double)
 newtype ModelPixelScale = ModelPixelScale PixelScale -- 33550
   deriving stock (Show)
 
-type TiePoint = (Double, Double, Double, Double, Double, Double)
+type RasterX = Double
+
+type RasterY = Double
+
+type RasterZ = Double
+
+type ModelX = Double
+
+type ModelY = Double
+
+type ModelZ = Double
+
+type TiePoint = (RasterX, RasterY, RasterZ, ModelX, ModelY, ModelZ)
 
 -- This tag stores raster->model tiepoint pairs in the order
 -- ModelTiepointTag = (...,I,J,K, X,Y,Z...)
@@ -356,10 +374,7 @@ readConfig bo h =
 readTileElevations :: ByteOrder -> Handle -> (Integer, Integer) -> ExceptT String IO (Vector Word16)
 readTileElevations byteOrder h (offset, len) = do
   liftIO $ hSeek h AbsoluteSeek offset
-
-  r <- readWord8Many (fromIntegral len) h >>= decodeLZW byteOrder
-
-  pure r
+  readWord8Many (fromIntegral len) h >>= decodeLZW byteOrder
 
 readTiffElevationData :: FilePath -> ExceptT String IO [Vector ElevationPoint]
 readTiffElevationData filePath =
@@ -889,7 +904,7 @@ decodeDouble bo =
 
 readDouble :: ByteOrder -> Handle -> ExceptT String IO Double
 readDouble bo h =
-  ExceptT $ runGetOrError (decodeDouble bo) <$> LBS.hGet h (8)
+  ExceptT $ runGetOrError (decodeDouble bo) <$> LBS.hGet h 8
 
 readDoubleMany :: Int -> ByteOrder -> Handle -> ExceptT String IO [Double]
 readDoubleMany count bo h =

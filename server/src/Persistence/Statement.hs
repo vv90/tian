@@ -163,12 +163,6 @@ saveImportedFileStatement =
     insert into imported_files (id) values ($1 :: text)
   |]
 
--- saveElevationPointsStatement :: Statement (Int32, Double, Double) Int64
--- saveElevationPointsStatement =
---   [rowsAffectedStatement|
---     insert into elevations (elevation, location) values ($1 :: int4, ST_GeogFromText('SRID=4326;POINT(' || $2 :: float8 || ' ' || $3 :: float8 || ')'))
---   |]
-
 encodeStartType :: TaskStart -> Text
 encodeStartType = \case
   StartLine _ -> "StartLine"

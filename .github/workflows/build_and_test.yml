@@ -86,7 +86,7 @@ jobs:
         id: meta-server
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.REGISTRY }}/vv90/marauders-radar-server
+          images: ${{ env.REGISTRY }}/vv90/tian-server
           tags: ${{ env.TAGS }}
       
       - name: Build and push Docker image (backend)
@@ -105,7 +105,7 @@ jobs:
         id: meta-client
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.REGISTRY }}/vv90/marauders-radar-client
+          images: ${{ env.REGISTRY }}/vv90/tian-client
           tags: ${{ env.TAGS }}
 
       - name: Build and push Docker image (client)

@@ -49,6 +49,10 @@ CREATE TABLE IF NOT EXISTS track_points (
 );
 
 CREATE TABLE IF NOT EXISTS elevations (
-  "elevation" int not null,
+  "elevation" smallint not null,
   "location" geography(Point, 4326) not null
-)
+);
+
+CREATE TABLE IF NOT EXISTS imported_files (
+  "id" text not null primary key
+);

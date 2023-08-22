@@ -11,8 +11,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-
       - name: Telegram Notify
         uses: appleboy/telegram-action@master
         with: 
@@ -21,4 +19,4 @@ jobs:
           format: markdown
           message: | 
             🚀 *${{ github.event.pull_request.title }}*, ${{github.actor}}
-            https://github.com/vv90/marauders-radar/pull/${{ github.event.number }}
+            https://github.com/vv90/tian/pull/${{ github.event.number }}

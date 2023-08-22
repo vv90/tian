@@ -47,9 +47,7 @@ distanceToTarget np tp =
 
 targetNavPoint :: (NavPoint, TaskFinish) -> [(NavPoint, Turnpoint)] -> NavPoint
 targetNavPoint finish tps =
-  fromMaybe
-    (fst finish)
-    (fst <$> viaNonEmpty head tps)
+  maybe (fst finish) fst (viaNonEmpty head tps)
 
 -- for debugging
 taskStartLine :: FlightTask -> ((Latitude, Longitude), (Latitude, Longitude))

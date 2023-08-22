@@ -136,7 +136,7 @@ mergeSourcesOn f sources =
           (liftIO $ traverse (forkIO . uncurry feedSinkQueue) qs) -- fork a thread for each conduit to feed it's queue
           (liftIO . traverse_ killThread) -- kill the threads when the conduit is done
           ( \_tids -> do
-              qs' <- catMaybes <$> traverse readQ (fst <$> qs) -- read the first value from each queue
+              qs' <- catMaybes <$> traverse (readQ . fst) qs -- read the first value from each queue
               consumeQueues qs'
           )
 
@@ -187,10 +187,36 @@ testDemoConduit =
         runConduitRes
           $
           --     -- demoC "./demo/"
+          --     -- demoC "./demo/"
+          --     -- demoC "./demo/"
+          --     -- demoC "./demo/"
+          --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
+          --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
+          --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
+          --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
+          --     -- .| printC
+          --     -- .| printC
+          --     -- .| printC
+          --     -- .| printC
+          -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
+          -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
+          -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
+          -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
+
+          --     -- demoC "./demo/"
+          --     -- demoC "./demo/"
+          --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
+          --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
+          --     -- .| printC
+          --     -- .| printC
+          -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
+          -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
+
+          --     -- demoC "./demo/"
           --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
           --     -- .| printC
           -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
-          mergeSourcesOn (\m -> m.time) sources
+          mergeSourcesOn (.time) sources
           -- .| playbackC 10
           .| mapC (\x -> (x.source, x.time))
           .| printC

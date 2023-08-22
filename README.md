@@ -13,6 +13,9 @@
 - Haskell compiler and toolkit:
   - [GHCup](https://www.haskell.org/ghcup/) (already includes `ghc`, `HLS`, `cabal` and `stack`).
   - Agree to enable `better integration of stack with GHCup` when prompted.
+  - `cabal install hlint`
+  - `cabal install apply-refact`
+  - `cabal install ormolu`
 - libpq (PostgreSQL client library)
   - On **Mac**:
     - `brew install libpq`
@@ -39,6 +42,12 @@ npm start
 cd server
 stack build
 stack run server-exe
+```
+
+### Before commit
+
+```sh
+bash precommit-fix.sh
 ```
 
 ## Useful links

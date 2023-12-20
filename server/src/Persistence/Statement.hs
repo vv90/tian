@@ -24,9 +24,9 @@ import Geo
   )
 import Hasql.Statement (Statement, refineResult)
 import Hasql.TH (maybeStatement, rowsAffectedStatement, singletonStatement, vectorStatement)
+import Map (GeoPoint)
 import NavPoint (NavPoint (NavPoint, code, country, desc, elev, freq, name, rwdir, rwlen, style))
 import Relude
-import Map (GeoPoint)
 
 newtype NavPointId = NavPointId Int32
 
@@ -118,15 +118,15 @@ saveNavPointsStatement =
           descs = toText . desc <$> nps
        in (names, codes, countries, latitudes, longitudes, elevations, styles, rwdirs, rwlens, freqs, descs)
 
-data ElevationPointQuery = ElevationPointQuery 
-  { from :: GeoPoint 
-  , to :: GeoPoint
-  , step :: (Latitude, Longitude)
+data ElevationPointQuery = ElevationPointQuery
+  { from :: GeoPoint,
+    to :: GeoPoint,
+    step :: (Latitude, Longitude)
   }
 
 getElevationPointsStatement :: Statement ElevationPointQuery (Vector (Double, Double, Double))
 getElevationPointsStatement =
-  lmap 
+  lmap
     ( \(ElevationPointQuery {from, to, step}) ->
         ( degreesLongitude . snd $ from,
           degreesLongitude . snd $ to,
@@ -136,7 +136,7 @@ getElevationPointsStatement =
           degreesLatitude . fst $ step
         )
     )
-  [vectorStatement|
+    [vectorStatement|
     WITH points AS (
       SELECT lon::float8, lat::float8
       FROM generate_series($1 :: float8, $2 :: float8, $3 :: float8) AS lon,

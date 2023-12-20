@@ -13,18 +13,18 @@ import Hasql.Transaction qualified as Transaction
 import Hasql.Transaction.Sessions (IsolationLevel (Serializable), Mode (Write), transaction)
 import NavPoint (NavPoint)
 import Persistence.Statement
-  ( checkImportedFileStatement,
+  ( ElevationPointQuery,
+    checkImportedFileStatement,
     deleteDuplicateNavPointsStatement,
     getAllFlightTasksStatement,
+    getElevationPointsStatement,
     getFlightTaskStatement,
     getNavPointsStatement,
     saveFlightTaskStatement,
     saveFlightTaskTurnpointsStatement,
     saveImportedFileStatement,
     saveNavPointsStatement,
-    saveSingleElevationPointStatement, 
-    ElevationPointQuery, 
-    getElevationPointsStatement,
+    saveSingleElevationPointStatement,
   )
 import Relude
 

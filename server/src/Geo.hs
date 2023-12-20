@@ -36,7 +36,7 @@ instance Num Latitude where
 instance Fractional Latitude where
   (/) :: Latitude -> Latitude -> Latitude
   (LatitudeDegrees x) / (LatitudeDegrees y) = LatitudeDegrees (x / y)
-  
+
   fromRational :: Rational -> Latitude
   fromRational x = LatitudeDegrees (fromRational x)
 
@@ -67,7 +67,7 @@ instance Num Longitude where
 instance Fractional Longitude where
   (/) :: Longitude -> Longitude -> Longitude
   (LongitudeDegrees x) / (LongitudeDegrees y) = LongitudeDegrees (x / y)
-  
+
   fromRational :: Rational -> Longitude
   fromRational x = LongitudeDegrees (fromRational x)
 

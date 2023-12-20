@@ -22,7 +22,8 @@ import Map (GeoPoint)
 import NavPoint (NavPoint, name, navPointLinesParser)
 import Network.Wai.Handler.Warp (Port, run)
 import Persistence.Connection (getConnection)
-import Persistence.Session (deleteDuplicateNavPointsSession, getAllFlightTasksSession, getFlightTaskSession, getNavPointsSession, saveFlightTaskSession, saveNavPointsSession, getElevationPointsSession)
+import Persistence.Session (deleteDuplicateNavPointsSession, getAllFlightTasksSession, getElevationPointsSession, getFlightTaskSession, getNavPointsSession, saveFlightTaskSession, saveNavPointsSession)
+import Persistence.Statement (ElevationPointQuery (..))
 import ProgressPoint (ProgressPointDto)
 import Relude
 import Servant
@@ -32,7 +33,6 @@ import TaskProgress (TaskProgressDto, toDto)
 import TaskProgressUtils (progress, taskStartLine)
 import Text.Parsec (Parsec, parse)
 import TrackPoint (FixValidity (..), TrackPoint (..))
-import Persistence.Statement (ElevationPointQuery (..))
 
 data LibError
   = ConnectionError Text
@@ -123,7 +123,7 @@ getElevationPoints :: [ElevationPointQuery] -> ExceptT LibError IO [Vector (Doub
 getElevationPoints query = do
   conn <- withExceptT ConnectionError getConnection
   withExceptT QueryError . ExceptT $ Session.run (traverse getElevationPointsSession query) conn
-  
+
 navPoints :: Handler (Vector NavPoint)
 navPoints = do
   result <- liftIO $ runExceptT getNavPoints
@@ -315,28 +315,26 @@ demoTask = do
     Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
     Right (Entity _ ft, nm) -> pure (ft, nm)
 
-
-
 elevationPoints :: [(GeoPoint, GeoPoint)] -> Handler [Vector (Double, Double, Double)]
-elevationPoints tiles = 
-  let query = 
-        fmap 
-          (\(from, to) -> 
-            ElevationPointQuery { 
-              from = from, 
-              to = to, 
-              step = ((fst to - fst from) / 10, (snd to - snd to) / 10) 
-            }
-          ) 
+elevationPoints tiles =
+  let query =
+        fmap
+          ( \(from, to) ->
+              ElevationPointQuery
+                { from = from,
+                  to = to,
+                  step = ((fst to - fst from) / 10, (snd to - snd to) / 10)
+                }
+          )
           tiles
-  in do
-  -- pts <- liftIO $ runExceptT $ readTiff "./demo/ASTGTMV003_N52E039_dem.tif" tiles
-  -- liftIO $ readElevations tiles
-  
-  res <- liftIO $ runExceptT $ getElevationPoints query 
-  case res of
-    Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
-    Right x -> pure x
+   in do
+        -- pts <- liftIO $ runExceptT $ readTiff "./demo/ASTGTMV003_N52E039_dem.tif" tiles
+        -- liftIO $ readElevations tiles
+
+        res <- liftIO $ runExceptT $ getElevationPoints query
+        case res of
+          Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
+          Right x -> pure x
 
 -- case pts of
 --     Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }

@@ -58,3 +58,11 @@ bash precommit-fix.sh
 - [Elm-ui community cookbook](https://github.com/rofrol/elm-ui-cookbook)
 - [Haskell] (https://www.haskell.org/documentation/)
 - [Haskell wiki](https://wiki.haskell.org/Haskell)
+
+## Preparing the data
+
+Import digital elevation map
+
+```sh
+raster2pgsql -s 4326 -I -C -M -F -t 100x100 ASTGTMV003_N45E005_dem.tif | psql -h localhost -d cvdb -p 5433 -U admin
+```

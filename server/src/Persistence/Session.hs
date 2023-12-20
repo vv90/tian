@@ -22,7 +22,9 @@ import Persistence.Statement
     saveFlightTaskTurnpointsStatement,
     saveImportedFileStatement,
     saveNavPointsStatement,
-    saveSingleElevationPointStatement,
+    saveSingleElevationPointStatement, 
+    ElevationPointQuery, 
+    getElevationPointsStatement,
   )
 import Relude
 
@@ -70,3 +72,7 @@ saveElevationPointsSession fileName points =
             pure $ Vector.sum pts
           Just _ ->
             pure 0
+
+getElevationPointsSession :: ElevationPointQuery -> Session (Vector (Double, Double, Double))
+getElevationPointsSession query =
+  statement query getElevationPointsStatement

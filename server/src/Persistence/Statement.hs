@@ -26,6 +26,7 @@ import Hasql.Statement (Statement, refineResult)
 import Hasql.TH (maybeStatement, rowsAffectedStatement, singletonStatement, vectorStatement)
 import NavPoint (NavPoint (NavPoint, code, country, desc, elev, freq, name, rwdir, rwlen, style))
 import Relude
+import Map (GeoPoint)
 
 newtype NavPointId = NavPointId Int32
 
@@ -116,6 +117,35 @@ saveNavPointsStatement =
           freqs = fmap toText . freq <$> nps
           descs = toText . desc <$> nps
        in (names, codes, countries, latitudes, longitudes, elevations, styles, rwdirs, rwlens, freqs, descs)
+
+data ElevationPointQuery = ElevationPointQuery 
+  { from :: GeoPoint 
+  , to :: GeoPoint
+  , step :: (Latitude, Longitude)
+  }
+
+getElevationPointsStatement :: Statement ElevationPointQuery (Vector (Double, Double, Double))
+getElevationPointsStatement =
+  lmap 
+    ( \(ElevationPointQuery {from, to, step}) ->
+        ( degreesLongitude . snd $ from,
+          degreesLongitude . snd $ to,
+          degreesLongitude . snd $ step,
+          degreesLatitude . fst $ from,
+          degreesLatitude . fst $ to,
+          degreesLatitude . fst $ step
+        )
+    )
+  [vectorStatement|
+    WITH points AS (
+      SELECT lon::float8, lat::float8
+      FROM generate_series($1 :: float8, $2 :: float8, $3 :: float8) AS lon,
+        generate_series($4 :: float8, $5 :: float8, $6 :: float8) AS lat
+    )
+    SELECT ST_X(geom)::float8, ST_Y(geom)::float8, ST_Value(rast, geom)::float8
+    FROM astgtmv003_n45e005_dem, points
+    WHERE ST_Intersects(rast, geom) 
+  |]
 
 saveSingleElevationPointStatement :: Statement (Int16, Double, Double) Int64
 saveSingleElevationPointStatement =

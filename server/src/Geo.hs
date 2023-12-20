@@ -19,6 +19,27 @@ newtype Latitude = LatitudeDegrees Double
 degreesLatitude :: Latitude -> Double
 degreesLatitude (LatitudeDegrees x) = x
 
+instance Num Latitude where
+  (+) :: Latitude -> Latitude -> Latitude
+  (LatitudeDegrees x) + (LatitudeDegrees y) = LatitudeDegrees (x + y)
+  (-) :: Latitude -> Latitude -> Latitude
+  (LatitudeDegrees x) - (LatitudeDegrees y) = LatitudeDegrees (x - y)
+  (*) :: Latitude -> Latitude -> Latitude
+  (LatitudeDegrees x) * (LatitudeDegrees y) = LatitudeDegrees (x * y)
+  abs :: Latitude -> Latitude
+  abs (LatitudeDegrees x) = LatitudeDegrees (abs x)
+  signum :: Latitude -> Latitude
+  signum (LatitudeDegrees x) = LatitudeDegrees (signum x)
+  fromInteger :: Integer -> Latitude
+  fromInteger x = LatitudeDegrees (fromInteger x)
+
+instance Fractional Latitude where
+  (/) :: Latitude -> Latitude -> Latitude
+  (LatitudeDegrees x) / (LatitudeDegrees y) = LatitudeDegrees (x / y)
+  
+  fromRational :: Rational -> Latitude
+  fromRational x = LatitudeDegrees (fromRational x)
+
 newtype Longitude = LongitudeDegrees Double
   deriving stock (Show, Read, Eq, Generic)
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
@@ -28,6 +49,27 @@ newtype Longitude = LongitudeDegrees Double
 
 degreesLongitude :: Longitude -> Double
 degreesLongitude (LongitudeDegrees x) = x
+
+instance Num Longitude where
+  (+) :: Longitude -> Longitude -> Longitude
+  (LongitudeDegrees x) + (LongitudeDegrees y) = LongitudeDegrees (x + y)
+  (-) :: Longitude -> Longitude -> Longitude
+  (LongitudeDegrees x) - (LongitudeDegrees y) = LongitudeDegrees (x - y)
+  (*) :: Longitude -> Longitude -> Longitude
+  (LongitudeDegrees x) * (LongitudeDegrees y) = LongitudeDegrees (x * y)
+  abs :: Longitude -> Longitude
+  abs (LongitudeDegrees x) = LongitudeDegrees (abs x)
+  signum :: Longitude -> Longitude
+  signum (LongitudeDegrees x) = LongitudeDegrees (signum x)
+  fromInteger :: Integer -> Longitude
+  fromInteger x = LongitudeDegrees (fromInteger x)
+
+instance Fractional Longitude where
+  (/) :: Longitude -> Longitude -> Longitude
+  (LongitudeDegrees x) / (LongitudeDegrees y) = LongitudeDegrees (x / y)
+  
+  fromRational :: Rational -> Longitude
+  fromRational x = LongitudeDegrees (fromRational x)
 
 newtype Elevation = ElevationMeters Double
   deriving stock (Show, Read, Eq, Generic)

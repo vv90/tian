@@ -13,9 +13,11 @@ import Hasql.Transaction qualified as Transaction
 import Hasql.Transaction.Sessions (IsolationLevel (Serializable), Mode (Write), transaction)
 import NavPoint (NavPoint)
 import Persistence.Statement
-  ( checkImportedFileStatement,
+  ( ElevationPointQuery,
+    checkImportedFileStatement,
     deleteDuplicateNavPointsStatement,
     getAllFlightTasksStatement,
+    getElevationPointsStatement,
     getFlightTaskStatement,
     getNavPointsStatement,
     saveFlightTaskStatement,
@@ -70,3 +72,7 @@ saveElevationPointsSession fileName points =
             pure $ Vector.sum pts
           Just _ ->
             pure 0
+
+getElevationPointsSession :: ElevationPointQuery -> Session (Vector (Double, Double, Double))
+getElevationPointsSession query =
+  statement query getElevationPointsStatement

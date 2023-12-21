@@ -22,7 +22,7 @@ import Html.Events exposing (on)
 import Json.Decode as D
 import Length exposing (Length, Meters)
 import List.Extra as ListX
-import Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, PlaneCoords(..), ViewInfo, WorldCoords, fromMercatorPoint, getMercatorUnit, makeTiles, mercatorFrame, mercatorRate, tileMesh, toMercatorPoint)
+import Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, PlaneCoords(..), WorldCoords, fromMercatorPoint, getMercatorUnit, makeTiles, mercatorFrame, mercatorRate, tileMesh, toMercatorPoint)
 import MapUtils exposing (TileKey, ZoomLevel(..), earthCircumference, tileKeyToUrl, tileLength, toMercatorWeb, zoomInt, zoomLevel)
 import Maybe.Extra as MaybeX
 import Pixels exposing (Pixels)
@@ -57,10 +57,10 @@ type DragState
 
 
 type alias ViewArgs =
-    { focalPoint : Point3d Meters WorldCoords
-    , azimuth : Angle
-    , elevation : Angle
-    , distance : Quantity Float Meters
+    { focalPoint : Point3d Meters WorldCoords -- the center point we're looking at
+    , azimuth : Angle -- camera angle around the z axis
+    , elevation : Angle -- camera angle relative to xy plane
+    , distance : Quantity Float Meters -- camera distance from the focal point
     }
 
 

@@ -54,15 +54,6 @@ type Map3dItem
 --     []
 
 
-type alias ViewInfo =
-    { zoom : ZoomLevel
-    , center : GeoPoint
-    , azimuth : Float
-    , elevation : Float
-    , distance : Distance
-    }
-
-
 type MercatorUnit
     = MercatorUnit
 

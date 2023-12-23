@@ -44,7 +44,7 @@ mapItems model =
     let
         toMarker ( id, p ) =
             Marker
-                ( p.lat, p.lon )
+                { lat = p.lat, lon = p.lon }
                 (id ++ " " ++ (p.altitude |> metersElevation |> roundN 2 |> String.fromFloat) ++ "m")
 
         pointItems =
@@ -66,7 +66,7 @@ map3dItems model =
         pointItems =
             model.points
                 |> Dict.toList
-                |> List.map (\( id, p ) -> Map3dUtils.Marker id ( p.lat, p.lon ) p.altitude)
+                |> List.map (\( id, p ) -> Map3dUtils.Marker id { lat = p.lat, lon = p.lon } p.altitude)
 
         taskItems =
             model.demoData

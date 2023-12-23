@@ -11,13 +11,14 @@ import GeoTiff.ElevationPoint (ElevationPoint (elevByte))
 import Hasql.Session (Session, statement)
 import Hasql.Transaction qualified as Transaction
 import Hasql.Transaction.Sessions (IsolationLevel (Serializable), Mode (Write), transaction)
+import Map (GeoPoint)
 import NavPoint (NavPoint)
 import Persistence.Statement
   ( ElevationPointQuery,
     checkImportedFileStatement,
     deleteDuplicateNavPointsStatement,
+    generateElevationPointsStatement,
     getAllFlightTasksStatement,
-    getElevationPointsStatement,
     getFlightTaskStatement,
     getNavPointsStatement,
     saveFlightTaskStatement,
@@ -73,6 +74,6 @@ saveElevationPointsSession fileName points =
           Just _ ->
             pure 0
 
-getElevationPointsSession :: ElevationPointQuery -> Session (Vector (Double, Double, Double))
-getElevationPointsSession query =
-  statement query getElevationPointsStatement
+generateElevationPointsSession :: ElevationPointQuery -> Session (Vector (GeoPoint, Double))
+generateElevationPointsSession query =
+  statement query generateElevationPointsStatement

@@ -1,20 +1,16 @@
 module Common.ApiCommands exposing (..)
 
-import Api.Map exposing (Tile, tileEncoder)
+import Api.Map exposing (GeoPoint, geoPointDecoder, geoPointEncoder)
 import Common.ApiResult exposing (ApiResult)
+import Common.JsonCodecsExtra exposing (tupleDecoder, tupleEncoder)
 import Env exposing (apiUrl)
 import Http
 import Json.Decode as D
 import Json.Encode as E
-import MapUtils exposing (TileKey)
 
 
-loadElevationsCmd : (ApiResult (List (List Int)) -> msg) -> List TileKey -> Cmd msg
+loadElevationsCmd : (ApiResult (List (List ( GeoPoint, Float ))) -> msg) -> List ( GeoPoint, GeoPoint ) -> Cmd msg
 loadElevationsCmd onLoaded tiles =
-    let
-        asTile ( x, y, z ) =
-            Tile x y z
-    in
     case tiles of
         [] ->
             Cmd.none
@@ -22,6 +18,6 @@ loadElevationsCmd onLoaded tiles =
         _ ->
             Http.post
                 { url = apiUrl "elevationPoints"
-                , body = Http.jsonBody <| E.list tileEncoder (List.map asTile tiles)
-                , expect = Http.expectJson onLoaded <| D.list <| D.list D.int
+                , body = Http.jsonBody <| E.list (tupleEncoder ( geoPointEncoder, geoPointEncoder )) tiles
+                , expect = Http.expectJson onLoaded <| D.list <| D.list (tupleDecoder ( geoPointDecoder, D.float ))
                 }

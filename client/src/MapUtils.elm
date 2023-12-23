@@ -3,33 +3,16 @@ module MapUtils exposing (..)
 -- import Geo.GeoUtils exposing (..)
 
 import Api.Geo exposing (Distance(..), Latitude(..), Longitude(..))
-import Common.GeoUtils exposing (GeoPoint)
+import Api.Map exposing (GeoPoint)
+import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Dict exposing (Dict)
 import List.Extra as ListX
+import Point2d exposing (Point2d)
+import Tile exposing (TileKey, tileKeyToUrl, tileSize)
 
 
 
 -- import Nav.Units exposing (Meters(..))
-
-
-tileSize : Int
-tileSize =
-    256
-
-
-minZoom : Float
-minZoom =
-    0
-
-
-maxZoom : Float
-maxZoom =
-    19
-
-
-earthCircumference : Float
-earthCircumference =
-    40075016.686
 
 
 stringFromBool : Bool -> String
@@ -44,17 +27,6 @@ stringFromBool b =
 stringFromTuple : ( String, String ) -> String
 stringFromTuple ( fst, snd ) =
     "(" ++ fst ++ ", " ++ snd ++ ")"
-
-
-type alias TileKey =
-    ( Int, Int, Int )
-
-
-type alias Tile =
-    { x : Int
-    , y : Int
-    , zoom : ZoomLevel
-    }
 
 
 type MarkerType
@@ -96,15 +68,15 @@ type alias MapView =
 
 
 toMercatorWeb : GeoPoint -> ( Float, Float )
-toMercatorWeb ( LatitudeDegrees lat, LongitudeDegrees lon ) =
+toMercatorWeb { lat, lon } =
     let
         latRad =
             -- lat |> (\(LatDeg latVal) -> degToRad latVal) |> getRad
-            degrees lat
+            lat |> degreesLatitude |> degrees
 
         lonDeg =
             -- lon |> (\(LonDeg lonVal) -> getDeg lonVal)
-            lon
+            lon |> degreesLongitude
 
         sec x =
             1 / cos x
@@ -130,7 +102,7 @@ fromMercatorWeb ( x, y ) =
         latDeg =
             latRad * 180 / pi
     in
-    ( LatitudeDegrees latDeg, LongitudeDegrees lonDeg )
+    { lat = LatitudeDegrees latDeg, lon = LongitudeDegrees lonDeg }
 
 
 scaleOffset : ( Float, Float ) -> Float -> ( Float, Float ) -> ( Float, Float )
@@ -157,19 +129,6 @@ changeZoom scaleCoeffcitient mapView =
         | zoom = mapView.zoom + logBase 2 scaleCoeffcitient
         , offset = scaleOffset center scaleCoeffcitient mapView.offset
     }
-
-
-tileKeyToUrl : TileKey -> String
-tileKeyToUrl ( x, y, zoom ) =
-    String.concat
-        [ "http://a.tile.openstreetmap.org/"
-        , String.fromInt zoom
-        , "/"
-        , x |> String.fromInt
-        , "/"
-        , y |> String.fromInt
-        , ".png"
-        ]
 
 
 isPointInView : MapView -> ( Float, Float ) -> Bool
@@ -356,176 +315,6 @@ scaleCoords scaleCoeffcitient offset =
             x / scaleCoeffcitient
     in
     Tuple.mapBoth applyScale applyScale offset
-
-
-type ZoomLevel
-    = Z0
-    | Z1
-    | Z2
-    | Z3
-    | Z4
-    | Z5
-    | Z6
-    | Z7
-    | Z8
-    | Z9
-    | Z10
-    | Z11
-    | Z12
-    | Z13
-    | Z14
-    | Z15
-    | Z16
-    | Z17
-    | Z18
-    | Z19
-    | Z20
-
-
-zoomInt : ZoomLevel -> Int
-zoomInt zoom =
-    case zoom of
-        Z0 ->
-            0
-
-        Z1 ->
-            1
-
-        Z2 ->
-            2
-
-        Z3 ->
-            3
-
-        Z4 ->
-            4
-
-        Z5 ->
-            5
-
-        Z6 ->
-            6
-
-        Z7 ->
-            7
-
-        Z8 ->
-            8
-
-        Z9 ->
-            9
-
-        Z10 ->
-            10
-
-        Z11 ->
-            11
-
-        Z12 ->
-            12
-
-        Z13 ->
-            13
-
-        Z14 ->
-            14
-
-        Z15 ->
-            15
-
-        Z16 ->
-            16
-
-        Z17 ->
-            17
-
-        Z18 ->
-            18
-
-        Z19 ->
-            19
-
-        Z20 ->
-            20
-
-
-zoomLevel : Int -> ZoomLevel
-zoomLevel zoom =
-    case zoom of
-        0 ->
-            Z0
-
-        1 ->
-            Z1
-
-        2 ->
-            Z2
-
-        3 ->
-            Z3
-
-        4 ->
-            Z4
-
-        5 ->
-            Z5
-
-        6 ->
-            Z6
-
-        7 ->
-            Z7
-
-        8 ->
-            Z8
-
-        9 ->
-            Z9
-
-        10 ->
-            Z10
-
-        11 ->
-            Z11
-
-        12 ->
-            Z12
-
-        13 ->
-            Z13
-
-        14 ->
-            Z14
-
-        15 ->
-            Z15
-
-        16 ->
-            Z16
-
-        17 ->
-            Z17
-
-        18 ->
-            Z18
-
-        19 ->
-            Z19
-
-        20 ->
-            Z20
-
-        z ->
-            if z < 0 then
-                Z0
-
-            else
-                Z20
-
-
-tileLength : Latitude -> ZoomLevel -> Float
-tileLength (LatitudeDegrees lat) zoom =
-    earthCircumference * cos (degrees lat) / 2 ^ toFloat (zoomInt zoom)
 
 
 

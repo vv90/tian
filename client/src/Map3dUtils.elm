@@ -1,20 +1,22 @@
 module Map3dUtils exposing (..)
 
 import Api.Geo exposing (Distance(..), Elevation, Latitude(..), Longitude(..))
+import Api.Map exposing (GeoPoint)
 import Color exposing (Color)
-import Common.GeoUtils exposing (GeoPoint, metersDistance)
+import Common.GeoUtils exposing (metersDistance)
 import Dict exposing (Dict)
 import Direction3d
 import Frame2d exposing (Frame2d)
 import Length exposing (Length, Meters)
 import List.Extra as ListX
-import MapUtils exposing (Tile, TileKey, ZoomLevel(..), earthCircumference, fromMercatorWeb, metersPerPixel, tileLength, tileSize, toMercatorWeb, zoomInt, zoomLevel)
+import MapUtils exposing (fromMercatorWeb, metersPerPixel, toMercatorWeb)
 import Point2d exposing (Point2d)
 import Point3d exposing (Point3d)
 import Quantity exposing (Quantity(..), Rate)
 import Scene3d.Material exposing (Texture)
 import Scene3d.Mesh as Mesh exposing (Mesh)
 import SketchPlane3d exposing (SketchPlane3d)
+import Tile exposing (Tile, TileKey, ZoomLevel(..), tileLength, zoomInt)
 import TriangularMesh exposing (TriangularMesh)
 import Vector2d exposing (Vector2d)
 
@@ -120,6 +122,41 @@ fromMercatorPoint =
     Point2d.toTuple getMercatorUnit >> fromMercatorWeb
 
 
+tileOrigin : Tile -> Point2d MercatorUnit MercatorCoords
+tileOrigin tile =
+    let
+        numTiles =
+            2 ^ zoomInt tile.zoom
+
+        ( x, y ) =
+            ( toFloat tile.x / toFloat numTiles
+            , toFloat tile.y / toFloat numTiles
+            )
+    in
+    Point2d.xy (mercatorUnit x) (mercatorUnit y)
+
+
+tileRectangle : Tile -> ( Point2d MercatorUnit MercatorCoords, Point2d MercatorUnit MercatorCoords )
+tileRectangle tile =
+    let
+        numTiles =
+            2 ^ zoomInt tile.zoom
+
+        ( x0, y0 ) =
+            ( toFloat tile.x / toFloat numTiles
+            , toFloat tile.y / toFloat numTiles
+            )
+
+        ( x1, y1 ) =
+            ( toFloat (tile.x + 1) / toFloat numTiles
+            , toFloat (tile.y + 1) / toFloat numTiles
+            )
+    in
+    ( Point2d.xy (mercatorUnit x0) (mercatorUnit y0)
+    , Point2d.xy (mercatorUnit x1) (mercatorUnit y1)
+    )
+
+
 
 -- containingTile : ZoomLevel -> Point2d MercatorUnit MercatorCoords -> TileKey
 -- containingTile zoom p =
@@ -146,7 +183,7 @@ mercatorFrame : GeoPoint -> Frame2d MercatorUnit PlaneCoords { defines : Mercato
 mercatorFrame center =
     let
         rate =
-            mercatorRate (Tuple.first center)
+            mercatorRate center.lat
 
         ( cx, cy ) =
             toMercatorWeb center
@@ -260,7 +297,7 @@ tileMesh :
     SketchPlane3d Meters WorldCoords { defines : PlaneCoords }
     -> Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
     -> Quantity Float (Rate Meters MercatorUnit)
-    -> List Int
+    -> List Float
     -> Tile
     -> Mesh.Textured WorldCoords
 tileMesh xyPlane mFrame mRate elevValues tile =
@@ -289,7 +326,7 @@ tileMesh xyPlane mFrame mRate elevValues tile =
         elevAt i j =
             elevValues
                 |> ListX.getAt (i * xCount + j)
-                |> Maybe.map (toFloat >> Length.meters)
+                |> Maybe.map Length.meters
 
         -- |> Point3d.on xyPlane
         -- |> Point3d.translateIn Direction3d.positiveZ elev

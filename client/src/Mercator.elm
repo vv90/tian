@@ -1,8 +1,8 @@
 module Mercator exposing (..)
 
 import Api.Geo exposing (Latitude)
-import MapUtils exposing (ZoomLevel(..), tileLength)
 import Math.Matrix4 exposing (Mat4)
+import Tile exposing (ZoomLevel(..), tileLength)
 
 
 type Mercator

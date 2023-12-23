@@ -2,6 +2,7 @@ module Map3d exposing (..)
 
 import Angle exposing (Angle)
 import Api.Geo exposing (Distance(..), Elevation(..), Latitude(..), Longitude(..))
+import Api.Map exposing (GeoPoint)
 import Axis3d
 import Basics.Extra exposing (uncurry)
 import Browser.Events as BE
@@ -10,7 +11,8 @@ import Color exposing (Color)
 import Common.ApiCommands exposing (loadElevationsCmd)
 import Common.ApiResult exposing (ApiResult, DeferredResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
-import Common.GeoUtils exposing (GeoPoint, metersDistance)
+import Common.GeoUtils exposing (degreesLatitude)
+import Constants exposing (earthCircumference)
 import Dict exposing (Dict)
 import Dict.Extra as DictX
 import Direction3d
@@ -22,8 +24,7 @@ import Html.Events exposing (on)
 import Json.Decode as D
 import Length exposing (Length, Meters)
 import List.Extra as ListX
-import Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, PlaneCoords(..), WorldCoords, fromMercatorPoint, getMercatorUnit, makeTiles, mercatorFrame, mercatorRate, tileMesh, toMercatorPoint)
-import MapUtils exposing (TileKey, ZoomLevel(..), earthCircumference, tileKeyToUrl, tileLength, toMercatorWeb, zoomInt, zoomLevel)
+import Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, PlaneCoords(..), WorldCoords, fromMercatorPoint, getMercatorUnit, makeTiles, mercatorFrame, mercatorRate, tileMesh, tileRectangle, toMercatorPoint)
 import Maybe.Extra as MaybeX
 import Pixels exposing (Pixels)
 import Plane3d
@@ -39,6 +40,7 @@ import SketchPlane3d exposing (SketchPlane3d)
 import Svg exposing (Svg)
 import Svg.Attributes as SvgAttr
 import Task
+import Tile exposing (TileKey, ZoomLevel, fromTileKey, tileKeyToUrl, zoomLevel)
 import Viewpoint3d
 
 
@@ -72,15 +74,11 @@ type alias TileData =
 
 type alias Model =
     { windowSize : WindowSize
-
-    -- , origin : GeoPoint
     , mapFrame : Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
     , mercatorRate : Quantity Float (Rate Meters MercatorUnit)
     , dragState : DragState
     , viewArgs : ViewArgs
     , loadedTiles : Dict TileKey TileData
-
-    -- , loadedTiles : Dict TileKey (Maybe (Material.Texture Color))
     , displayedTiles : List ( TileKey, ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords ) )
     }
 
@@ -148,17 +146,20 @@ xyPlane =
 pickZoom : Model -> ZoomLevel
 pickZoom model =
     let
-        ( LatitudeDegrees lat, _ ) =
+        latRad =
             SketchPlane3d.originPoint xyPlane
                 |> Point3d.projectInto xyPlane
                 |> Point2d.at_ model.mercatorRate
                 |> Point2d.relativeTo model.mapFrame
                 |> fromMercatorPoint
+                |> .lat
+                |> degreesLatitude
+                |> degrees
 
         viewDistance =
             Length.inMeters model.viewArgs.distance
     in
-    logBase 2 (earthCircumference * cos (degrees lat) / viewDistance)
+    logBase 2 (earthCircumference * cos latRad / viewDistance)
         |> round
         |> zoomLevel
 
@@ -211,15 +212,18 @@ updateTiles model =
         tLen =
             Maybe.map (Length.inMeters >> (\d -> d / toFloat numTiles)) dist
 
-        ( LatitudeDegrees lat, _ ) =
+        letRad =
             SketchPlane3d.originPoint xyPlane
                 |> Point3d.projectInto xyPlane
                 |> Point2d.at_ model.mercatorRate
                 |> Point2d.relativeTo model.mapFrame
                 |> fromMercatorPoint
+                |> .lat
+                |> degreesLatitude
+                |> degrees
 
         zoom =
-            Maybe.map ((\l -> logBase 2 (earthCircumference * cos (degrees lat) / l)) >> round >> zoomLevel) tLen
+            Maybe.map ((\l -> logBase 2 (earthCircumference * cos letRad / l)) >> round >> zoomLevel) tLen
 
         -- focusedGeoPoint =
         --     Point3d.toMeters model.viewArgs.focalPoint
@@ -262,7 +266,7 @@ updateTiles model =
                 |> withPendingMeshes missingMeshes
 
         cmds =
-            loadElevationsCmd (Finished >> LoadElevations missingMeshes) missingMeshes
+            loadElevationsCmd (Finished >> LoadElevations missingMeshes) (List.map (fromTileKey >> tileRectangle >> Tuple.mapBoth fromMercatorPoint fromMercatorPoint) missingMeshes)
                 :: (missingTextures |> List.map loadTextureCmd)
 
         -- missingKeys ts =
@@ -382,10 +386,8 @@ init windowSize origin =
         model =
             { windowSize = windowSize
             , viewArgs = viewArgs
-
-            -- , origin = origin
             , mapFrame = mercatorFrame origin
-            , mercatorRate = mercatorRate (Tuple.first origin)
+            , mercatorRate = mercatorRate origin.lat
             , dragState = Static
             , loadedTiles = Dict.empty
             , displayedTiles = []
@@ -418,7 +420,7 @@ init windowSize origin =
 
 type Msg
     = TileLoaded TileKey (Maybe (Material.Texture Color))
-    | LoadElevations (List TileKey) (AsyncOperationStatus (ApiResult (List (List Int))))
+    | LoadElevations (List TileKey) (AsyncOperationStatus (ApiResult (List (List ( GeoPoint, Float )))))
     | DragStart ( Float, Float )
     | DragMove Bool ( Float, Float )
     | DragStop ( Float, Float )
@@ -460,7 +462,12 @@ update msg model =
             )
 
         LoadElevations tiles Started ->
-            ( model, loadElevationsCmd (Finished >> LoadElevations tiles) tiles )
+            let
+                payload : List ( GeoPoint, GeoPoint )
+                payload =
+                    tiles |> List.map (fromTileKey >> tileRectangle >> Tuple.mapBoth fromMercatorPoint fromMercatorPoint)
+            in
+            ( model, loadElevationsCmd (Finished >> LoadElevations tiles) payload )
 
         LoadElevations tiles (Finished (Ok res)) ->
             let
@@ -472,7 +479,7 @@ update msg model =
                         elevVals
                         { x = tx, y = ty, zoom = zoomLevel zoom }
 
-                updateTileData : TileKey -> List Int -> Maybe TileData -> Maybe TileData
+                updateTileData : TileKey -> List Float -> Maybe TileData -> Maybe TileData
                 updateTileData ( tx, ty, zoom ) elevVals data =
                     case data of
                         Just val ->
@@ -482,7 +489,7 @@ update msg model =
                             Just { texture = NotStarted, mesh = makeMesh ( tx, ty, zoom ) elevVals |> Resolved }
 
                 newLoadedTiles =
-                    ListX.zip tiles res
+                    ListX.zip tiles (List.map (List.map Tuple.second) res)
                         |> List.foldl
                             (\( tk, pts ) -> Dict.update tk (updateTileData tk pts))
                             model.loadedTiles

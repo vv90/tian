@@ -16,13 +16,13 @@ import Entity (Entity (..))
 import FlightTask (FlightTask)
 import FlightTrack (FlightTrack (..))
 import FlightTrack.Parser (buildFlightTrack, flightInfoParserAll)
-import Geo (Elevation (..), Latitude, Longitude)
+import Geo (Elevation (..), GeoPosition (..), Latitude, Longitude)
 import Hasql.Session qualified as Session
 import Map (GeoPoint)
 import NavPoint (NavPoint, name, navPointLinesParser)
 import Network.Wai.Handler.Warp (Port, run)
 import Persistence.Connection (getConnection)
-import Persistence.Session (deleteDuplicateNavPointsSession, getAllFlightTasksSession, getElevationPointsSession, getFlightTaskSession, getNavPointsSession, saveFlightTaskSession, saveNavPointsSession)
+import Persistence.Session (deleteDuplicateNavPointsSession, generateElevationPointsSession, getAllFlightTasksSession, getFlightTaskSession, getNavPointsSession, saveFlightTaskSession, saveNavPointsSession)
 import Persistence.Statement (ElevationPointQuery (..))
 import ProgressPoint (ProgressPointDto)
 import Relude
@@ -119,10 +119,10 @@ saveFlightTask ft = do
   savedTpsNum <- withExceptT QueryError . ExceptT $ Session.run (saveFlightTaskSession ft) conn
   pure $ savedTpsNum + 1
 
-getElevationPoints :: [ElevationPointQuery] -> ExceptT LibError IO [Vector (Double, Double, Double)]
+getElevationPoints :: [ElevationPointQuery] -> ExceptT LibError IO [Vector (GeoPoint, Double)]
 getElevationPoints query = do
   conn <- withExceptT ConnectionError getConnection
-  withExceptT QueryError . ExceptT $ Session.run (traverse getElevationPointsSession query) conn
+  withExceptT QueryError . ExceptT $ Session.run (traverse generateElevationPointsSession query) conn
 
 navPoints :: Handler (Vector NavPoint)
 navPoints = do
@@ -242,7 +242,7 @@ type API =
     :<|> "test" :> "startLine" :> Capture "taskId" Int32 :> Get '[JSON] ((Latitude, Longitude), (Latitude, Longitude))
     :<|> "demo" :> WebSocketSource (Text, ProgressPointDto)
     :<|> "demoTask" :> Get '[JSON] (FlightTask, [NameMatch])
-    :<|> "elevationPoints" :> ReqBody '[JSON] [(GeoPoint, GeoPoint)] :> Post '[JSON] [Vector (Double, Double, Double)]
+    :<|> "elevationPoints" :> ReqBody '[JSON] [(GeoPoint, GeoPoint)] :> Post '[JSON] [Vector (GeoPoint, Double)]
 
 -- :<|> "startDemo" :> Get '[JSON] ()
 
@@ -315,7 +315,7 @@ demoTask = do
     Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
     Right (Entity _ ft, nm) -> pure (ft, nm)
 
-elevationPoints :: [(GeoPoint, GeoPoint)] -> Handler [Vector (Double, Double, Double)]
+elevationPoints :: [(GeoPoint, GeoPoint)] -> Handler [Vector (GeoPoint, Double)]
 elevationPoints tiles =
   let query =
         fmap
@@ -323,7 +323,7 @@ elevationPoints tiles =
               ElevationPointQuery
                 { from = from,
                   to = to,
-                  step = ((fst to - fst from) / 10, (snd to - snd to) / 10)
+                  step = ((latitude to - latitude from) / 10, (longitude to - longitude to) / 10)
                 }
           )
           tiles

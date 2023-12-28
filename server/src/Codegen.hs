@@ -11,7 +11,7 @@ import Language.Elm.Name (Module)
 import Language.Elm.Pretty qualified as Pretty
 import Language.Elm.Simplification qualified as Simplification
 import Language.Haskell.To.Elm (jsonDefinitions)
-import Map (MapTile)
+import Map (GeoPoint)
 import NavPoint (NavPoint, WaypointStyle)
 import Prettyprinter (Doc)
 import Prettyprinter.Render.Text (hPutDoc)
@@ -41,7 +41,7 @@ typeDefinitions =
       jsonDefinitions @ProgressPointDto,
       jsonDefinitions @TaskProgressDto,
       jsonDefinitions @NameMatch,
-      jsonDefinitions @MapTile
+      jsonDefinitions @GeoPoint
     ]
 
 elmSrcPath :: FilePath

@@ -1,30 +1,29 @@
 module Api.Map exposing
-    ( Tile
-    , tileDecoder
-    , tileEncoder
+    ( GeoPoint
+    , geoPointDecoder
+    , geoPointEncoder
     )
 
+import Api.Geo
 import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
 
 
-type alias Tile =
-    { x : Int, y : Int, zoom : Int }
+type alias GeoPoint =
+    { lat : Api.Geo.Latitude, lon : Api.Geo.Longitude }
 
 
-tileEncoder : Tile -> Json.Encode.Value
-tileEncoder a =
+geoPointEncoder : GeoPoint -> Json.Encode.Value
+geoPointEncoder a =
     Json.Encode.object
-        [ ( "x", Json.Encode.int a.x )
-        , ( "y", Json.Encode.int a.y )
-        , ( "zoom", Json.Encode.int a.zoom )
+        [ ( "lat", Api.Geo.latitudeEncoder a.lat )
+        , ( "lon", Api.Geo.longitudeEncoder a.lon )
         ]
 
 
-tileDecoder : Json.Decode.Decoder Tile
-tileDecoder =
-    Json.Decode.succeed Tile
-        |> Json.Decode.Pipeline.required "x" Json.Decode.int
-        |> Json.Decode.Pipeline.required "y" Json.Decode.int
-        |> Json.Decode.Pipeline.required "zoom" Json.Decode.int
+geoPointDecoder : Json.Decode.Decoder GeoPoint
+geoPointDecoder =
+    Json.Decode.succeed GeoPoint
+        |> Json.Decode.Pipeline.required "lat" Api.Geo.latitudeDecoder
+        |> Json.Decode.Pipeline.required "lon" Api.Geo.longitudeDecoder

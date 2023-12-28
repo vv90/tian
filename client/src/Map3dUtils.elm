@@ -1,20 +1,25 @@
 module Map3dUtils exposing (..)
 
 import Api.Geo exposing (Distance(..), Elevation, Latitude(..), Longitude(..))
+import Api.Map exposing (GeoPoint)
+import Array exposing (Array)
+import Array.Extra
 import Color exposing (Color)
-import Common.GeoUtils exposing (GeoPoint, metersDistance)
+import Common.GeoUtils exposing (metersDistance)
 import Dict exposing (Dict)
 import Direction3d
 import Frame2d exposing (Frame2d)
 import Length exposing (Length, Meters)
 import List.Extra as ListX
-import MapUtils exposing (Tile, TileKey, ZoomLevel(..), earthCircumference, fromMercatorWeb, metersPerPixel, tileLength, tileSize, toMercatorWeb, zoomInt, zoomLevel)
+import MapUtils exposing (fromMercatorWeb, metersPerPixel, toMercatorWeb)
+import Maybe.Extra
 import Point2d exposing (Point2d)
 import Point3d exposing (Point3d)
 import Quantity exposing (Quantity(..), Rate)
 import Scene3d.Material exposing (Texture)
 import Scene3d.Mesh as Mesh exposing (Mesh)
 import SketchPlane3d exposing (SketchPlane3d)
+import Tile exposing (Tile, TileKey, ZoomLevel(..), tileLength, zoomInt)
 import TriangularMesh exposing (TriangularMesh)
 import Vector2d exposing (Vector2d)
 
@@ -120,6 +125,41 @@ fromMercatorPoint =
     Point2d.toTuple getMercatorUnit >> fromMercatorWeb
 
 
+tileOrigin : Tile -> Point2d MercatorUnit MercatorCoords
+tileOrigin tile =
+    let
+        numTiles =
+            2 ^ zoomInt tile.zoom
+
+        ( x, y ) =
+            ( toFloat tile.x / toFloat numTiles
+            , toFloat tile.y / toFloat numTiles
+            )
+    in
+    Point2d.xy (mercatorUnit x) (mercatorUnit y)
+
+
+tileRectangle : Tile -> ( Point2d MercatorUnit MercatorCoords, Point2d MercatorUnit MercatorCoords )
+tileRectangle tile =
+    let
+        numTiles =
+            2 ^ zoomInt tile.zoom
+
+        ( x0, y0 ) =
+            ( toFloat tile.x / toFloat numTiles
+            , toFloat tile.y / toFloat numTiles
+            )
+
+        ( x1, y1 ) =
+            ( toFloat (tile.x + 1) / toFloat numTiles
+            , toFloat (tile.y + 1) / toFloat numTiles
+            )
+    in
+    ( Point2d.xy (mercatorUnit x0) (mercatorUnit y0)
+    , Point2d.xy (mercatorUnit x1) (mercatorUnit y1)
+    )
+
+
 
 -- containingTile : ZoomLevel -> Point2d MercatorUnit MercatorCoords -> TileKey
 -- containingTile zoom p =
@@ -146,7 +186,7 @@ mercatorFrame : GeoPoint -> Frame2d MercatorUnit PlaneCoords { defines : Mercato
 mercatorFrame center =
     let
         rate =
-            mercatorRate (Tuple.first center)
+            mercatorRate center.lat
 
         ( cx, cy ) =
             toMercatorWeb center
@@ -256,11 +296,113 @@ makeTiles isInView mFrame mRate focalPoint zoom =
         |> Dict.toList
 
 
+makeTilePoints : Tile -> List GeoPoint
+makeTilePoints tile =
+    let
+        numTiles =
+            2 ^ zoomInt tile.zoom
+
+        ( xCount, yCount ) =
+            ( 9, 9 )
+
+        ( xStart, yStart ) =
+            ( toFloat tile.x / toFloat numTiles
+            , toFloat tile.y / toFloat numTiles
+            )
+
+        ( xEnd, yEnd ) =
+            ( toFloat (tile.x + 1) / toFloat numTiles
+            , toFloat (tile.y + 1) / toFloat numTiles
+            )
+
+        ( xStep, yStep ) =
+            ( (xEnd - xStart) / xCount
+            , (yEnd - yStart) / yCount
+            )
+
+        makePoint i j =
+            Point2d.xy
+                (mercatorUnit <| xStart + toFloat i * xStep)
+                -- the data points and texture orientation is top left to bottom right
+                -- while the grid indexing is bottom left to top right
+                -- so invert the y axis to match the orientation
+                (mercatorUnit <| yStart + toFloat j * yStep)
+
+        -- |> Point2d.at mRate
+    in
+    List.range 0 yCount
+        |> ListX.andThen (\j -> List.range 0 xCount |> List.map (\i -> makePoint i j))
+        |> List.map fromMercatorPoint
+
+
+makeMesh :
+    Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
+    -> Quantity Float (Rate Meters MercatorUnit)
+    -> SketchPlane3d Meters WorldCoords { defines : PlaneCoords }
+    -> Array (Array ( GeoPoint, Float ))
+    -> Mesh.Textured WorldCoords
+makeMesh mFrame mRate xyPlane points =
+    let
+        foldMinLength : Array a -> Maybe Int -> Maybe Int
+        foldMinLength arr shortestLength =
+            case shortestLength of
+                Nothing ->
+                    Just <| Array.length arr
+
+                Just l ->
+                    Just <| min (Array.length arr) l
+
+        yCount : Int
+        yCount =
+            Array.length points
+
+        xCount : Int
+        xCount =
+            Array.foldr foldMinLength Nothing points |> Maybe.withDefault 0
+
+        in3d : Quantity Float Meters -> Point2d Meters PlaneCoords -> Point3d Meters WorldCoords
+        in3d elev p =
+            Point3d.on xyPlane p
+                |> Point3d.translateIn Direction3d.positiveZ elev
+
+        makePoint : ( GeoPoint, Float ) -> Point3d Meters WorldCoords
+        makePoint ( p, e ) =
+            p
+                |> toMercatorPoint
+                |> Point2d.placeIn mFrame
+                |> Point2d.at mRate
+                |> in3d (Length.meters e)
+
+        --
+        meshOriginPoint : () -> Point3d Meters WorldCoords
+        meshOriginPoint () =
+            points
+                |> Array.get 0
+                |> Maybe.andThen (Array.get 0)
+                |> Maybe.map makePoint
+                |> Maybe.withDefault Point3d.origin
+
+        withRelativeTextureCoords ( dx, dy ) p =
+            { position = p
+            , uv = ( dx, -dy )
+            }
+
+        pointAt i j =
+            points
+                |> Array.get j
+                |> Maybe.andThen (Array.get i)
+                |> Maybe.Extra.unpack meshOriginPoint makePoint
+                |> withRelativeTextureCoords ( toFloat i / toFloat (xCount - 1), toFloat j / toFloat (yCount - 1) )
+    in
+    TriangularMesh.indexedGrid (xCount - 1) (yCount - 1) pointAt
+        |> Mesh.texturedFacets
+
+
 tileMesh :
     SketchPlane3d Meters WorldCoords { defines : PlaneCoords }
     -> Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
     -> Quantity Float (Rate Meters MercatorUnit)
-    -> List Int
+    -> List Float
     -> Tile
     -> Mesh.Textured WorldCoords
 tileMesh xyPlane mFrame mRate elevValues tile =
@@ -269,7 +411,7 @@ tileMesh xyPlane mFrame mRate elevValues tile =
             2 ^ zoomInt tile.zoom
 
         ( xCount, yCount ) =
-            ( 10, 10 )
+            ( 9, 9 )
 
         ( xStart, yStart ) =
             ( toFloat tile.x / toFloat numTiles
@@ -288,11 +430,14 @@ tileMesh xyPlane mFrame mRate elevValues tile =
 
         elevAt i j =
             elevValues
-                |> ListX.getAt (i * xCount + j)
-                |> Maybe.map (toFloat >> Length.meters)
+                |> ListX.getAt (j * xCount + i)
+                |> Maybe.map Length.meters
 
         -- |> Point3d.on xyPlane
         -- |> Point3d.translateIn Direction3d.positiveZ elev
+        -- 8 9   10 11
+        -- 4  5  6  7
+        -- 0  1  2  3
         in3d elev p =
             case elev of
                 Just z ->
@@ -302,22 +447,30 @@ tileMesh xyPlane mFrame mRate elevValues tile =
                 Nothing ->
                     Point3d.on xyPlane p
 
-        withRelativeCoords ( dx, dy ) p =
+        withRelativeTextureCoords ( dx, dy ) p =
             { position = p
-            , uv = ( dx, dy )
+            , uv = ( dx, -dy )
             }
 
+        -- pointAt1 i j =
+        --     Point2d.xyIn
+        --         mFrame
+        --         (mercatorUnit <| xStart + toFloat i * xStep)
+        --         (mercatorUnit <| yStart + toFloat j * yStep)
+        --         |> Point2d.at mRate
         pointAt i j =
             Point2d.xyIn
                 mFrame
                 (mercatorUnit <| xStart + toFloat i * xStep)
-                -- invert the y axis to match the texture orientation
-                (mercatorUnit <| yEnd - toFloat j * yStep)
+                -- the data points and texture orientation is top left to bottom right
+                -- while the grid indexing is bottom left to top right
+                -- so invert the y axis to match the orientation
+                (mercatorUnit <| yStart + toFloat j * yStep)
                 |> Point2d.at mRate
                 |> in3d (elevAt i j)
-                |> withRelativeCoords ( toFloat i / xCount, toFloat j / yCount )
+                |> withRelativeTextureCoords ( toFloat i / xCount, toFloat j / yCount )
     in
-    TriangularMesh.indexedGrid 10 10 pointAt
+    TriangularMesh.indexedGrid xCount yCount pointAt
         |> Mesh.texturedFacets
 
 

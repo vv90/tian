@@ -15,13 +15,13 @@ startToMapItem nextPoint ( np, start ) =
         StartLine r ->
             let
                 startBearing =
-                    bearing ( np.lat, np.lon ) ( nextPoint.lat, nextPoint.lon )
+                    bearing { lat = np.lat, lon = np.lon } { lat = nextPoint.lat, lon = nextPoint.lon }
 
                 ( lp1, lp2 ) =
-                    linePerpendicularToBearing (DistanceMeters r) ( np.lat, np.lon ) startBearing
+                    linePerpendicularToBearing (DistanceMeters r) { lat = np.lat, lon = np.lon } startBearing
             in
             -- makePerpendicularLine r np nextPoint
-            -- Circle ( np.lat, np.lon ) (DistanceMeters r)
+            -- Circle { lat = np.lat, lon = np.lon } (DistanceMeters r)
             Line TaskLine [ lp1, lp2 ]
 
 
@@ -31,13 +31,13 @@ startToMap3dItem nextPoint ( np, start ) =
         StartLine r ->
             let
                 startBearing =
-                    bearing ( np.lat, np.lon ) ( nextPoint.lat, nextPoint.lon )
+                    bearing { lat = np.lat, lon = np.lon } { lat = nextPoint.lat, lon = nextPoint.lon }
 
                 ( lp1, lp2 ) =
-                    linePerpendicularToBearing (DistanceMeters r) ( np.lat, np.lon ) startBearing
+                    linePerpendicularToBearing (DistanceMeters r) { lat = np.lat, lon = np.lon } startBearing
             in
             -- makePerpendicularLine r np nextPoint
-            -- Circle ( np.lat, np.lon ) (DistanceMeters r)
+            -- Circle { lat = np.lat, lon = np.lon } (DistanceMeters r)
             M3d.Line [ ( lp1, ElevationMeters 0 ), ( lp2, ElevationMeters 0 ) ]
 
 
@@ -46,10 +46,10 @@ finishToMapItem prevPoint ( np, finish ) =
     case finish of
         FinishLine r ->
             -- makePerpendicularLine r np prevPoint
-            Circle ( np.lat, np.lon ) (DistanceMeters r)
+            Circle { lat = np.lat, lon = np.lon } (DistanceMeters r)
 
         FinishCylinder r ->
-            Circle ( np.lat, np.lon ) (DistanceMeters r)
+            Circle { lat = np.lat, lon = np.lon } (DistanceMeters r)
 
 
 finishToMap3dItem : NavPoint -> ( NavPoint, TaskFinish ) -> Map3dItem
@@ -57,24 +57,24 @@ finishToMap3dItem prevPoint ( np, finish ) =
     case finish of
         FinishLine r ->
             -- makePerpendicularLine r np prevPoint
-            M3d.Cylinder ( np.lat, np.lon ) (DistanceMeters r) (ElevationMeters 10000)
+            M3d.Cylinder { lat = np.lat, lon = np.lon } (DistanceMeters r) (ElevationMeters 10000)
 
         FinishCylinder r ->
-            M3d.Cylinder ( np.lat, np.lon ) (DistanceMeters r) (ElevationMeters 10000)
+            M3d.Cylinder { lat = np.lat, lon = np.lon } (DistanceMeters r) (ElevationMeters 10000)
 
 
 turnpointToMapItem : ( NavPoint, Turnpoint ) -> MapItem
 turnpointToMapItem ( np, tp ) =
     case tp of
         Cylinder r ->
-            Circle ( np.lat, np.lon ) (DistanceMeters r)
+            Circle { lat = np.lat, lon = np.lon } (DistanceMeters r)
 
 
 turnpointToMap3dItem : ( NavPoint, Turnpoint ) -> Map3dItem
 turnpointToMap3dItem ( np, tp ) =
     case tp of
         Cylinder r ->
-            M3d.Cylinder ( np.lat, np.lon ) (DistanceMeters r) (ElevationMeters 10000)
+            M3d.Cylinder { lat = np.lat, lon = np.lon } (DistanceMeters r) (ElevationMeters 10000)
 
 
 firstNavPointAfterStart : FlightTask -> NavPoint
@@ -100,7 +100,7 @@ taskToMapItems task =
         (\( np, tp ) ( prev, lines ) ->
             ( np
             , turnpointToMapItem ( np, tp )
-                :: Line TaskLine [ ( prev.lat, prev.lon ), ( np.lat, np.lon ) ]
+                :: Line TaskLine [ { lat = prev.lat, lon = prev.lon }, { lat = np.lat, lon = np.lon } ]
                 :: lines
             )
         )
@@ -114,8 +114,8 @@ taskToMapItems task =
                 finishToMapItem (lastNavPointBeforeFinish task) task.finish
                     :: Line
                         TaskLine
-                        [ ( prev.lat, prev.lon )
-                        , (Tuple.first >> (\x -> ( x.lat, x.lon ))) task.finish
+                        [ { lat = prev.lat, lon = prev.lon }
+                        , (Tuple.first >> (\x -> { lat = x.lat, lon = x.lon })) task.finish
                         ]
                     :: lines
            )
@@ -128,7 +128,7 @@ taskToMap3dItems task =
         (\( np, tp ) ( prev, lines ) ->
             ( np
             , turnpointToMap3dItem ( np, tp )
-                :: M3d.Line [ ( ( prev.lat, prev.lon ), ElevationMeters 0 ), ( ( np.lat, np.lon ), ElevationMeters 0 ) ]
+                :: M3d.Line [ ( { lat = prev.lat, lon = prev.lon }, ElevationMeters 0 ), ( { lat = np.lat, lon = np.lon }, ElevationMeters 0 ) ]
                 :: lines
             )
         )
@@ -141,8 +141,8 @@ taskToMap3dItems task =
         |> (\( prev, lines ) ->
                 finishToMap3dItem (lastNavPointBeforeFinish task) task.finish
                     :: M3d.Line
-                        [ ( ( prev.lat, prev.lon ), ElevationMeters 0 )
-                        , (Tuple.first >> (\x -> ( ( x.lat, x.lon ), ElevationMeters 0 ))) task.finish
+                        [ ( { lat = prev.lat, lon = prev.lon }, ElevationMeters 0 )
+                        , (Tuple.first >> (\x -> ( { lat = x.lat, lon = x.lon }, ElevationMeters 0 ))) task.finish
                         ]
                     :: lines
            )

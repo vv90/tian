@@ -1,11 +1,11 @@
 module Page.Test.TestProgress exposing (..)
 
 import Api.Geo exposing (latitudeEncoder, longitudeEncoder)
+import Api.Map exposing (GeoPoint, geoPointDecoder, geoPointEncoder)
 import Api.TaskProgress exposing (ProgressPoint, TaskProgress, taskProgressDecoder)
-import Common.ApiExtra exposing (geoPointDecoder, geoPointEncoder)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
-import Common.GeoUtils exposing (GeoPoint, degreesLatitude, degreesLongitude)
+import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Common.JsonCodecsExtra exposing (tupleDecoder, tupleEncoder)
 import Element exposing (Element, column, spacing, text)
 import Element.Input as Input
@@ -43,7 +43,7 @@ toMapItems model =
         progressPointItem : ProgressPoint -> Maybe MapItem
         progressPointItem p =
             Maybe.map
-                (Marker ( p.lat, p.lon ))
+                (Marker { lat = p.lat, lon = p.lon })
                 p.target
 
         taskProgressItems =

@@ -5,13 +5,14 @@ module Map exposing (..)
 -- import Nav.Units exposing (Deg(..), Meters(..), degToRad, getDeg, getRad)
 
 import Api.Geo exposing (Distance(..), Latitude(..), Longitude(..))
+import Api.Map exposing (GeoPoint)
 import Browser.Events as BE
 import Canvas exposing (Point, Renderable, clear, group, rect, shapes, texture)
 import Canvas.Settings exposing (fill)
 import Canvas.Settings.Advanced exposing (scale, transform, translate)
 import Canvas.Texture as Texture exposing (..)
 import Color exposing (..)
-import Common.GeoUtils exposing (GeoPoint)
+import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Dict exposing (Dict)
 import Flags exposing (WindowSize)
 import Html exposing (Html, button, div, h2, h5, img, label, object, option, p, select, text)
@@ -23,6 +24,7 @@ import MapUtils exposing (..)
 import Maybe.Extra as MaybeX
 import Svg exposing (Svg)
 import Svg.Attributes as SvgAttr
+import Tile exposing (TileKey, maxZoom, minZoom, tileSize)
 import TimeUtils exposing (..)
 
 
@@ -384,8 +386,8 @@ view mapItems model =
                                 (\y -> y / (toFloat tileSize * 2 ^ model.mapView.zoom))
                             -- |> (fromMercatorWeb >> (\p -> ( (getLon >> getDeg) p.lon, (getLat >> getDeg) p.lat )))
                             |> fromMercatorWeb
-                            |> (\( LatitudeDegrees lat, LongitudeDegrees lon ) -> ( lat, lon ))
-                            |> Tuple.mapBoth String.fromFloat String.fromFloat
+                            |> (\{ lat, lon } -> ( lat, lon ))
+                            |> Tuple.mapBoth (degreesLatitude >> String.fromFloat) (degreesLongitude >> String.fromFloat)
                             |> stringFromTuple
                         ]
                     )
@@ -505,9 +507,8 @@ renderCircle mapView point (DistanceMeters radius) =
         ( x, y ) =
             geoPointToViewCoords mapView point
 
-        ( LatitudeDegrees lat, LongitudeDegrees lon ) =
-            point
-
+        -- ( LatitudeDegrees lat, LongitudeDegrees lon ) =
+        --     point
         rPixels =
             metersPerPixel (floor mapView.zoom)
                 |> Maybe.map
@@ -516,7 +517,7 @@ renderCircle mapView point (DistanceMeters radius) =
                             scaleCoefficient =
                                 scaleFromZoom mapView.zoom
                         in
-                        radius / (cos (degrees lat) * m / scaleCoefficient)
+                        radius / ((point.lat |> degreesLatitude |> degrees |> cos) * m / scaleCoefficient)
                     )
                 |> MaybeX.unpack (always 5) identity
     in

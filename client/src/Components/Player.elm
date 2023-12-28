@@ -1,7 +1,8 @@
 module Components.Player exposing (..)
 
+import Api.Map exposing (GeoPoint)
 import Api.TaskProgress exposing (ProgressPoint, TaskProgress)
-import Common.GeoUtils exposing (GeoPoint, degreesLatitude, degreesLongitude, metersDistance, metersElevation)
+import Common.GeoUtils exposing (degreesLatitude, degreesLongitude, metersDistance, metersElevation)
 import Common.Utils exposing (roundN)
 import Components.PlaybackSpeed exposing (PlaybackSpeed(..), increaseSpeed, lowerSpeed, playbackCoefficient)
 import Element exposing (Element, column, none, padding, row, spacing, text)
@@ -79,7 +80,7 @@ currPoints model =
     let
         position : ProgressPoint -> GeoPoint
         position point =
-            ( point.lat, point.lon )
+            { lat = point.lat, lon = point.lon }
     in
     model.states
         -- |> List.filterMap (\s -> List.head s.past |> Maybe.map (\p -> (s.compId, p.)) )

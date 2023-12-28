@@ -1,6 +1,5 @@
 module Common.GeoUtils exposing
     ( Bearing
-    , GeoPoint
     , bearing
     , degreesLatitude
     , degreesLongitude
@@ -10,10 +9,7 @@ module Common.GeoUtils exposing
     )
 
 import Api.Geo exposing (..)
-
-
-type alias GeoPoint =
-    ( Latitude, Longitude )
+import Api.Map exposing (GeoPoint)
 
 
 type Bearing
@@ -97,8 +93,14 @@ toDecimalDegrees degrees minutes seconds =
 {-| Distance between 2 geo points
 -}
 distance : GeoPoint -> GeoPoint -> Distance
-distance ( p1Lat, p1Lon ) ( p2Lat, p2Lon ) =
+distance gp1 gp2 =
     let
+        ( p1Lat, p1Lon ) =
+            ( gp1.lat, gp1.lon )
+
+        ( p2Lat, p2Lon ) =
+            ( gp2.lat, gp2.lon )
+
         ( lonRad1, latRad1 ) =
             ( p1Lon |> degreesLongitude |> degrees
             , p1Lat |> degreesLatitude |> degrees
@@ -136,8 +138,14 @@ distance ( p1Lat, p1Lon ) ( p2Lat, p2Lon ) =
 {-| Bearing from first point to the second
 -}
 bearing : GeoPoint -> GeoPoint -> Bearing
-bearing ( p1Lat, p1Lon ) ( p2Lat, p2Lon ) =
+bearing gp1 gp2 =
     let
+        ( p1Lat, p1Lon ) =
+            ( gp1.lat, gp1.lon )
+
+        ( p2Lat, p2Lon ) =
+            ( gp2.lat, gp2.lon )
+
         ( lonRad1, latRad1 ) =
             ( p1Lon |> degreesLongitude |> degrees
             , p1Lat |> degreesLatitude |> degrees
@@ -182,11 +190,11 @@ bearingDifference (Bearing b1) (Bearing b2) =
 {-| Calculates the destination geo point when traveling on a set bearing for a set distance from the start geo point
 -}
 destination : Bearing -> Distance -> GeoPoint -> GeoPoint
-destination (Bearing b) (DistanceMeters d) ( pLat, pLon ) =
+destination (Bearing b) (DistanceMeters d) { lat, lon } =
     let
         ( lonRad1, latRad1 ) =
-            ( pLon |> degreesLongitude |> degrees
-            , pLat |> degreesLatitude |> degrees
+            ( lon |> degreesLongitude |> degrees
+            , lat |> degreesLatitude |> degrees
             )
 
         bRad =
@@ -201,9 +209,9 @@ destination (Bearing b) (DistanceMeters d) ( pLat, pLon ) =
         lonRad2 =
             lonRad1 + atan2 (sin bRad * sin (d / r) * cos latRad1) (cos (d / r) - sin latRad1 * sin latRad2)
     in
-    ( latRad2 |> radToDeg |> LatitudeDegrees
-    , lonRad2 |> radToDeg |> LongitudeDegrees
-    )
+    { lat = latRad2 |> radToDeg |> LatitudeDegrees
+    , lon = lonRad2 |> radToDeg |> LongitudeDegrees
+    }
 
 
 {-| Returns a line with midpoint of `origin`, perpendicular to the bearing of `bearing` of length `2 * radius`

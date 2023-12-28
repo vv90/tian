@@ -11,12 +11,12 @@ progressPointsToMapItems progressPoints =
     let
         pointMapItem : ProgressPoint -> MapItem
         pointMapItem p =
-            Point TrackPoint ( p.lat, p.lon )
+            Point TrackPoint { lat = p.lat, lon = p.lon }
 
         lineMapItem : Maybe ProgressPoint -> ProgressPoint -> Maybe MapItem
         lineMapItem lastPoint p =
             Maybe.map
-                (\lp -> Line TrackLine [ ( lp.lat, lp.lon ), ( p.lat, p.lon ) ])
+                (\lp -> Line TrackLine [ { lat = lp.lat, lon = lp.lon }, { lat = p.lat, lon = p.lon } ])
                 lastPoint
 
         combineMapItems : List MapItem -> MapItem -> Maybe MapItem -> List MapItem
@@ -46,4 +46,4 @@ progressPointsToMapItems progressPoints =
 
 targetToMapItem : ProgressPoint -> NavPoint -> MapItem
 targetToMapItem pp np =
-    Line TaskLine [ ( pp.lat, pp.lon ), ( np.lat, np.lon ) ]
+    Line TaskLine [ { lat = pp.lat, lon = pp.lon }, { lat = np.lat, lon = np.lon } ]

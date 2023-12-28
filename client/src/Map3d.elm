@@ -3,28 +3,29 @@ module Map3d exposing (..)
 import Angle exposing (Angle)
 import Api.Geo exposing (Distance(..), Elevation(..), Latitude(..), Longitude(..))
 import Api.Map exposing (GeoPoint)
+import Array exposing (Array)
 import Axis3d
 import Basics.Extra exposing (uncurry)
-import Browser.Events as BE
+import Browser.Events as BrowserEvents
 import Camera3d exposing (Camera3d)
 import Color exposing (Color)
 import Common.ApiCommands exposing (loadElevationsCmd)
 import Common.ApiResult exposing (ApiResult, DeferredResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
-import Common.GeoUtils exposing (degreesLatitude)
+import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Constants exposing (earthCircumference)
 import Dict exposing (Dict)
 import Dict.Extra as DictX
 import Direction3d
 import Flags exposing (WindowSize)
 import Frame2d exposing (Frame2d)
-import Html exposing (Html, div)
-import Html.Attributes exposing (style)
-import Html.Events exposing (on)
+import Html exposing (Html, div, input, text)
+import Html.Attributes as HtmlAttr exposing (attribute, style, type_)
+import Html.Events as HtmlEvents exposing (on)
 import Json.Decode as D
 import Length exposing (Length, Meters)
 import List.Extra as ListX
-import Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, PlaneCoords(..), WorldCoords, fromMercatorPoint, getMercatorUnit, makeTiles, mercatorFrame, mercatorRate, tileMesh, tileRectangle, toMercatorPoint)
+import Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, PlaneCoords(..), WorldCoords, fromMercatorPoint, getMercatorUnit, makeMesh, makeTilePoints, makeTiles, mercatorFrame, mercatorRate, tileMesh, tileRectangle, toMercatorPoint)
 import Maybe.Extra as MaybeX
 import Pixels exposing (Pixels)
 import Plane3d
@@ -54,7 +55,7 @@ type WebGLResult
 
 
 type DragState
-    = MovingFrom (Point3d Meters WorldCoords)
+    = MovingFrom { azimuth : Angle, elevation : Angle, point : Point3d Meters WorldCoords, xy : ( Float, Float ) }
     | Static
 
 
@@ -74,6 +75,7 @@ type alias TileData =
 
 type alias Model =
     { windowSize : WindowSize
+    , dragControlsAzimuthAndElevation : Bool
     , mapFrame : Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
     , mercatorRate : Quantity Float (Rate Meters MercatorUnit)
     , dragState : DragState
@@ -124,6 +126,11 @@ withPendingMeshes keys model =
 withFocalPoint : Point3d Meters WorldCoords -> ViewArgs -> ViewArgs
 withFocalPoint focalPoint viewArgs =
     { viewArgs | focalPoint = focalPoint }
+
+
+withAzimuthElevation : Angle -> Angle -> ViewArgs -> ViewArgs
+withAzimuthElevation azimuth elevation viewArgs =
+    { viewArgs | azimuth = azimuth, elevation = elevation }
 
 
 adjustViewDistance : Length -> ViewArgs -> ViewArgs
@@ -385,6 +392,7 @@ init windowSize origin =
 
         model =
             { windowSize = windowSize
+            , dragControlsAzimuthAndElevation = False
             , viewArgs = viewArgs
             , mapFrame = mercatorFrame origin
             , mercatorRate = mercatorRate origin.lat
@@ -419,8 +427,9 @@ init windowSize origin =
 
 
 type Msg
-    = TileLoaded TileKey (Maybe (Material.Texture Color))
-    | LoadElevations (List TileKey) (AsyncOperationStatus (ApiResult (List (List ( GeoPoint, Float )))))
+    = SetDragControlAzimuthAndElevation Bool
+    | TileLoaded TileKey (Maybe (Material.Texture Color))
+    | LoadElevations (List TileKey) (AsyncOperationStatus (ApiResult (List (Array (Array ( GeoPoint, Float ))))))
     | DragStart ( Float, Float )
     | DragMove Bool ( Float, Float )
     | DragStop ( Float, Float )
@@ -440,6 +449,9 @@ screenRectangle windowSize =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        SetDragControlAzimuthAndElevation b ->
+            ( { model | dragControlsAzimuthAndElevation = b }, Cmd.none )
+
         TileLoaded tileKey texture ->
             -- ( { model | loadedTiles = Dict.insert tileKey texture model.loadedTiles }
             -- , Cmd.none
@@ -471,28 +483,49 @@ update msg model =
 
         LoadElevations tiles (Finished (Ok res)) ->
             let
-                makeMesh ( tx, ty, zoom ) elevVals =
-                    tileMesh
-                        xyPlane
+                mesh elevVals =
+                    makeMesh
                         model.mapFrame
                         model.mercatorRate
+                        xyPlane
                         elevVals
-                        { x = tx, y = ty, zoom = zoomLevel zoom }
 
-                updateTileData : TileKey -> List Float -> Maybe TileData -> Maybe TileData
+                -- tileMesh
+                --     xyPlane
+                --     model.mapFrame
+                --     model.mercatorRate
+                --     elevVals
+                --     { x = tx, y = ty, zoom = zoomLevel zoom }
+                updateTileData : TileKey -> Array (Array ( GeoPoint, Float )) -> Maybe TileData -> Maybe TileData
                 updateTileData ( tx, ty, zoom ) elevVals data =
                     case data of
                         Just val ->
-                            Just { val | mesh = makeMesh ( tx, ty, zoom ) elevVals |> Resolved }
+                            Just { val | mesh = mesh elevVals |> Resolved }
 
                         Nothing ->
-                            Just { texture = NotStarted, mesh = makeMesh ( tx, ty, zoom ) elevVals |> Resolved }
+                            Just { texture = NotStarted, mesh = mesh elevVals |> Resolved }
 
                 newLoadedTiles =
-                    ListX.zip tiles (List.map (List.map Tuple.second) res)
+                    ListX.zip tiles res
                         |> List.foldl
                             (\( tk, pts ) -> Dict.update tk (updateTileData tk pts))
                             model.loadedTiles
+
+                -- showGeoPoint : GeoPoint -> String
+                -- showGeoPoint { lat, lon } =
+                --     "{ lat: " ++ String.fromFloat (degreesLatitude lat) ++ ", lon: " ++ String.fromFloat (degreesLongitude lon) ++ "}"
+                -- geoPointDifference : (GeoPoint, GeoPoint) -> GeoPoint
+                -- geoPointDifference ( p1, p2 ) =
+                --     { lat = LatitudeDegrees (degreesLatitude p1.lat - degreesLatitude p2.lat)
+                --     , lon = LongitudeDegrees (degreesLongitude p1.lon - degreesLongitude p2.lon)
+                --     }
+                -- checkPoints =
+                --     ListX.zip tiles res
+                --     |> List.map
+                --         ( Tuple.mapBoth (fromTileKey >> makeTilePoints) (List.map Tuple.first)
+                --             >> (\(a, b) -> ListX.zip a b)
+                --             >> List.map (geoPointDifference >> showGeoPoint)
+                --         )
             in
             ( { model | loadedTiles = newLoadedTiles }, Cmd.none )
 
@@ -512,14 +545,14 @@ update msg model =
             in
             case point of
                 Just p ->
-                    ( { model | dragState = MovingFrom p }, Cmd.none )
+                    ( { model | dragState = MovingFrom { azimuth = model.viewArgs.azimuth, elevation = model.viewArgs.elevation, point = p, xy = ( x, y ) } }, Cmd.none )
 
                 Nothing ->
                     ( model, Cmd.none )
 
         DragMove isDown ( x, y ) ->
             let
-                point =
+                projectedPoint =
                     Camera3d.ray
                         (camera model.viewArgs)
                         (screenRectangle model.windowSize)
@@ -538,11 +571,11 @@ update msg model =
                         (Point3d.yCoordinate p |> plus dy)
                         (Point3d.zCoordinate p)
             in
-            case ( model.dragState, point ) of
-                ( MovingFrom prevPoint, Just currPoint ) ->
+            case ( model.dragState, projectedPoint, model.dragControlsAzimuthAndElevation ) of
+                ( MovingFrom { azimuth, elevation, point }, Just currPoint, False ) ->
                     let
                         d =
-                            delta currPoint prevPoint
+                            delta currPoint point
 
                         newPoint =
                             move
@@ -553,7 +586,7 @@ update msg model =
                             { model
                                 | dragState =
                                     if isDown then
-                                        MovingFrom (move currPoint d)
+                                        MovingFrom { azimuth = azimuth, elevation = elevation, point = move currPoint d, xy = ( x, y ) }
 
                                     else
                                         Static
@@ -573,6 +606,24 @@ update msg model =
                     updateTiles newModel
 
                 -- ( newModel, loadMissingTilesCmd newModel.loadedTiles tiles)
+                ( MovingFrom { azimuth, elevation, point, xy }, Just currPoint, True ) ->
+                    let
+                        ( lastX, lastY ) =
+                            xy
+
+                        newAzimuth =
+                            Angle.degrees (Angle.inDegrees azimuth + ((lastX - x) * 0.1))
+
+                        newElevation =
+                            Angle.degrees (Angle.inDegrees elevation + ((y - lastY) * 0.1))
+                    in
+                    ( { model
+                        | dragState = MovingFrom { azimuth = newAzimuth, elevation = newElevation, point = currPoint, xy = ( x, y ) }
+                        , viewArgs = withAzimuthElevation newAzimuth newElevation model.viewArgs
+                      }
+                    , Cmd.none
+                    )
+
                 _ ->
                     ( model, Cmd.none )
 
@@ -597,15 +648,33 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.dragState of
-        Static ->
-            Sub.none
+    let
+        isShiftKey : String -> Bool
+        isShiftKey =
+            (==) "Shift"
 
-        MovingFrom _ ->
+        -- let
+        --     _ =
+        --         Debug.log "" key
+        -- in
+        keyModSub =
             Sub.batch
-                [ BE.onMouseMove (D.map2 DragMove decodeButtons decodePosition)
-                , BE.onMouseUp (D.map DragStop decodePosition)
+                [ BrowserEvents.onKeyDown (D.map (isShiftKey >> SetDragControlAzimuthAndElevation) decodeKey)
+                , BrowserEvents.onKeyUp (D.map (isShiftKey >> not >> SetDragControlAzimuthAndElevation) decodeKey)
                 ]
+
+        mouseSub =
+            case model.dragState of
+                Static ->
+                    Sub.none
+
+                MovingFrom _ ->
+                    Sub.batch
+                        [ BrowserEvents.onMouseMove (D.map2 DragMove decodeMouseButtons decodePosition)
+                        , BrowserEvents.onMouseUp (D.map DragStop decodePosition)
+                        ]
+    in
+    Sub.batch [ keyModSub, mouseSub ]
 
 
 mapItemView : Model -> Map3dItem -> ( Svg Msg, Scene3d.Entity WorldCoords )
@@ -951,11 +1020,22 @@ view mapItems model =
             , style "top" "0"
             ]
             svgs
+
+        -- , div
+        --     [ style "position" "absolute"
+        --     , style "bottom" "0"
+        --     , style "right" "0"
+        --     , style "padding" "10px"
+        --     , style "background-color" "white"
+        --     , style "width" "150px"
+        --     , style "height" "50px"
+        --     ]
+        --     [ input [ type_ "range", HtmlAttr.min "1", HtmlAttr.max "100", attribute "value" "50" ] [] ]
         ]
 
 
-decodeButtons : D.Decoder Bool
-decodeButtons =
+decodeMouseButtons : D.Decoder Bool
+decodeMouseButtons =
     D.field "buttons" (D.map (\buttons -> buttons == 1) D.int)
 
 
@@ -964,6 +1044,11 @@ decodePosition =
     D.map2 Tuple.pair
         (D.field "pageX" D.float)
         (D.field "pageY" D.float)
+
+
+decodeKey : D.Decoder String
+decodeKey =
+    D.field "key" D.string
 
 
 type alias WheelEvent =

@@ -121,40 +121,56 @@ saveNavPointsStatement =
 data ElevationPointQuery = ElevationPointQuery
   { from :: GeoPoint,
     to :: GeoPoint,
-    step :: (Latitude, Longitude)
+    resolution :: Int
   }
 
 generateElevationPointsStatement :: Statement ElevationPointQuery (Vector (GeoPoint, Double))
 generateElevationPointsStatement =
-  let prepareInput :: ElevationPointQuery -> (Double, Double, Double, Double, Double, Double)
-      prepareInput (ElevationPointQuery {from, to, step}) =
+  let lonStepSize :: ElevationPointQuery -> Double
+      lonStepSize (ElevationPointQuery {from, to, resolution}) =
+        ((degreesLongitude . longitude) to - (degreesLongitude . longitude) from) / fromIntegral (resolution - 1)
+
+      latStepSize :: ElevationPointQuery -> Double
+      latStepSize (ElevationPointQuery {from, to, resolution}) =
+        ((degreesLatitude . latitude) to - (degreesLatitude . latitude) from) / fromIntegral (resolution - 1)
+
+      prepareInput :: ElevationPointQuery -> (Double, Double, Double, Double, Int32)
+      prepareInput query@(ElevationPointQuery {from, resolution}) =
         ( degreesLongitude . longitude $ from,
-          degreesLongitude . longitude $ to,
-          degreesLongitude . snd $ step,
+          lonStepSize query,
           degreesLatitude . latitude $ from,
-          degreesLatitude . latitude $ to,
-          degreesLatitude . fst $ step
+          latStepSize query,
+          fromIntegral (resolution - 1)
+        )
+
+      makeGeoPoint :: (Double, Double, Double) -> (GeoPoint, Double)
+      makeGeoPoint (lon, lat, elev) =
+        ( GeoPoint (LatitudeDegrees lat) (LongitudeDegrees lon),
+          elev
         )
 
       processOutput :: Vector (Double, Double, Double) -> Vector (GeoPoint, Double)
       processOutput =
-        fmap
-          ( \(lon, lat, elev) ->
-              ( GeoPoint (LatitudeDegrees lat) (LongitudeDegrees lon),
-                elev
-              )
-          )
+        fmap makeGeoPoint
    in (fmap processOutput . lmap prepareInput)
         [vectorStatement|
-    WITH points AS (
-      SELECT lon::float8, lat::float8
-      FROM generate_series($1 :: float8, $2 :: float8, $3 :: float8) AS lon,
-        generate_series($4 :: float8, $5 :: float8, $6 :: float8) AS lat
-    )
-    SELECT ST_X(geom)::float8, ST_Y(geom)::float8, ST_Value(rast, geom)::float8
-    FROM astgtmv003_n45e005_dem, points
-    WHERE ST_Intersects(rast, geom) 
-  |]
+          WITH points AS (
+            SELECT 
+              ST_SetSRID(
+                ST_MakePoint(
+                  $1 :: float8 :: numeric + (i_lon * $2 :: float8 :: numeric), 
+                  $3 :: float8 :: numeric + (i_lat * $4 :: float8 :: numeric)
+                ), 
+                4326
+              ) as geom
+            FROM generate_series(0, $5 :: int4, 1) AS i_lat,
+              generate_series(0, $5 :: int4, 1) AS i_lon
+          )
+          SELECT ST_X(geom)::float8, ST_Y(geom)::float8, COALESCE(ST_Value(rast, geom), 0.0)::float8
+          FROM points
+          LEFT JOIN astgtmv003_n45e005_dem
+          ON ST_Intersects(rast, geom) 
+        |]
 
 saveSingleElevationPointStatement :: Statement (Int16, Double, Double) Int64
 saveSingleElevationPointStatement =

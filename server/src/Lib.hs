@@ -16,7 +16,7 @@ import Entity (Entity (..))
 import FlightTask (FlightTask)
 import FlightTrack (FlightTrack (..))
 import FlightTrack.Parser (buildFlightTrack, flightInfoParserAll)
-import Geo (Elevation (..), GeoPosition (..), Latitude, Longitude)
+import Geo (Elevation (..), Latitude, Longitude)
 import Hasql.Session qualified as Session
 import Map (GeoPoint)
 import NavPoint (NavPoint, name, navPointLinesParser)
@@ -33,6 +33,7 @@ import TaskProgress (TaskProgressDto, toDto)
 import TaskProgressUtils (progress, taskStartLine)
 import Text.Parsec (Parsec, parse)
 import TrackPoint (FixValidity (..), TrackPoint (..))
+import Utils (unflattenVector)
 
 data LibError
   = ConnectionError Text
@@ -242,7 +243,7 @@ type API =
     :<|> "test" :> "startLine" :> Capture "taskId" Int32 :> Get '[JSON] ((Latitude, Longitude), (Latitude, Longitude))
     :<|> "demo" :> WebSocketSource (Text, ProgressPointDto)
     :<|> "demoTask" :> Get '[JSON] (FlightTask, [NameMatch])
-    :<|> "elevationPoints" :> ReqBody '[JSON] [(GeoPoint, GeoPoint)] :> Post '[JSON] [Vector (GeoPoint, Double)]
+    :<|> "elevationPoints" :> ReqBody '[JSON] [(GeoPoint, GeoPoint)] :> Post '[JSON] [Vector (Vector (GeoPoint, Double))]
 
 -- :<|> "startDemo" :> Get '[JSON] ()
 
@@ -315,15 +316,18 @@ demoTask = do
     Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
     Right (Entity _ ft, nm) -> pure (ft, nm)
 
-elevationPoints :: [(GeoPoint, GeoPoint)] -> Handler [Vector (GeoPoint, Double)]
+elevationPoints :: [(GeoPoint, GeoPoint)] -> Handler [Vector (Vector (GeoPoint, Double))]
 elevationPoints tiles =
-  let query =
+  let resolution :: Int
+      resolution = 10
+
+      query =
         fmap
           ( \(from, to) ->
               ElevationPointQuery
                 { from = from,
                   to = to,
-                  step = ((latitude to - latitude from) / 10, (longitude to - longitude to) / 10)
+                  resolution
                 }
           )
           tiles
@@ -334,7 +338,7 @@ elevationPoints tiles =
         res <- liftIO $ runExceptT $ getElevationPoints query
         case res of
           Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
-          Right x -> pure x
+          Right x -> pure $ fmap (unflattenVector resolution) x
 
 -- case pts of
 --     Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }

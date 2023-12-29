@@ -1,6 +1,5 @@
 module Main where
 
--- import Lib (startApp)
 import Backend.Utils (runBackend)
 import Env (checkRequiredEnvironmentKeys)
 import Relude

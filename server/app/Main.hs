@@ -1,7 +1,8 @@
 module Main where
 
+-- import Lib (startApp)
+import Backend.Utils (runBackend)
 import Env (checkRequiredEnvironmentKeys)
-import Lib (startApp)
 import Relude
 
 -- startCounter :: Int -> IO ()
@@ -22,9 +23,10 @@ main = do
 
   -- convertTiffSafe "./demo/ASTGTMV003_N44E006_dem.tif"
   -- convertTiffSafe "./demo/ASTGTMV003_N45E005_dem.tif"
+  runBackend
 
-  -- print "done"
-  startApp 8081
+-- print "done"
+-- startApp 8081
 
 -- convertTiffSafe "./demo/ASTGTMV003_N45E005_dem.tif"
 

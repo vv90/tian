@@ -27,6 +27,7 @@ library
   exposed-modules:
       Aprs.AprsMessage
       Aprs.Utils
+      Backend.Utils
       Codegen
       Demo.DemoConduit
       Demo.DemoTask

@@ -34,7 +34,7 @@ instance GeoPosition3d AprsMessage where
 instance RecordedGeoPosition AprsMessage where
   time x = x.time
 
-aprsLatParser :: Parsec Text () Latitude
+aprsLatParser :: Parsec ByteString () Latitude
 aprsLatParser = do
   degrees <- readEither <$> count 2 digit
   minutes <- readEither <$> count 2 digit
@@ -50,7 +50,7 @@ aprsLatParser = do
     Right x -> pure $ LatitudeDegrees $ adjustForHemisphereFn x
     Left e -> fail $ "Failed to parse latitude: " ++ toString e
 
-aprsLonParser :: Parsec Text () Longitude
+aprsLonParser :: Parsec ByteString () Longitude
 aprsLonParser = do
   deg <- readEither <$> count 3 digit
   minutes <- readEither <$> count 2 digit
@@ -66,7 +66,7 @@ aprsLonParser = do
     Right x -> pure $ LongitudeDegrees $ adjustForHemisphereFn x
     Left e -> fail $ "Failed to parse longitude: " ++ toString e
 
-aprsTimeParser :: Parsec Text () DiffTime
+aprsTimeParser :: Parsec ByteString () DiffTime
 aprsTimeParser = do
   hrs <- readEither <$> count 2 digit
   mins <- readEither <$> count 2 digit
@@ -76,7 +76,7 @@ aprsTimeParser = do
     Right x -> pure $ secondsToDiffTime x
     Left e -> fail $ "Failed to parse time: " ++ toString e
 
-aprsAltParser :: Parsec Text () Elevation
+aprsAltParser :: Parsec ByteString () Elevation
 aprsAltParser = do
   void $ string "A="
   alt <- readEither <$> count 6 digit
@@ -84,11 +84,11 @@ aprsAltParser = do
     Right x -> pure $ ElevationMeters x
     Left e -> fail $ "Failed to parse altitude: " ++ toString e
 
-aprsSourceParser :: Parsec Text () Text
+aprsSourceParser :: Parsec ByteString () Text
 aprsSourceParser =
   toText <$> many1 alphaNum
 
-aprsMessageParser :: Parsec Text () AprsMessage
+aprsMessageParser :: Parsec ByteString () AprsMessage
 aprsMessageParser =
   AprsMessage
     <$> aprsSourceParser

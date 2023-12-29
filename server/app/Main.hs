@@ -25,8 +25,6 @@ main = do
   -- convertTiffSafe "./demo/ASTGTMV003_N45E005_dem.tif"
   runBackend
 
--- print "done"
--- startApp 8081
 
 -- convertTiffSafe "./demo/ASTGTMV003_N45E005_dem.tif"
 

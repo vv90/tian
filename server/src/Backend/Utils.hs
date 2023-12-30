@@ -10,5 +10,5 @@ runBackend :: IO ()
 runBackend = do
   flightsTvar <- newTVarIO HM.empty
 
-  concurrently_ (startApp 8081) (runAprs flightsTvar)
+  concurrently_ (startApp flightsTvar 8081) (runAprs flightsTvar)
   pass

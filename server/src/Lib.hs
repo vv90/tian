@@ -2,9 +2,12 @@
 
 module Lib (startApp, app) where
 
-import Conduit (ConduitT, ResourceT)
+import Aprs.Utils (FlightId, FlightPosition, FlightsTable)
+import Conduit (ConduitT, ResourceT, yield)
 import Control.Arrow (ArrowChoice (left))
+import Control.Concurrent.STM.TBChan (readTBChan)
 import Control.Monad.Except (withExceptT)
+import Data.HashMap.Strict qualified as HM
 import Data.List.NonEmpty qualified as NE (cons, reverse)
 import Data.Time (UTCTime (UTCTime))
 import Data.Time.Calendar (fromGregorian)
@@ -18,7 +21,7 @@ import FlightTrack (FlightTrack (..))
 import FlightTrack.Parser (buildFlightTrack, flightInfoParserAll)
 import Geo (Elevation (..), Latitude, Longitude)
 import Hasql.Session qualified as Session
-import Map (GeoPoint)
+import Map (GeoPoint (..))
 import NavPoint (NavPoint, name, navPointLinesParser)
 import Network.Wai.Handler.Warp (Port, run)
 import Persistence.Connection (getConnection)
@@ -27,7 +30,7 @@ import Persistence.Statement (ElevationPointQuery (..))
 import ProgressPoint (ProgressPointDto)
 import Relude
 import Servant
-import Servant.API.WebSocketConduit (WebSocketSource)
+import Servant.API.WebSocketConduit (WebSocketConduit, WebSocketSource)
 import Servant.Multipart (FileData (fdFileName, fdPayload), FromMultipart (fromMultipart), Mem, MultipartData (files), MultipartForm)
 import TaskProgress (TaskProgressDto, toDto)
 import TaskProgressUtils (progress, taskStartLine)
@@ -243,14 +246,29 @@ type API =
     :<|> "test" :> "startLine" :> Capture "taskId" Int32 :> Get '[JSON] ((Latitude, Longitude), (Latitude, Longitude))
     :<|> "demo" :> WebSocketSource (Text, ProgressPointDto)
     :<|> "demoTask" :> Get '[JSON] (FlightTask, [NameMatch])
+    :<|> "watchFlights" :> WebSocketConduit () (FlightId, FlightPosition)
     :<|> "elevationPoints" :> ReqBody '[JSON] [(GeoPoint, GeoPoint)] :> Post '[JSON] [Vector (Vector (GeoPoint, Double))]
 
 -- :<|> "startDemo" :> Get '[JSON] ()
 
-startApp :: Port -> IO ()
-startApp port = do
+server :: TVar FlightsTable -> Server API
+server flightsTvar =
+  uploadNavPoints
+    :<|> navPoints
+    :<|> flightTasks
+    :<|> saveTask
+    :<|> uploadFlightTrack
+    :<|> testTaskProgress
+    :<|> testStartLine
+    :<|> progressDemo
+    :<|> demoTask
+    :<|> watchFlights flightsTvar
+    :<|> elevationPoints
+
+startApp :: TVar FlightsTable -> Port -> IO ()
+startApp flightsTvar port = do
   putStrLn ("Server started on port " <> show port)
-  run port app
+  run port (app flightsTvar)
 
 -- app :: Application
 -- app = corsMiddleware $ serve api server
@@ -265,11 +283,20 @@ startApp port = do
 --                 , corsRequestHeaders = ["Authorization", "Origin", "Content-Type", "Browser-Locale-Data"]
 --                 -- , corsIgnoreFailures = True
 --                 }
-app :: Application
-app = serve api server
+app :: TVar FlightsTable -> Application
+app flightsTvar = serve api (server flightsTvar)
 
 api :: Proxy API
 api = Proxy
+
+watchFlights :: TVar FlightsTable -> ConduitT () (FlightId, FlightPosition) (ResourceT IO) ()
+watchFlights flightsTvar =
+  let readAllChans :: ConduitT () (FlightId, FlightPosition) (ResourceT IO) ()
+      readAllChans = do
+        chans <- HM.toList <$> readTVarIO flightsTvar
+        traverse_ (\(flightId, chan) -> atomically (readTBChan chan) >>= (yield . (flightId,))) chans
+        readAllChans
+   in readAllChans
 
 progressDemo :: ConduitT () (Text, ProgressPointDto) (ResourceT IO) ()
 progressDemo = do
@@ -356,16 +383,3 @@ elevationPoints tiles =
 --             throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
 --         Right (Entity _ ft) ->
 --             liftIO $ atomically $ putTMVar var ft
-
-server :: Server API
-server =
-  uploadNavPoints
-    :<|> navPoints
-    :<|> flightTasks
-    :<|> saveTask
-    :<|> uploadFlightTrack
-    :<|> testTaskProgress
-    :<|> testStartLine
-    :<|> progressDemo
-    :<|> demoTask
-    :<|> elevationPoints

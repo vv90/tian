@@ -2,6 +2,7 @@ module Aprs.Utils where
 
 import Aprs.AprsMessage (AprsMessage (..), aprsMessageParser)
 import Conduit (ConduitT, await, mapC, runConduit, takeC, (.|))
+import Control.Concurrent.STM.TBChan (TBChan, newTBChan, writeTBChan)
 import Data.Conduit.Network (appSink, appSource, clientSettings, runTCPClient)
 import Data.HashMap.Strict as HM
 import Geo (Elevation, altitude, latitude, longitude)
@@ -9,9 +10,13 @@ import Map (GeoPoint (..))
 import Relude
 import Text.Parsec (parse)
 
-type FlightsTable = HashMap Text (GeoPoint, Elevation)
+type FlightId = Text
 
-fromAprsMessage :: AprsMessage -> (GeoPoint, Elevation)
+type FlightPosition = (GeoPoint, Elevation)
+
+type FlightsTable = HashMap FlightId (TBChan FlightPosition)
+
+fromAprsMessage :: AprsMessage -> FlightPosition
 fromAprsMessage msg = (GeoPoint (latitude msg) (longitude msg), altitude msg)
 
 authC :: ConduitT ByteString ByteString IO ()
@@ -24,6 +29,18 @@ withAuth ptSink responseSink = do
   putStrLn "authenticated"
   ptSink
 
+updateFlightsTable :: TVar FlightsTable -> AprsMessage -> STM ()
+updateFlightsTable flightsTvar msg = do
+  flight <- HM.lookup (source msg) <$> readTVar flightsTvar
+
+  case flight of
+    Nothing -> do
+      chan <- newTBChan 1000
+      modifyTVar' flightsTvar $ HM.insert (source msg) chan
+      writeTBChan chan $ fromAprsMessage msg
+    Just chan -> do
+      writeTBChan chan $ fromAprsMessage msg
+
 handleAprsMessage :: TVar FlightsTable -> ConduitT ByteString Void IO ()
 handleAprsMessage flightsTvar = do
   message <- await
@@ -31,12 +48,13 @@ handleAprsMessage flightsTvar = do
   case parse aprsMessageParser "" <$> message of
     Nothing -> pass
     Just (Right msg) -> do
-      liftIO $ putStrLn "."
-      _ <- atomically $ modifyTVar' flightsTvar $ HM.insert msg.source $ fromAprsMessage msg
+      -- liftIO $ putStrLn "."
+      atomically $ updateFlightsTable flightsTvar msg
+      -- readTVarIO flightsTvar >>= print . sort . HM.keys
 
       handleAprsMessage flightsTvar
     Just (Left _) -> do
-      liftIO $ putStrLn "X"
+      -- liftIO $ putStrLn "X"
       handleAprsMessage flightsTvar
 
 runAprs :: TVar FlightsTable -> IO ()

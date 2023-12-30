@@ -2,10 +2,12 @@ module Main exposing (..)
 
 -- import Geo.GeoUtils exposing (..)
 -- import Utils exposing (..)
+-- import MapUtils exposing (..)
 
 import Api.Entity exposing (Entity)
 import Api.FlightTask exposing (FlightTask, flightTaskDecoder)
-import Api.Geo exposing (Latitude(..), Longitude(..))
+import Api.Geo exposing (Elevation, Latitude(..), Longitude(..), elevationDecoder)
+import Api.Map exposing (GeoPoint, geoPointDecoder)
 import Api.NavPoint exposing (NavPoint, navPointDecoder)
 import Api.TaskProgress exposing (progressPointDecoder)
 import AppState
@@ -19,6 +21,7 @@ import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Common.Palette as Palette
 import Common.TaskProgressUtils exposing (progressPointsToMapItems, targetToMapItem)
 import Components.Player as Player
+import Dict exposing (Dict, empty)
 import Element exposing (Element, alignBottom, column, el, fill, height, layout, link, onRight, padding, paddingEach, px, rgba255, row, spacing, text, width)
 import Element.Background as Background
 import Element.Font as Font
@@ -33,7 +36,7 @@ import List.Extra as ListX
 import List.Nonempty as NE exposing (Nonempty(..))
 import Map exposing (..)
 import Map3d exposing (..)
-import MapUtils exposing (..)
+import Map3dUtils exposing (Map3dItem(..))
 import Maybe.Extra as MaybeX
 import Page.Demo as Demo
 import Page.FlightTask.FlightTaskForm as FlightTaskForm
@@ -41,6 +44,7 @@ import Page.FlightTask.FlightTaskList as FlightTaskList
 import Page.FlightTaskPage as FlightTaskPage
 import Page.FlightTrack.FlightTrackUpload as FlightTrackUpload
 import Page.Test.TestProgress as TestProgress
+import Ports exposing (flightPositionReceiver, watchFlight)
 
 
 
@@ -78,6 +82,7 @@ main =
         }
 
 
+sidebarWidth : Int
 sidebarWidth =
     480
 
@@ -99,6 +104,7 @@ type alias Model =
     , appState : AppState.Model
     , messages : List String
     , demoTask : Maybe FlightTask
+    , flightPositions : Dict String ( GeoPoint, Elevation )
     }
 
 
@@ -140,11 +146,13 @@ init flags =
                 |> AppState.withPendingFlightTasks
       , messages = []
       , demoTask = Nothing
+      , flightPositions = Dict.empty
       }
     , Cmd.batch
         [ Cmd.map AppStateMsg AppState.getNavPointsCmd
         , Cmd.map AppStateMsg AppState.getFlightTasksCmd
         , Cmd.map Map3dMsg m3dCmd
+        , watchFlight ()
         ]
     )
 
@@ -159,6 +167,7 @@ type Msg
     | MessageReceived String
       -- | GotDemoFlightTask (ApiResult FlightTask)
       -- | DemoInit (AsyncOperationStatus (ApiResult FlightTask))
+    | FlightPositionReceived String
     | NoMsg
 
 
@@ -284,6 +293,18 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        FlightPositionReceived str ->
+            let
+                pos =
+                    D.decodeString (tupleDecoder ( D.string, tupleDecoder ( geoPointDecoder, elevationDecoder ) )) str
+            in
+            case pos of
+                Ok ( key, val ) ->
+                    ( { model | flightPositions = Dict.insert key val model.flightPositions }, Cmd.none )
+
+                Err _ ->
+                    ( model, Cmd.none )
+
         -- ( { model | messages = str :: model.messages }, Cmd.none )
         -- GotDemoFlightTask (Ok task) ->
         --     ( { model | flightTaskPage = FlightTaskPage.DemoPage (Demo.init task) }
@@ -311,6 +332,7 @@ subscriptions model =
         [ Sub.map MapMsg (Map.subscriptions model.mapModel)
         , Sub.map Map3dMsg (Map3d.subscriptions model.map3dModel)
         , Sub.map FlightTaskPageMsg (FlightTaskPage.subscriptions model.flightTaskPage)
+        , flightPositionReceiver FlightPositionReceived
 
         -- , messageReceiver MessageReceived
         ]
@@ -430,15 +452,15 @@ view model =
                     Demo.mapItems pm
 
         map3dItems =
-            case model.flightTaskPage of
-                FlightTaskPage.UploadTrack pm ->
-                    FlightTrackUpload.map3dItems (AppState.resolvedTasks model.appState) pm
+            model.flightPositions |> Dict.toList |> List.map (\( key, ( pt, elev ) ) -> Marker key pt elev)
 
-                FlightTaskPage.DemoPage pm ->
-                    Demo.map3dItems pm
-
-                _ ->
-                    []
+        -- case model.flightTaskPage of
+        --     FlightTaskPage.UploadTrack pm ->
+        --         FlightTrackUpload.map3dItems (AppState.resolvedTasks model.appState) pm
+        --     FlightTaskPage.DemoPage pm ->
+        --         Demo.map3dItems pm
+        --     _ ->
+        --         []
     in
     div
         [ style "display" "flex"

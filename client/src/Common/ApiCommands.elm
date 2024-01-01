@@ -41,17 +41,6 @@ loadElevationTileCmd onLoaded ( x, y, zoom ) =
         }
 
 
-
--- unflattenVector : Int -> Array a -> Array (Array a)
--- unflattenVector rowLength items =
---     if rowLength <= 0 then
---         Array.empty
---     else if not Array.isEmptyitems then
---         Array.cons (Array.take rowLength items) (unflattenVector rowLength (Array.drop rowLength items))
---     else
---         Array.empty
-
-
 hydrateTile : ElevationPointsTile -> Array ( GeoPoint, Int )
 hydrateTile tile =
     let

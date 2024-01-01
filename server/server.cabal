@@ -112,6 +112,7 @@ library
     , vector
     , wai
     , wai-cors
+    , wai-extra
     , warp
   default-language: GHC2021
 
@@ -171,6 +172,7 @@ executable codegen-exe
     , vector
     , wai
     , wai-cors
+    , wai-extra
     , warp
   default-language: GHC2021
 
@@ -230,6 +232,7 @@ executable seed-exe
     , vector
     , wai
     , wai-cors
+    , wai-extra
     , warp
   default-language: GHC2021
 
@@ -289,6 +292,7 @@ executable server-exe
     , vector
     , wai
     , wai-cors
+    , wai-extra
     , warp
   default-language: GHC2021
 
@@ -357,5 +361,6 @@ test-suite server-test
     , vector
     , wai
     , wai-cors
+    , wai-extra
     , warp
   default-language: GHC2021

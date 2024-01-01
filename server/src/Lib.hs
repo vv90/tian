@@ -15,6 +15,7 @@ import Data.Vector (Vector)
 import Demo.DemoConduit (demoC)
 import Demo.DemoTask (loadDemoTask)
 import Demo.NameMatch (NameMatch, loadNames)
+import Network.Wai.Middleware.Gzip
 import Entity (Entity (..))
 import FlightTask (FlightTask)
 import FlightTrack (FlightTrack (..))
@@ -270,21 +271,13 @@ startApp flightsTvar port = do
   putStrLn ("Server started on port " <> show port)
   run port (app flightsTvar)
 
--- app :: Application
--- app = corsMiddleware $ serve api server
---     where
---         corsMiddleware :: Middleware
---         corsMiddleware = cors (const $ Just corsPolicy)
 
---         corsPolicy =
---             simpleCorsResourcePolicy
---                 { corsMethods = [methodOptions, methodGet, methodPost, methodPut, methodDelete]
---                 -- Note: Content-Type header is necessary for POST requests
---                 , corsRequestHeaders = ["Authorization", "Origin", "Content-Type", "Browser-Locale-Data"]
---                 -- , corsIgnoreFailures = True
---                 }
 app :: TVar FlightsTable -> Application
-app flightsTvar = serve api (server flightsTvar)
+app flightsTvar =
+  server flightsTvar 
+    & serve api
+    & gzip def
+
 
 api :: Proxy API
 api = Proxy

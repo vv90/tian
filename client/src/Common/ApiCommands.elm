@@ -3,8 +3,8 @@ module Common.ApiCommands exposing (..)
 import Api.Types exposing (..)
 import Array exposing (Array)
 import Common.ApiResult exposing (ApiResult)
-import Common.GeoUtils exposing (degreesLatitude, degreesLongitude, scaleLatitude, scaleLongitude, sumLatitude, sumLongitude)
-import Common.JsonCodecsExtra exposing (tripleDecoder, tupleDecoder, tupleEncoder)
+import Common.GeoUtils exposing (scaleLatitude, scaleLongitude, sumLatitude, sumLongitude)
+import Common.JsonCodecsExtra exposing (tupleDecoder, tupleEncoder)
 import Env exposing (apiUrl)
 import Http
 import Json.Decode as D
@@ -49,8 +49,5 @@ hydrateTile tile =
             { lat = sumLatitude tile.origin.lat (scaleLatitude (toFloat i) tile.latStep)
             , lon = sumLongitude tile.origin.lon (scaleLongitude (toFloat j) tile.lonStep)
             }
-
-        -- xa =
-        --     Array.initialize tile.rowLength (\rl -> Array.initialize tile.rowLength (\cl -> Array.get (rl * tile.rowLength + cl) points |> Maybe.map (Tuple.pair (makeGeoPoint cl rl))))
     in
     Array.indexedMap (\i elev -> ( makeGeoPoint (i // tile.rowLength) (modBy tile.rowLength i), elev )) tile.elevations

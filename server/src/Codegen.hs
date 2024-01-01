@@ -3,15 +3,16 @@ module Codegen where
 import Data.HashMap.Lazy qualified as HashMap
 import Data.Text qualified as Text
 import Demo.NameMatch (NameMatch)
+import ElevationPointsTileData (ElevationPointsTile)
 import Entity (Entity)
 import FlightTask (FlightTask, TaskFinish, TaskStart, Turnpoint)
 import Geo (Direction, Distance, Elevation, Latitude, Longitude)
+import GeoPoint (GeoPoint)
 import Language.Elm.Definition (Definition)
 import Language.Elm.Name (Module)
 import Language.Elm.Pretty qualified as Pretty
 import Language.Elm.Simplification qualified as Simplification
 import Language.Haskell.To.Elm (jsonDefinitions)
-import Map (GeoPoint)
 import NavPoint (NavPoint, WaypointStyle)
 import Prettyprinter (Doc)
 import Prettyprinter.Render.Text (hPutDoc)
@@ -41,7 +42,8 @@ typeDefinitions =
       jsonDefinitions @ProgressPointDto,
       jsonDefinitions @TaskProgressDto,
       jsonDefinitions @NameMatch,
-      jsonDefinitions @GeoPoint
+      jsonDefinitions @GeoPoint,
+      jsonDefinitions @ElevationPointsTile
     ]
 
 elmSrcPath :: FilePath

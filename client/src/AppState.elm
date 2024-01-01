@@ -1,8 +1,6 @@
-module AppState exposing (..)
+module AppState exposing (Model, Msg(..), getFlightTasksCmd, getFlightTasksTask, getNavPointsCmd, init, jsonResponse, resolvedTasks, saveFlightTaskCmd, saveFlightTaskTask, update, withFlightTasks, withPendingFlightTasks, withPendingNavPoints)
 
-import Api.Entity exposing (Entity, entityDecoder)
-import Api.FlightTask exposing (FlightTask, flightTaskDecoder, flightTaskEncoder)
-import Api.NavPoint exposing (NavPoint, navPointDecoder)
+import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPending)
 import Env exposing (apiUrl)

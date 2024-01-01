@@ -31,7 +31,7 @@ data TaskProgressDto = TaskProgressDto
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.TaskProgress.TaskProgress" TaskProgressDto
+    via ElmType "Api.Types.TaskProgress" TaskProgressDto
 
 toDto :: TaskProgress -> TaskProgressDto
 toDto (TaskProgress taskId' date' compId' points' legs') =

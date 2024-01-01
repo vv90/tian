@@ -26,15 +26,15 @@ data Entity k a = Entity
 instance HasElmType Entity where
   elmDefinition :: Maybe Definition
   elmDefinition =
-    Just $ deriveElmTypeDefinition @Entity defaultOptions "Api.Entity.Entity"
+    Just $ deriveElmTypeDefinition @Entity defaultOptions "Api.Types.Entity"
 
 instance HasElmDecoder Aeson.Value Entity where
   elmDecoderDefinition =
-    Just $ deriveElmJSONDecoder @Entity defaultOptions Aeson.defaultOptions "Api.Entity.entityDecoder"
+    Just $ deriveElmJSONDecoder @Entity defaultOptions Aeson.defaultOptions "Api.Types.entityDecoder"
 
 instance HasElmEncoder Aeson.Value Entity where
   elmEncoderDefinition =
-    Just $ deriveElmJSONEncoder @Entity defaultOptions Aeson.defaultOptions "Api.Entity.entityEncoder"
+    Just $ deriveElmJSONEncoder @Entity defaultOptions Aeson.defaultOptions "Api.Types.entityEncoder"
 
 instance (HasElmType k, HasElmType a) => HasElmType (Entity k a) where
   elmType =

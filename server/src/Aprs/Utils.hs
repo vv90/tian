@@ -6,7 +6,7 @@ import Control.Concurrent.STM.TBChan (TBChan, newTBChan, writeTBChan)
 import Data.Conduit.Network (appSink, appSource, clientSettings, runTCPClient)
 import Data.HashMap.Strict as HM
 import Geo (Elevation, altitude, latitude, longitude)
-import Map (GeoPoint (..))
+import GeoPoint (GeoPoint (..))
 import Relude
 import Text.Parsec (parse)
 

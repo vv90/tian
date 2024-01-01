@@ -1,4 +1,4 @@
-module Common.ApiResult exposing (..)
+module Common.ApiResult exposing (ApiResult, DeferredResult)
 
 import Common.Deferred exposing (Deferred)
 import Http exposing (Error)

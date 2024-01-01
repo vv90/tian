@@ -61,7 +61,8 @@ config =
     -- , NoUnused.Patterns.rule
     -- , NoUnused.Variables.rule
     -- , NoImportingEverything.rule [ "Element" ]
-    -- , NoExposingEverything.rule
+    , NoExposingEverything.rule
+
     -- , NoMissingTypeAnnotation.rule
     -- , NoMissingTypeAnnotationInLetIn.rule
     -- , NoPrematureLetComputation.rule

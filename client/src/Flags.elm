@@ -1,4 +1,4 @@
-module Flags exposing (..)
+module Flags exposing (Config, Flags, WindowSize)
 
 
 type alias Flags =

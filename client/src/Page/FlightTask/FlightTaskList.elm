@@ -1,7 +1,6 @@
-module Page.FlightTask.FlightTaskList exposing (..)
+module Page.FlightTask.FlightTaskList exposing (Props, view, viewLoaded)
 
-import Api.Entity exposing (Entity)
-import Api.FlightTask exposing (FlightTask)
+import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (Deferred(..))
 import Common.Palette as Palette

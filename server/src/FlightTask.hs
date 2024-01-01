@@ -8,12 +8,12 @@ import NavPoint (NavPoint (..))
 import Relude
 
 newtype Turnpoint
-  = Cylinder Double
+  = TurnpointCylinder Double
   deriving stock (Show, Read, Eq, Generic)
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.FlightTask.Turnpoint" Turnpoint
+    via ElmType "Api.Types.Turnpoint" Turnpoint
 
 newtype TaskStart
   = StartLine Double
@@ -21,7 +21,7 @@ newtype TaskStart
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.FlightTask.TaskStart" TaskStart
+    via ElmType "Api.Types.TaskStart" TaskStart
 
 data TaskFinish
   = FinishLine Double
@@ -30,7 +30,7 @@ data TaskFinish
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.FlightTask.TaskFinish" TaskFinish
+    via ElmType "Api.Types.TaskFinish" TaskFinish
 
 data FlightTask = FlightTask
   { start :: (NavPoint, TaskStart),
@@ -41,7 +41,7 @@ data FlightTask = FlightTask
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.FlightTask.FlightTask" FlightTask
+    via ElmType "Api.Types.FlightTask" FlightTask
 
 -- makeFlightTask :: [NavPoint] -> (Text, TaskStart) -> [(Text, Turnpoint)] -> (Text, TaskFinish) -> Either Text FlightTask
 -- makeFlightTask navPoints (startName, startLine) turnpointItems (finishName, finishLine) = do

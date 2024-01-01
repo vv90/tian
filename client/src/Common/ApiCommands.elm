@@ -1,24 +1,36 @@
-module Common.ApiCommands exposing (..)
+module Common.ApiCommands exposing (hydrateTile, loadElevationTileCmd)
 
-import Api.Map exposing (GeoPoint, geoPointDecoder, geoPointEncoder)
+import Api.Types exposing (..)
 import Array exposing (Array)
 import Common.ApiResult exposing (ApiResult)
-import Common.JsonCodecsExtra exposing (tupleDecoder, tupleEncoder)
+import Common.GeoUtils exposing (scaleLatitude, scaleLongitude, sumLatitude, sumLongitude)
 import Env exposing (apiUrl)
 import Http
-import Json.Decode as D
-import Json.Encode as E
+import Tile exposing (TileKey)
 
 
-loadElevationsCmd : (ApiResult (List (Array (Array ( GeoPoint, Float )))) -> msg) -> List ( GeoPoint, GeoPoint ) -> Cmd msg
-loadElevationsCmd onLoaded tiles =
-    case tiles of
-        [] ->
-            Cmd.none
+loadElevationTileCmd : (ApiResult ElevationPointsTile -> msg) -> TileKey -> Cmd msg
+loadElevationTileCmd onLoaded ( x, y, zoom ) =
+    Http.get
+        { url =
+            apiUrl <|
+                "elevationTile/"
+                    ++ String.fromInt zoom
+                    ++ "/"
+                    ++ String.fromInt x
+                    ++ "/"
+                    ++ String.fromInt y
+        , expect = Http.expectJson onLoaded elevationPointsTileDecoder
+        }
 
-        _ ->
-            Http.post
-                { url = apiUrl "elevationPoints"
-                , body = Http.jsonBody <| E.list (tupleEncoder ( geoPointEncoder, geoPointEncoder )) tiles
-                , expect = Http.expectJson onLoaded <| D.list <| D.array <| D.array (tupleDecoder ( geoPointDecoder, D.float ))
-                }
+
+hydrateTile : ElevationPointsTile -> Array ( GeoPoint, Int )
+hydrateTile tile =
+    let
+        makeGeoPoint : Int -> Int -> GeoPoint
+        makeGeoPoint i j =
+            { lat = sumLatitude tile.origin.lat (scaleLatitude (toFloat i) tile.latStep)
+            , lon = sumLongitude tile.origin.lon (scaleLongitude (toFloat j) tile.lonStep)
+            }
+    in
+    Array.indexedMap (\i elev -> ( makeGeoPoint (i // tile.rowLength) (modBy tile.rowLength i), elev )) tile.elevations

@@ -1,4 +1,4 @@
-module Common.ChildUpdate exposing (..)
+module Common.ChildUpdate exposing (childUpdate, childUpdateWithEffect)
 
 
 childUpdate :

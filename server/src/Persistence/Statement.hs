@@ -22,9 +22,9 @@ import Geo
     metersDistance,
     metersElevation,
   )
+import GeoPoint (GeoPoint (..))
 import Hasql.Statement (Statement, refineResult)
 import Hasql.TH (maybeStatement, rowsAffectedStatement, singletonStatement, vectorStatement)
-import Map (GeoPoint (..))
 import NavPoint (NavPoint (NavPoint, code, country, desc, elev, freq, name, rwdir, rwlen, style))
 import Relude
 
@@ -120,36 +120,30 @@ saveNavPointsStatement =
 
 data ElevationPointQuery = ElevationPointQuery
   { from :: GeoPoint,
-    to :: GeoPoint,
+    lonStepSize :: Longitude,
+    latStepSize :: Latitude,
     resolution :: Int
   }
+  deriving stock (Show, Eq)
 
-generateElevationPointsStatement :: Statement ElevationPointQuery (Vector (GeoPoint, Double))
+generateElevationPointsStatement :: Statement ElevationPointQuery (Vector (GeoPoint, Int))
 generateElevationPointsStatement =
-  let lonStepSize :: ElevationPointQuery -> Double
-      lonStepSize (ElevationPointQuery {from, to, resolution}) =
-        ((degreesLongitude . longitude) to - (degreesLongitude . longitude) from) / fromIntegral (resolution - 1)
-
-      latStepSize :: ElevationPointQuery -> Double
-      latStepSize (ElevationPointQuery {from, to, resolution}) =
-        ((degreesLatitude . latitude) to - (degreesLatitude . latitude) from) / fromIntegral (resolution - 1)
-
-      prepareInput :: ElevationPointQuery -> (Double, Double, Double, Double, Int32)
-      prepareInput query@(ElevationPointQuery {from, resolution}) =
+  let prepareInput :: ElevationPointQuery -> (Double, Double, Double, Double, Int32)
+      prepareInput (ElevationPointQuery {from, lonStepSize, latStepSize, resolution}) =
         ( degreesLongitude . longitude $ from,
-          lonStepSize query,
+          degreesLongitude lonStepSize,
           degreesLatitude . latitude $ from,
-          latStepSize query,
-          fromIntegral (resolution - 1)
+          degreesLatitude latStepSize,
+          fromIntegral $ resolution - 1
         )
 
-      makeGeoPoint :: (Double, Double, Double) -> (GeoPoint, Double)
+      makeGeoPoint :: (Double, Double, Double) -> (GeoPoint, Int)
       makeGeoPoint (lon, lat, elev) =
         ( GeoPoint (LatitudeDegrees lat) (LongitudeDegrees lon),
-          elev
+          floor elev
         )
 
-      processOutput :: Vector (Double, Double, Double) -> Vector (GeoPoint, Double)
+      processOutput :: Vector (Double, Double, Double) -> Vector (GeoPoint, Int)
       processOutput =
         fmap makeGeoPoint
    in (fmap processOutput . lmap prepareInput)
@@ -168,7 +162,7 @@ generateElevationPointsStatement =
           )
           SELECT ST_X(geom)::float8, ST_Y(geom)::float8, COALESCE(ST_Value(rast, geom), 0.0)::float8
           FROM points
-          LEFT JOIN astgtmv003_n45e005_dem
+          LEFT JOIN astgtmv003_n43e005_dem
           ON ST_Intersects(rast, geom) 
         |]
 
@@ -177,34 +171,6 @@ saveSingleElevationPointStatement =
   [rowsAffectedStatement|
     insert into elevations (elevation, location) values ($1 :: int2, ST_GeogFromText('SRID=4326;POINT(' || $2 :: float8 || ' ' || $3 :: float8 || ')'))
   |]
-
--- saveElevationPointStatement :: Statement (Vector ElevationPoint) Int64
--- saveElevationPointStatement =
---   lmap
---     nest
---     [rowsAffectedStatement|
---       insert into elevations (elevation, location)
---       select * from unnest ($1 :: int2[], ST_GeogFromText(' || $2 :: float8[] || '))
---     |]
---   where
---     -- sql =
---     --   "insert into elevations (elevation, location)
---     --     select * from unnest ($1 :: int2[], 'SRID=4326;POINT($2 :: float8[], $3 :: float8[])')
---     --   "
---     -- showLon :: ElevationPoint -> Text
---     -- showLon = show . degreesLongitude . longitude
-
---     -- showLat :: ElevationPoint -> Text
---     -- showLat = show . degreesLatitude . latitude
-
---     nest eps =
---       let elevs = elevByte <$> eps
---           lons = degreesLongitude . longitude <$> eps
---           lats = degreesLatitude . latitude <$> eps
-
---           pts :: Vector Text
---           pts = (\x -> "SRID=4326;POINT(" +| x.lon |+ " " +| x.lat |+ ")") <$> eps  --'SRID=4326;POINT(' || $2 :: float8[] || ' ' || $3 :: float8[] || ')'
---       in (elevs, lons)
 
 checkImportedFileStatement :: Statement Text (Maybe Text)
 checkImportedFileStatement =
@@ -229,11 +195,11 @@ decodeStartType = \case
 
 encodeTurnpointType :: Turnpoint -> Text
 encodeTurnpointType = \case
-  Cylinder _ -> "Cylinder"
+  TurnpointCylinder _ -> "Cylinder"
 
 decodeTurnpointType :: Text -> Either Text (Double -> Turnpoint)
 decodeTurnpointType = \case
-  "Cylinder" -> Right Cylinder
+  "Cylinder" -> Right TurnpointCylinder
   x -> Left $ "Failed to parse turnpoint type: unrecognized value '" <> x <> "'"
 
 encodeFinishType :: TaskFinish -> Text
@@ -567,6 +533,6 @@ saveFlightTaskTurnpointsStatement =
         |]
   where
     turnpointType = \case
-      Cylinder _ -> "Cylinder" :: Text
+      TurnpointCylinder _ -> "Cylinder" :: Text
     turnpointRadius = \case
-      Cylinder r -> r
+      TurnpointCylinder r -> r

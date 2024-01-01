@@ -1,4 +1,4 @@
-module Components.PlaybackSpeed exposing (..)
+module Components.PlaybackSpeed exposing (PlaybackSpeed(..), increaseSpeed, lowerSpeed, playbackCoefficient)
 
 
 type PlaybackSpeed

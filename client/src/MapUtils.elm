@@ -1,9 +1,8 @@
-module MapUtils exposing (..)
+module MapUtils exposing (LineStyle(..), MapItem(..), MapView, MarkerType(..), PointStyle(..), addTileSources, changeZoom, fromMercatorWeb, geoPointToViewCoords, isInView, isPointInRect, isPointInView, isValidTileKey, metersPerPixel, normalizeTileKey, scaleCoords, scaleFromZoom, scaleOffset, stringFromBool, stringFromTuple, tilesInView, toMercatorWeb, viewCoordsToGeoPoint)
 
 -- import Geo.GeoUtils exposing (..)
 
-import Api.Geo exposing (Distance(..), Latitude(..), Longitude(..))
-import Api.Map exposing (GeoPoint)
+import Api.Types exposing (..)
 import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Dict exposing (Dict)
 import List.Extra as ListX

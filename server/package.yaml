@@ -151,6 +151,8 @@ dependencies:
 - filepath
 # for elm codegen
 - directory
+# for gzip support (for http server)
+- wai-extra
 
 library:
   source-dirs: src

@@ -4,14 +4,12 @@ import Data.Vector (Vector)
 import Data.Vector qualified as Vector
 import Entity (Entity (..))
 import FlightTask (FlightTask)
--- saveElevationPointStatement,
-
 import Geo (degreesLatitude, degreesLongitude, latitude, longitude)
+import GeoPoint (GeoPoint)
 import GeoTiff.ElevationPoint (ElevationPoint (elevByte))
 import Hasql.Session (Session, statement)
 import Hasql.Transaction qualified as Transaction
 import Hasql.Transaction.Sessions (IsolationLevel (Serializable), Mode (Write), transaction)
-import Map (GeoPoint)
 import NavPoint (NavPoint)
 import Persistence.Statement
   ( ElevationPointQuery,
@@ -57,8 +55,7 @@ getFlightTaskSession taskId =
 
 saveElevationPointsSession :: Text -> [Vector ElevationPoint] -> Session Int64
 saveElevationPointsSession fileName points =
-  let -- saveGroup = flip Transaction.statement saveElevationPointStatement
-      savePoint = flip Transaction.statement saveSingleElevationPointStatement
+  let savePoint = flip Transaction.statement saveSingleElevationPointStatement
 
       pointToTuple :: ElevationPoint -> (Int16, Double, Double)
       pointToTuple p = (p.elevByte, degreesLongitude $ longitude p, degreesLatitude $ latitude p)
@@ -74,6 +71,6 @@ saveElevationPointsSession fileName points =
           Just _ ->
             pure 0
 
-generateElevationPointsSession :: ElevationPointQuery -> Session (Vector (GeoPoint, Double))
+generateElevationPointsSession :: ElevationPointQuery -> Session (Vector (GeoPoint, Int))
 generateElevationPointsSession query =
   statement query generateElevationPointsStatement

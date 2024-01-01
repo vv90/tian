@@ -1,8 +1,6 @@
-module Page.FlightTask.FlightTaskForm exposing (..)
+module Page.FlightTask.FlightTaskForm exposing (Effect(..), FinishModel, FlightTaskRow(..), FlightTaskSelection(..), Model, Msg(..), Props, StartModel, TurnpointModel, init, initFinishModel, initStartModel, mapItems, radiusCodec, result, saveFlightTaskCmd, taskSelectionTable, update, view, viewLoaded, withFinishRadius, withFinishSelectModel, withSearchSelectModel, withSelectedItem, withStartRadius, withTurnpointRadius)
 
-import Api.Entity exposing (Entity)
-import Api.FlightTask exposing (FlightTask, TaskFinish(..), TaskStart(..), Turnpoint(..), flightTaskEncoder)
-import Api.NavPoint exposing (NavPoint)
+import Api.Types exposing (..)
 import AppState
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..))
@@ -140,7 +138,7 @@ result model =
                         List.map
                             (\tpr ->
                                 ( Tuple.first tpr
-                                , Cylinder <| (*) 1000 <| V.getPositive <| Tuple.second tpr
+                                , TurnpointCylinder <| (*) 1000 <| V.getPositive <| Tuple.second tpr
                                 )
                             )
                             tprs

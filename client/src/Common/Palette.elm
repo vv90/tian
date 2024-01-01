@@ -1,4 +1,4 @@
-module Common.Palette exposing (..)
+module Common.Palette exposing (accent, darkGray, darkerGray, error, gray, lightGray, primary, primaryDark, primaryFont, shadow, success, tarnsparent, white)
 
 import Element exposing (rgb255, rgba255)
 

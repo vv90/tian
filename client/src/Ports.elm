@@ -1,4 +1,4 @@
-port module Ports exposing (..)
+port module Ports exposing (flightPositionReceiver, messageReceiver, startDemo, watchFlight)
 
 
 port startDemo : () -> Cmd msg

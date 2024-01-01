@@ -6,7 +6,6 @@ import Api.Types exposing (..)
 import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Dict exposing (Dict)
 import List.Extra as ListX
-import Point2d exposing (Point2d)
 import Tile exposing (TileKey, tileKeyToUrl, tileSize)
 
 

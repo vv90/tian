@@ -10,7 +10,6 @@ module Common.Validation exposing
     )
 
 import Parser exposing (Parser, deadEndsToString)
-import Svg.Attributes exposing (x)
 
 
 type CodecError

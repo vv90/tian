@@ -4,27 +4,23 @@ import Api.Types exposing (..)
 import AppState
 import Browser
 import Common.ApiResult exposing (ApiResult)
-import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..))
+import Common.Deferred exposing (Deferred(..))
 import Common.Effect as Effect
 import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Common.Palette as Palette
-import Dict exposing (Dict, empty)
-import Element exposing (Element, alignBottom, column, el, fill, height, layout, link, onRight, padding, paddingEach, px, rgba255, row, spacing, text, width)
+import Dict exposing (Dict)
+import Element exposing (Element, alignBottom, column, fill, height, link, paddingEach, row, spacing, text)
 import Element.Font as Font
 import Flags exposing (..)
-import Html exposing (Html, button, div)
+import Html exposing (Html, div)
 import Html.Attributes exposing (style)
 import Json.Decode as D
 import List.Extra as ListX
-import List.Nonempty as NE exposing (Nonempty(..))
-import Map exposing (..)
-import Map3d exposing (..)
+import Map
+import Map3d
 import Map3dUtils exposing (Map3dItem(..))
-import Maybe.Extra as MaybeX
 import Page.Demo as Demo
-import Page.FlightTask.FlightTaskForm as FlightTaskForm
 import Page.FlightTaskPage as FlightTaskPage
-import Page.FlightTrack.FlightTrackUpload as FlightTrackUpload
 import Page.Test.TestProgress as TestProgress
 import Ports exposing (flightPositionReceiver, watchFlight)
 
@@ -136,36 +132,8 @@ update msg model =
                 ( nextModel, cmd, point ) =
                     Map.update m model.mapModel
 
-                selectedTaskId =
-                    case model.flightTaskPage of
-                        FlightTaskPage.UploadTrack utm ->
-                            Just utm.taskId
-
-                        _ ->
-                            Nothing
-
                 -- for debugging
-                selectedPoints =
-                    case model.testProgressModel.progress of
-                        NotStarted ->
-                            Just []
-
-                        InProgress ->
-                            Nothing
-
-                        Updating _ ->
-                            Nothing
-
-                        Resolved pts ->
-                            Result.toMaybe pts
-                                |> Maybe.map (.points >> List.map (\p -> ( p.lat, p.lon )))
-
                 -- for debugging
-                appendPoint ps p =
-                    MaybeX.unwrap
-                        (NE.fromElement p)
-                        (\xs -> NE.append xs (NE.fromElement p))
-                        (NE.fromList ps)
             in
             ( { model | mapModel = nextModel }
             , Cmd.map MapMsg cmd
@@ -393,21 +361,6 @@ selectedFlightTask flightTasksD taskId =
 view : Model -> Html Msg
 view model =
     let
-        mapItems =
-            case model.flightTaskPage of
-                FlightTaskPage.AddTask pm ->
-                    FlightTaskForm.mapItems pm
-
-                FlightTaskPage.UploadTrack pm ->
-                    -- taskItems ++ pointItems ++ TestProgress.toMapItems model.testProgressModel
-                    FlightTrackUpload.mapItems (AppState.resolvedTasks model.appState) pm
-
-                FlightTaskPage.SelectTask ->
-                    []
-
-                FlightTaskPage.DemoPage pm ->
-                    Demo.mapItems pm
-
         map3dItems =
             model.flightPositions |> Dict.toList |> List.map (\( key, ( pt, elev ) ) -> Marker key pt elev)
 

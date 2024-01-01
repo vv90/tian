@@ -28,21 +28,6 @@ getRaw (FormField formField) =
     formField.raw
 
 
-isDirty : FormField r v -> Bool
-isDirty (FormField formField) =
-    formField.dirty
-
-
-initFormField : Codec r v -> v -> FormField r v
-initFormField codec val =
-    FormField
-        { raw = codec.encode val
-        , val = Ok val
-        , codec = codec
-        , dirty = False
-        }
-
-
 initFormFieldRaw : Codec r v -> r -> FormField r v
 initFormFieldRaw codec raw =
     FormField

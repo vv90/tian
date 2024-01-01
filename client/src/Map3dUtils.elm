@@ -1,26 +1,22 @@
 module Map3dUtils exposing (Map3dItem(..), MercatorCoords(..), MercatorUnit(..), PlaneCoords(..), SomeCoords(..), WorldCoords(..), fromMercatorPoint, getMercatorUnit, makeMesh_, makeTilePoints, makeTiles, mercatorFrame, mercatorRate, mercatorUnit, tileMesh, tileOrigin, tileRectangle, toMercatorPoint)
 
 import Api.Types exposing (..)
-import Array exposing (Array)
-import Array.Extra
-import Color exposing (Color)
+import Array
 import Common.ApiCommands exposing (hydrateTile)
-import Common.GeoUtils exposing (metersDistance)
 import Dict exposing (Dict)
 import Direction3d
 import Frame2d exposing (Frame2d)
-import Length exposing (Length, Meters)
+import Length exposing (Meters)
 import List.Extra as ListX
-import MapUtils exposing (fromMercatorWeb, metersPerPixel, toMercatorWeb)
+import MapUtils exposing (fromMercatorWeb, toMercatorWeb)
 import Maybe.Extra
 import Point2d exposing (Point2d)
 import Point3d exposing (Point3d)
 import Quantity exposing (Quantity(..), Rate)
-import Scene3d.Material exposing (Texture)
-import Scene3d.Mesh as Mesh exposing (Mesh)
+import Scene3d.Mesh as Mesh
 import SketchPlane3d exposing (SketchPlane3d)
 import Tile exposing (Tile, TileKey, ZoomLevel(..), tileLength, zoomInt)
-import TriangularMesh exposing (TriangularMesh)
+import TriangularMesh
 import Vector2d exposing (Vector2d)
 
 

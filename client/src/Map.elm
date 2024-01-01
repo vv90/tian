@@ -10,12 +10,12 @@ import Canvas exposing (Point, Renderable, clear, group, rect, shapes, texture)
 import Canvas.Settings exposing (fill)
 import Canvas.Settings.Advanced exposing (scale, transform, translate)
 import Canvas.Texture as Texture exposing (..)
-import Color exposing (..)
+import Color
 import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Dict exposing (Dict)
 import Flags exposing (WindowSize)
-import Html exposing (Html, button, div, h2, h5, img, label, object, option, p, select, text)
-import Html.Attributes exposing (attribute, class, height, src, style, value, width)
+import Html exposing (Html, button, div, h5, text)
+import Html.Attributes exposing (style)
 import Html.Events exposing (on, onClick)
 import Json.Decode as D
 import List.Extra as ListX
@@ -24,7 +24,6 @@ import Maybe.Extra as MaybeX
 import Svg exposing (Svg)
 import Svg.Attributes as SvgAttr
 import Tile exposing (TileKey, maxZoom, minZoom, tileSize)
-import TimeUtils exposing (..)
 
 
 type DragState
@@ -597,12 +596,6 @@ renderPolygon mapView points =
 renderMarker : MapView -> GeoPoint -> String -> Svg Msg
 renderMarker mapView point label =
     let
-        w =
-            40
-
-        h =
-            40
-
         -- markerSrc =
         --   case marker.markerType of
         --     Glider -> VitePluginHelper.asset "/assets/images/glider.svg"

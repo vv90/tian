@@ -1,6 +1,5 @@
 module Common.Date exposing (Date(..), addDay, countLeapYears, dateCompare, daysBeforeMonth, formatDate, fromPosix, isLeapYear, millisInDay, monthToString, toPosix)
 
-import List exposing (..)
 import Time exposing (..)
 
 

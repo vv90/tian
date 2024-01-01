@@ -1,19 +1,14 @@
 module Owl.Globe exposing (ViewArgs, WGS84Coords(..), WGS84Degrees(..), WorldCoords(..), camera, screenRectangle)
 
 import Angle exposing (Angle)
-import Api.Geo exposing (Distance)
-import Axis3d exposing (Axis3d)
 import Camera3d exposing (Camera3d)
 import Flags exposing (WindowSize)
 import Length exposing (Meters)
 import Pixels exposing (Pixels)
-import Plane3d exposing (Plane3d)
-import Point2d exposing (Point2d)
+import Point2d
 import Point3d exposing (Point3d)
-import Polygon2d exposing (Polygon2d)
 import Quantity exposing (Quantity)
 import Rectangle2d exposing (Rectangle2d)
-import Scene3d.Mesh as Mesh exposing (Mesh)
 import Viewpoint3d
 
 

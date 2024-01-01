@@ -2,44 +2,42 @@ module Map3d exposing (DragState(..), Model, Msg(..), TileData, ViewArgs, WebGLR
 
 import Angle exposing (Angle)
 import Api.Types exposing (..)
-import Array exposing (Array)
-import Axis3d exposing (at_)
+import Axis3d
 import Basics.Extra exposing (uncurry)
 import Browser.Events as BrowserEvents
 import Camera3d exposing (Camera3d)
 import Color exposing (Color)
-import Common.ApiCommands exposing (hydrateTile, loadElevationTileCmd)
-import Common.ApiResult exposing (ApiResult, DeferredResult)
-import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
-import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
+import Common.ApiCommands exposing (loadElevationTileCmd)
+import Common.ApiResult exposing (ApiResult)
+import Common.Deferred exposing (Deferred(..), deferredToMaybe, setPending)
+import Common.GeoUtils exposing (degreesLatitude)
 import Constants exposing (earthCircumference)
 import Dict exposing (Dict)
-import Dict.Extra as DictX
 import Direction3d
 import Flags exposing (WindowSize)
 import Frame2d exposing (Frame2d)
-import Html exposing (Html, div, input, text)
-import Html.Attributes as HtmlAttr exposing (attribute, style, type_)
-import Html.Events as HtmlEvents exposing (on)
+import Html exposing (Html, div)
+import Html.Attributes exposing (style)
+import Html.Events exposing (on)
 import Json.Decode as D
 import Length exposing (Length, Meters)
-import Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, PlaneCoords(..), WorldCoords, fromMercatorPoint, getMercatorUnit, makeMesh_, makeTilePoints, makeTiles, mercatorFrame, mercatorRate, tileMesh, tileRectangle, toMercatorPoint)
+import Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, PlaneCoords, WorldCoords, fromMercatorPoint, makeMesh_, makeTiles, mercatorFrame, mercatorRate, toMercatorPoint)
 import Maybe.Extra as MaybeX
 import Pixels exposing (Pixels)
 import Plane3d
 import Point2d exposing (Point2d)
 import Point3d exposing (Point3d)
 import Point3d.Projection as Projection
-import Quantity exposing (Quantity(..), Rate, minus, plus)
+import Quantity exposing (Quantity, Rate, minus, plus)
 import Rectangle2d exposing (Rectangle2d)
 import Scene3d
 import Scene3d.Material as Material
-import Scene3d.Mesh as Mesh exposing (Mesh)
+import Scene3d.Mesh as Mesh
 import SketchPlane3d exposing (SketchPlane3d)
 import Svg exposing (Svg)
 import Svg.Attributes as SvgAttr
 import Task
-import Tile exposing (TileKey, ZoomLevel, fromTileKey, tileKeyToUrl, zoomLevel)
+import Tile exposing (TileKey, ZoomLevel, tileKeyToUrl, zoomLevel)
 import Viewpoint3d
 
 
@@ -222,9 +220,6 @@ updateTiles model =
                         model.mercatorRate
                         (Point3d.projectInto xyPlane model.viewArgs.focalPoint)
                     )
-
-        _ =
-            tiles |> List.map Tuple.first
 
         -- gets tile keys that are missing the given property
         missingKeys prop =
@@ -615,40 +610,6 @@ mapItemView model mapItem =
 
 debugInfo : Model -> List String
 debugInfo model =
-    let
-        n =
-            0
-
-        showGeoPoint ( LatitudeDegrees lat, LongitudeDegrees lon ) =
-            String.fromFloat lat ++ ", " ++ String.fromFloat lon
-
-        show2dPoint fromQty p =
-            Point2d.toTuple fromQty p
-                |> (\( x, y ) -> String.fromFloat x ++ ", " ++ String.fromFloat y)
-
-        show3dPoint fromQty p =
-            Point3d.toTuple fromQty p
-                |> (\( x, y, z ) -> String.fromFloat x ++ ", " ++ String.fromFloat y ++ ", " ++ String.fromFloat z)
-
-        -- (Quantity depth) =
-        --     Projection.depth (camera (Point3d.meters 0 0 0)
-        -- ( ( Quantity fromX, Quantity fromY ), ( Quantity toX, Quantity toY ) ) =
-        --     Rectangle2d.vertices screenRectangle
-        --         |> List.filterMap
-        --             (Camera3d.ray model.camera screenRectangle
-        --                 >> Axis3d.intersectionWithPlane Plane3d.xy
-        --                 >> Maybe.map (\p -> ( Point3d.xCoordinate p, Point3d.yCoordinate p ))
-        --             )
-        --         |> List.foldr
-        --             (\( x, y ) ( ( minx, miny ), ( maxx, maxy ) ) ->
-        --                 ( ( Quantity.min x minx, Quantity.min y miny )
-        --                 , ( Quantity.max x maxx, Quantity.max y maxy )
-        --                 )
-        --             )
-        --             ( ( Length.meters 0, Length.meters 0 )
-        --             , ( Length.meters 0, Length.meters 0 )
-        --             )
-    in
     [-- model.displayedTiles |> List.length |> String.fromInt |> (++) "Tiles in view: "
      -- , showGeoPoint model.origin
      -- , toMercatorPoint model.origin |> show2dPoint getMercatorUnit

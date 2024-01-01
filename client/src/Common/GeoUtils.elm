@@ -29,11 +29,6 @@ metersElevation (ElevationMeters meters) =
     meters
 
 
-degreesDirection : Direction -> Int
-degreesDirection (DirectionDegrees degrees) =
-    degrees
-
-
 degreesLongitude : Longitude -> Float
 degreesLongitude (LongitudeDegrees degrees) =
     degrees
@@ -101,63 +96,6 @@ radToDeg x =
 -- lat_deg = lat_rad * 180.0 / pi
 
 
-sinh : Float -> Float
-sinh x =
-    (e ^ x - e ^ -x) / 2
-
-
-{-| Converts from degrees, minutes, seconds to decimal degrees
--}
-toDecimalDegrees : Int -> Float -> Float -> Float
-toDecimalDegrees degrees minutes seconds =
-    toFloat degrees + minutes / 60 + seconds / 3600
-
-
-{-| Distance between 2 geo points
--}
-distance : GeoPoint -> GeoPoint -> Distance
-distance gp1 gp2 =
-    let
-        ( p1Lat, p1Lon ) =
-            ( gp1.lat, gp1.lon )
-
-        ( p2Lat, p2Lon ) =
-            ( gp2.lat, gp2.lon )
-
-        ( lonRad1, latRad1 ) =
-            ( p1Lon |> degreesLongitude |> degrees
-            , p1Lat |> degreesLatitude |> degrees
-            )
-
-        ( lonRad2, latRad2 ) =
-            ( p2Lon |> degreesLongitude |> degrees
-            , p2Lat |> degreesLatitude |> degrees
-            )
-
-        ( deltaLon, deltaLat ) =
-            ( lonRad2 - lonRad1, latRad2 - latRad2 )
-
-        r =
-            metersDistance earthRadius
-
-        -- a = sin²(Δφ/2) + cos φ1 ⋅ cos φ2 ⋅ sin²(Δλ/2)
-        a =
-            sin (deltaLat / 2) ^ 2 + cos latRad1 * cos latRad2 * sin (deltaLon / 2) ^ 2
-
-        -- c = 2 ⋅ atan2( √a, √(1−a) )
-        c =
-            2 * atan2 (sqrt a) (sqrt (1 - a))
-
-        -- d = R ⋅ c
-        d =
-            r * c
-
-        -- where	φ is latitude, λ is longitude, R is earth’s radius (mean radius = 6,371km);
-        -- note that angles need to be in radians to pass to trig functions!
-    in
-    DistanceMeters d
-
-
 {-| Bearing from first point to the second
 -}
 bearing : GeoPoint -> GeoPoint -> Bearing
@@ -193,21 +131,6 @@ bearing gp1 gp2 =
             atan2 x y |> radToDeg
     in
     normalizedBearing b
-
-
-{-| Returns the angle between 2 bearings (from 0 to 180 degrees)
--}
-bearingDifference : Bearing -> Bearing -> Float
-bearingDifference (Bearing b1) (Bearing b2) =
-    let
-        angle =
-            max b1 b2 - min b1 b2
-    in
-    if angle > 180 then
-        360 - angle
-
-    else
-        angle
 
 
 {-| Calculates the destination geo point when traveling on a set bearing for a set distance from the start geo point

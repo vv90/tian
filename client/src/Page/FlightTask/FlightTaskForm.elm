@@ -1,7 +1,6 @@
 module Page.FlightTask.FlightTaskForm exposing (Effect(..), FinishModel, FlightTaskRow(..), FlightTaskSelection(..), Model, Msg(..), Props, StartModel, TurnpointModel, init, initFinishModel, initStartModel, mapItems, radiusCodec, result, saveFlightTaskCmd, taskSelectionTable, update, view, viewLoaded, withFinishRadius, withFinishSelectModel, withSearchSelectModel, withSelectedItem, withStartRadius, withTurnpointRadius)
 
 import Api.Types exposing (..)
-import AppState
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..))
 import Common.Effect as Effect exposing (EffectSet, effect)

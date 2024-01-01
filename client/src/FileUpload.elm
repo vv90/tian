@@ -8,7 +8,6 @@ import Html.Attributes exposing (type_)
 import Html.Events exposing (on)
 import Http
 import Json.Decode as D
-import Task exposing (perform)
 
 
 type alias Model =

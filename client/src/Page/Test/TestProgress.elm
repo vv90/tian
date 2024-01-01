@@ -4,12 +4,11 @@ import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
 import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
-import Common.JsonCodecsExtra exposing (tupleDecoder, tupleEncoder)
+import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Element exposing (Element, column, spacing, text)
 import Element.Input as Input
 import Env exposing (apiUrl)
 import Http
-import Json.Decode as D
 import Json.Encode as E
 import List.Nonempty as NE exposing (Nonempty)
 import MapUtils exposing (LineStyle(..), MapItem(..))

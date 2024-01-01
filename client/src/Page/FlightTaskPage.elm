@@ -2,11 +2,9 @@ module Page.FlightTaskPage exposing (Effect(..), Model(..), Msg(..), Props, init
 
 import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)
-import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPending)
+import Common.Deferred exposing (Deferred)
 import Common.Effect as Effect exposing (EffectSet, effect)
-import Element exposing (Element, text)
-import Http
-import Json.Decode as D
+import Element exposing (Element)
 import Page.Demo as Demo
 import Page.FlightTask.FlightTaskForm as FlightTaskForm
 import Page.FlightTask.FlightTaskList as FlightTaskList

@@ -20,8 +20,8 @@ import FlightTask (FlightTask)
 import FlightTrack (FlightTrack (..))
 import FlightTrack.Parser (buildFlightTrack, flightInfoParserAll)
 import Geo (Elevation (..), Latitude, Longitude)
+import GeoPoint (GeoPoint (..))
 import Hasql.Session qualified as Session
-import Map (GeoPoint (..))
 import NavPoint (NavPoint, name, navPointLinesParser)
 import Network.Wai.Handler.Warp (Port, run)
 import Persistence.Connection (getConnection)
@@ -248,8 +248,7 @@ type API =
     :<|> "demoTask" :> Get '[JSON] (FlightTask, [NameMatch])
     :<|> "watchFlights" :> WebSocketConduit () (FlightId, FlightPosition)
     :<|> "elevationPoints" :> ReqBody '[JSON] [(GeoPoint, GeoPoint)] :> Post '[JSON] [Vector (Vector (GeoPoint, Double))]
-
--- :<|> "startDemo" :> Get '[JSON] ()
+    :<|> "elevationTile" :> Capture "zoom" Int :> Capture "x" Int :> Capture "y" Int :> Get '[OctetStream] ByteString
 
 server :: TVar FlightsTable -> Server API
 server flightsTvar =
@@ -264,6 +263,7 @@ server flightsTvar =
     :<|> demoTask
     :<|> watchFlights flightsTvar
     :<|> elevationPoints
+    :<|> elevationTile
 
 startApp :: TVar FlightsTable -> Port -> IO ()
 startApp flightsTvar port = do
@@ -366,6 +366,10 @@ elevationPoints tiles =
         case res of
           Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
           Right x -> pure $ fmap (unflattenVector resolution) x
+
+elevationTile :: Int -> Int -> Int -> Handler ByteString
+elevationTile zoom x y = do
+  readFileBS $ "./tiles/" <> show zoom <> "/" <> show x <> "_" <> show y <> ".json"
 
 -- case pts of
 --     Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }

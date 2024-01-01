@@ -7,11 +7,11 @@ import FlightTask (FlightTask)
 -- saveElevationPointStatement,
 
 import Geo (degreesLatitude, degreesLongitude, latitude, longitude)
+import GeoPoint (GeoPoint)
 import GeoTiff.ElevationPoint (ElevationPoint (elevByte))
 import Hasql.Session (Session, statement)
 import Hasql.Transaction qualified as Transaction
 import Hasql.Transaction.Sessions (IsolationLevel (Serializable), Mode (Write), transaction)
-import Map (GeoPoint)
 import NavPoint (NavPoint)
 import Persistence.Statement
   ( ElevationPointQuery,

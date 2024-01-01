@@ -39,13 +39,14 @@ library
       FlightTrack.Parser
       Geo
       Geo.Utils
+      GeoPoint
       GeoTiff.ElevationPoint
       GeoTiff.LZW
       GeoTiff.Tiff
       GeoTiff.Utils
       Lib
       Magic.ElmDeriving
-      Map
+      Mercator
       NavPoint
       Persistence.Connection
       Persistence.Session

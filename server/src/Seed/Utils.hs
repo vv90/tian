@@ -1,22 +1,71 @@
 module Seed.Utils where
 
 import Control.Monad.Except (withExceptT)
-import GeoTiff.Tiff (readTiffElevationData)
+import Data.Aeson (encode)
+import Data.Aeson.Types ()
+import Geo (Latitude (..), Longitude (..))
+import GeoPoint (GeoPoint (..))
 import Hasql.Session qualified as Session
+import Mercator (MercatorTileKey (..), tileBoundingGeoPoints)
 import Persistence.Connection (getConnection)
-import Persistence.Session (saveElevationPointsSession)
+import Persistence.Session (generateElevationPointsSession)
+import Persistence.Statement (ElevationPointQuery (..))
 import Relude
+import Utils (unflattenVector)
+
+generateTileElevationPoints :: MercatorTileKey -> ExceptT String IO ()
+generateTileElevationPoints tileKey =
+  let resolution :: Int
+      resolution = 32
+      (from, to) = tileBoundingGeoPoints tileKey
+      query = ElevationPointQuery from to resolution
+
+      asTuple :: (GeoPoint, Double) -> (Double, Double, Int)
+      asTuple (GeoPoint (LatitudeDegrees lat) (LongitudeDegrees lon), elev) =
+        (lat, lon, floor elev)
+   in do
+        conn <- withExceptT show getConnection
+        result <-
+          withExceptT show
+            $ ExceptT
+            $ Session.run (generateElevationPointsSession query) conn
+
+        writeFileLBS ("./tiles/12/" <> show tileKey.x <> "_" <> show tileKey.y <> ".json")
+          $ encode
+          $ unflattenVector resolution
+          $ fmap asTuple result
+
+        pass
 
 seed :: ExceptT String IO ()
-seed = do
-  r <- readTiffElevationData "./demo/ASTGTMV003_N45E005_dem.tif"
+seed =
+  let startX :: Int
+      startX = 2109
 
-  putStrLn $ "read" ++ show (length r) ++ "point groups"
+      startY :: Int
+      startY = 1466
 
-  conn <- withExceptT show getConnection
-  done <-
-    withExceptT show
-      $ ExceptT
-      $ Session.run (saveElevationPointsSession "ASTGTMV003_N45E005_dem.tif" r) conn
+      endX :: Int
+      endX = 2116
 
-  putStrLn $ "added" ++ show done ++ "points"
+      endY :: Int
+      endY = 1473
+
+      zoom :: Int
+      zoom = 12
+
+      tileKeys = [MercatorTileKey x y zoom | x <- [startX .. endX], y <- [startY .. endY]]
+   in do
+        traverse_ generateTileElevationPoints tileKeys
+
+-- r <- readTiffElevationData "./demo/ASTGTMV003_N45E005_dem.tif"
+
+-- putStrLn $ "read" ++ show (length r) ++ "point groups"
+
+-- conn <- withExceptT show getConnection
+-- done <-
+--   withExceptT show
+--     $ ExceptT
+--     $ Session.run (saveElevationPointsSession "ASTGTMV003_N45E005_dem.tif" r) conn
+
+-- putStrLn $ "added" ++ show done ++ "points"

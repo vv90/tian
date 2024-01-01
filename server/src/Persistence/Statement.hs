@@ -22,9 +22,9 @@ import Geo
     metersDistance,
     metersElevation,
   )
+import GeoPoint (GeoPoint (..))
 import Hasql.Statement (Statement, refineResult)
 import Hasql.TH (maybeStatement, rowsAffectedStatement, singletonStatement, vectorStatement)
-import Map (GeoPoint (..))
 import NavPoint (NavPoint (NavPoint, code, country, desc, elev, freq, name, rwdir, rwlen, style))
 import Relude
 
@@ -168,7 +168,7 @@ generateElevationPointsStatement =
           )
           SELECT ST_X(geom)::float8, ST_Y(geom)::float8, COALESCE(ST_Value(rast, geom), 0.0)::float8
           FROM points
-          LEFT JOIN astgtmv003_n45e005_dem
+          LEFT JOIN astgtmv003_n43e005_dem
           ON ST_Intersects(rast, geom) 
         |]
 

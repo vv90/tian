@@ -339,7 +339,7 @@ makeMesh :
     Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
     -> Quantity Float (Rate Meters MercatorUnit)
     -> SketchPlane3d Meters WorldCoords { defines : PlaneCoords }
-    -> Array (Array ( GeoPoint, Float ))
+    -> Array (Array ( GeoPoint, Int ))
     -> Mesh.Textured WorldCoords
 makeMesh mFrame mRate xyPlane points =
     let
@@ -365,13 +365,13 @@ makeMesh mFrame mRate xyPlane points =
             Point3d.on xyPlane p
                 |> Point3d.translateIn Direction3d.positiveZ elev
 
-        makePoint : ( GeoPoint, Float ) -> Point3d Meters WorldCoords
+        makePoint : ( GeoPoint, Int ) -> Point3d Meters WorldCoords
         makePoint ( p, e ) =
             p
                 |> toMercatorPoint
                 |> Point2d.placeIn mFrame
                 |> Point2d.at mRate
-                |> in3d (Length.meters e)
+                |> in3d (Length.meters <| toFloat e)
 
         --
         meshOriginPoint : () -> Point3d Meters WorldCoords

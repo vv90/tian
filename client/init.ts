@@ -43,12 +43,12 @@ const getConfig = async () => {
         const reader = new FileReader();
 
         reader.onload = () => {
-          console.log("Result: " + reader.result);
+          // console.log("Result: " + reader.result);
         };
 
         reader.readAsText(event.data);
       } else {
-        console.log("Result: " + event.data);
+        // console.log("Result: " + event.data);
       }
       // console.log("Received message from server:", event.data);
       app.ports.flightPositionReceiver.send(event.data);

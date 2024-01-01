@@ -24,3 +24,12 @@ tupleEncoder ( encodeA, encodeB ) ( a, b ) =
         [ encodeA a
         , encodeB b
         ]
+
+
+tripleDecoder : ( D.Decoder a, D.Decoder b, D.Decoder c ) -> D.Decoder ( a, b, c )
+tripleDecoder ( decodeA, decodeB, decodeC ) =
+    D.map3
+        (\a b c -> ( a, b, c ))
+        (D.index 0 decodeA)
+        (D.index 1 decodeB)
+        (D.index 2 decodeC)

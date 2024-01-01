@@ -4,12 +4,12 @@ import Angle exposing (Angle)
 import Api.Geo exposing (Distance(..), Elevation(..), Latitude(..), Longitude(..))
 import Api.Map exposing (GeoPoint)
 import Array exposing (Array)
-import Axis3d
+import Axis3d exposing (at_)
 import Basics.Extra exposing (uncurry)
 import Browser.Events as BrowserEvents
 import Camera3d exposing (Camera3d)
 import Color exposing (Color)
-import Common.ApiCommands exposing (loadElevationsCmd)
+import Common.ApiCommands exposing (loadElevationTileCmd, loadElevationsCmd)
 import Common.ApiResult exposing (ApiResult, DeferredResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
 import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
@@ -246,6 +246,9 @@ updateTiles model =
                         (Point3d.projectInto xyPlane model.viewArgs.focalPoint)
                     )
 
+        _ =
+            tiles |> List.map Tuple.first
+
         -- gets tile keys that are missing the given property
         missingKeys prop =
             List.filterMap
@@ -273,7 +276,12 @@ updateTiles model =
                 |> withPendingMeshes missingMeshes
 
         cmds =
-            loadElevationsCmd (Finished >> LoadElevations missingMeshes) (List.map (fromTileKey >> tileRectangle >> Tuple.mapBoth fromMercatorPoint fromMercatorPoint) missingMeshes)
+            let
+                loadTileElevationsCmds =
+                    missingMeshes |> List.map (\tileKey -> loadElevationTileCmd (ElevationsTileLoaded tileKey) tileKey)
+            in
+            -- loadElevationsCmd (Finished >> LoadElevations missingMeshes) (List.map (fromTileKey >> tileRectangle >> Tuple.mapBoth fromMercatorPoint fromMercatorPoint) missingMeshes)
+            Cmd.batch loadTileElevationsCmds
                 :: (missingTextures |> List.map loadTextureCmd)
 
         -- missingKeys ts =
@@ -429,7 +437,8 @@ init windowSize origin =
 type Msg
     = SetDragControlAzimuthAndElevation Bool
     | TileLoaded TileKey (Maybe (Material.Texture Color))
-    | LoadElevations (List TileKey) (AsyncOperationStatus (ApiResult (List (Array (Array ( GeoPoint, Float ))))))
+    | LoadElevations (List TileKey) (AsyncOperationStatus (ApiResult (List (Array (Array ( GeoPoint, Int ))))))
+    | ElevationsTileLoaded TileKey (ApiResult (Array (Array ( GeoPoint, Int ))))
     | DragStart ( Float, Float )
     | DragMove Bool ( Float, Float )
     | DragStop ( Float, Float )
@@ -473,6 +482,29 @@ update msg model =
             , Cmd.none
             )
 
+        ElevationsTileLoaded tileKey (Ok res) ->
+            let
+                mesh elevVals =
+                    makeMesh
+                        model.mapFrame
+                        model.mercatorRate
+                        xyPlane
+                        elevVals
+
+                updateTileData : TileKey -> Array (Array ( GeoPoint, Int )) -> Maybe TileData -> Maybe TileData
+                updateTileData ( tx, ty, zoom ) elevVals data =
+                    case data of
+                        Just val ->
+                            Just { val | mesh = mesh elevVals |> Resolved }
+
+                        Nothing ->
+                            Just { texture = NotStarted, mesh = mesh elevVals |> Resolved }
+            in
+            ( { model | loadedTiles = Dict.update tileKey (updateTileData tileKey res) model.loadedTiles }, Cmd.none )
+
+        ElevationsTileLoaded _ (Err _) ->
+            ( model, Cmd.none )
+
         LoadElevations tiles Started ->
             let
                 payload : List ( GeoPoint, GeoPoint )
@@ -496,7 +528,7 @@ update msg model =
                 --     model.mercatorRate
                 --     elevVals
                 --     { x = tx, y = ty, zoom = zoomLevel zoom }
-                updateTileData : TileKey -> Array (Array ( GeoPoint, Float )) -> Maybe TileData -> Maybe TileData
+                updateTileData : TileKey -> Array (Array ( GeoPoint, Int )) -> Maybe TileData -> Maybe TileData
                 updateTileData ( tx, ty, zoom ) elevVals data =
                     case data of
                         Just val ->
@@ -653,10 +685,6 @@ subscriptions model =
         isShiftKey =
             (==) "Shift"
 
-        -- let
-        --     _ =
-        --         Debug.log "" key
-        -- in
         keyModSub =
             Sub.batch
                 [ BrowserEvents.onKeyDown (D.map (isShiftKey >> SetDragControlAzimuthAndElevation) decodeKey)

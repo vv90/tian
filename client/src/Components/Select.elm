@@ -1,4 +1,4 @@
-module Components.Select exposing (..)
+module Components.Select exposing (Model, Msg(..), init, update, view)
 
 import Element exposing (Element, below, column, el, htmlAttribute, text)
 import Element.Events exposing (onClick)

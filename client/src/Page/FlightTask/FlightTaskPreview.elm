@@ -1,4 +1,4 @@
-module Page.FlightTask.FlightTaskPreview exposing (..)
+module Page.FlightTask.FlightTaskPreview exposing (view)
 
 import Api.Types exposing (..)
 import Element exposing (Element, text)

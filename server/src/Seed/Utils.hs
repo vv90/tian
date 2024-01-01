@@ -10,8 +10,8 @@ import GeoPoint (GeoPoint (..))
 import Hasql.Session qualified as Session
 import Mercator (MercatorTileKey (..), tileBoundingGeoPoints)
 import Persistence.Connection (getConnection)
-import Persistence.Session (generateElevationPointsSession')
-import Persistence.Statement (ElevationPointQuery' (..))
+import Persistence.Session (generateElevationPointsSession)
+import Persistence.Statement (ElevationPointQuery (..))
 import Relude
 
 generateTileElevationPoints :: MercatorTileKey -> ExceptT String IO ()
@@ -26,7 +26,7 @@ generateTileElevationPoints tileKey =
       lonStep :: Longitude
       lonStep = (to.lon - from.lon) / fromIntegral (resolution - 1)
 
-      query = ElevationPointQuery' from lonStep latStep resolution
+      query = ElevationPointQuery from lonStep latStep resolution
 
       -- asTuple :: (GeoPoint, Int) -> (Int)
       -- asTuple (GeoPoint (LatitudeDegrees lat) (LongitudeDegrees lon), elev) =
@@ -40,7 +40,7 @@ generateTileElevationPoints tileKey =
         result <-
           withExceptT show
             $ ExceptT
-            $ Session.run (generateElevationPointsSession' query) conn
+            $ Session.run (generateElevationPointsSession query) conn
 
         writeFileLBS ("./tiles/12/" <> show tileKey.x <> "_" <> show tileKey.y <> ".json")
           $ encode

@@ -1,31 +1,19 @@
-module Main exposing (..)
-
--- import Geo.GeoUtils exposing (..)
--- import Utils exposing (..)
--- import MapUtils exposing (..)
+module Main exposing (DetachedPosition(..), Model, Msg(..), detachedView, init, main, selectedFlightTask, sidebar, sidebarWidth, subscriptions, update, view, withAppState, withFlightTaskPage, withSidebarOffset)
 
 import Api.Types exposing (..)
 import AppState
 import Browser
 import Common.ApiResult exposing (ApiResult)
-import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe)
+import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..))
 import Common.Effect as Effect
-import Common.FlightTaskUtils exposing (navPoints, taskToMapItems)
-import Common.GeoUtils exposing (metersElevation)
 import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Common.Palette as Palette
-import Common.TaskProgressUtils exposing (progressPointsToMapItems, targetToMapItem)
-import Components.Player as Player
 import Dict exposing (Dict, empty)
 import Element exposing (Element, alignBottom, column, el, fill, height, layout, link, onRight, padding, paddingEach, px, rgba255, row, spacing, text, width)
-import Element.Background as Background
 import Element.Font as Font
-import Element.Input as Input
-import Env exposing (apiUrl)
 import Flags exposing (..)
 import Html exposing (Html, button, div)
 import Html.Attributes exposing (style)
-import Http
 import Json.Decode as D
 import List.Extra as ListX
 import List.Nonempty as NE exposing (Nonempty(..))
@@ -35,36 +23,10 @@ import Map3dUtils exposing (Map3dItem(..))
 import Maybe.Extra as MaybeX
 import Page.Demo as Demo
 import Page.FlightTask.FlightTaskForm as FlightTaskForm
-import Page.FlightTask.FlightTaskList as FlightTaskList
 import Page.FlightTaskPage as FlightTaskPage
 import Page.FlightTrack.FlightTrackUpload as FlightTrackUpload
 import Page.Test.TestProgress as TestProgress
 import Ports exposing (flightPositionReceiver, watchFlight)
-
-
-
--- getDemoTaskCmd : Cmd Msg
--- getDemoTaskCmd =
---     Http.request
---         { method = "GET"
---         , headers = []
---         , url = apiUrl "demoTask"
---         , body = Http.emptyBody
---         , expect = Http.expectJson (Finished >> DemoInit) flightTaskDecoder
---         , timeout = Nothing
---         , tracker = Nothing
---         }
--- startDemoCmd : Cmd Msg
--- startDemoCmd =
---     Http.request
---         { method = "GET"
---         , headers = []
---         , url = apiUrl "startDemo"
---         , body = Http.emptyBody
---         , expect = Http.expectWhatever (\_ -> NoMsg)
---         , timeout = Nothing
---         , tracker = Nothing
---         }
 
 
 main : Program Flags Model Msg

@@ -1,4 +1,4 @@
-module Map3dUtils exposing (..)
+module Map3dUtils exposing (Map3dItem(..), MercatorCoords(..), MercatorUnit(..), PlaneCoords(..), SomeCoords(..), WorldCoords(..), fromMercatorPoint, getMercatorUnit, makeMesh_, makeTilePoints, makeTiles, mercatorFrame, mercatorRate, mercatorUnit, tileMesh, tileOrigin, tileRectangle, toMercatorPoint)
 
 import Api.Types exposing (..)
 import Array exposing (Array)
@@ -388,69 +388,6 @@ makeMesh_ mFrame mRate xyPlane tile =
                 |> withRelativeTextureCoords ( toFloat i / toFloat xCount, toFloat j / toFloat yCount )
     in
     TriangularMesh.indexedGrid xCount yCount pointAt
-        |> Mesh.texturedFacets
-
-
-makeMesh :
-    Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
-    -> Quantity Float (Rate Meters MercatorUnit)
-    -> SketchPlane3d Meters WorldCoords { defines : PlaneCoords }
-    -> Array (Array ( GeoPoint, Int ))
-    -> Mesh.Textured WorldCoords
-makeMesh mFrame mRate xyPlane points =
-    let
-        foldMinLength : Array a -> Maybe Int -> Maybe Int
-        foldMinLength arr shortestLength =
-            case shortestLength of
-                Nothing ->
-                    Just <| Array.length arr
-
-                Just l ->
-                    Just <| min (Array.length arr) l
-
-        yCount : Int
-        yCount =
-            Array.length points
-
-        xCount : Int
-        xCount =
-            Array.foldr foldMinLength Nothing points |> Maybe.withDefault 0
-
-        in3d : Quantity Float Meters -> Point2d Meters PlaneCoords -> Point3d Meters WorldCoords
-        in3d elev p =
-            Point3d.on xyPlane p
-                |> Point3d.translateIn Direction3d.positiveZ elev
-
-        makePoint : ( GeoPoint, Int ) -> Point3d Meters WorldCoords
-        makePoint ( p, e ) =
-            p
-                |> toMercatorPoint
-                |> Point2d.placeIn mFrame
-                |> Point2d.at mRate
-                |> in3d (Length.meters <| toFloat e)
-
-        --
-        meshOriginPoint : () -> Point3d Meters WorldCoords
-        meshOriginPoint () =
-            points
-                |> Array.get 0
-                |> Maybe.andThen (Array.get 0)
-                |> Maybe.map makePoint
-                |> Maybe.withDefault Point3d.origin
-
-        withRelativeTextureCoords ( dx, dy ) p =
-            { position = p
-            , uv = ( dx, -dy )
-            }
-
-        pointAt i j =
-            points
-                |> Array.get j
-                |> Maybe.andThen (Array.get i)
-                |> Maybe.Extra.unpack meshOriginPoint makePoint
-                |> withRelativeTextureCoords ( toFloat i / toFloat (xCount - 1), toFloat j / toFloat (yCount - 1) )
-    in
-    TriangularMesh.indexedGrid (xCount - 1) (yCount - 1) pointAt
         |> Mesh.texturedFacets
 
 

@@ -1,4 +1,4 @@
-module Common.JsonCodecsExtra exposing (..)
+module Common.JsonCodecsExtra exposing (filesDecoder, tripleDecoder, tupleDecoder, tupleEncoder)
 
 import File exposing (File)
 import Json.Decode as D

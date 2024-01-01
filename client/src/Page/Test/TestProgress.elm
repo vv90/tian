@@ -1,4 +1,4 @@
-module Page.Test.TestProgress exposing (..)
+module Page.Test.TestProgress exposing (Model, Msg(..), getTaskStartLine, init, toMapItems, update, updateProgressCmd, view)
 
 import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)

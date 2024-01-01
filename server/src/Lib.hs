@@ -20,14 +20,12 @@ import FlightTask (FlightTask)
 import FlightTrack (FlightTrack (..))
 import FlightTrack.Parser (buildFlightTrack, flightInfoParserAll)
 import Geo (Elevation (..), Latitude, Longitude)
-import GeoPoint (GeoPoint (..))
 import Hasql.Session qualified as Session
 import NavPoint (NavPoint, name, navPointLinesParser)
 import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Middleware.Gzip
 import Persistence.Connection (getConnection)
-import Persistence.Session (deleteDuplicateNavPointsSession, generateElevationPointsSession, getAllFlightTasksSession, getFlightTaskSession, getNavPointsSession, saveFlightTaskSession, saveNavPointsSession)
-import Persistence.Statement (ElevationPointQuery (..))
+import Persistence.Session (deleteDuplicateNavPointsSession, getAllFlightTasksSession, getFlightTaskSession, getNavPointsSession, saveFlightTaskSession, saveNavPointsSession)
 import ProgressPoint (ProgressPointDto)
 import Relude
 import Servant
@@ -37,7 +35,6 @@ import TaskProgress (TaskProgressDto, toDto)
 import TaskProgressUtils (progress, taskStartLine)
 import Text.Parsec (Parsec, parse)
 import TrackPoint (FixValidity (..), TrackPoint (..))
-import Utils (unflattenVector)
 
 data LibError
   = ConnectionError Text
@@ -123,11 +120,6 @@ saveFlightTask ft = do
   conn <- withExceptT ConnectionError getConnection
   savedTpsNum <- withExceptT QueryError . ExceptT $ Session.run (saveFlightTaskSession ft) conn
   pure $ savedTpsNum + 1
-
-getElevationPoints :: [ElevationPointQuery] -> ExceptT LibError IO [Vector (GeoPoint, Double)]
-getElevationPoints query = do
-  conn <- withExceptT ConnectionError getConnection
-  withExceptT QueryError . ExceptT $ Session.run (traverse generateElevationPointsSession query) conn
 
 navPoints :: Handler (Vector NavPoint)
 navPoints = do
@@ -248,7 +240,6 @@ type API =
     :<|> "demo" :> WebSocketSource (Text, ProgressPointDto)
     :<|> "demoTask" :> Get '[JSON] (FlightTask, [NameMatch])
     :<|> "watchFlights" :> WebSocketConduit () (FlightId, FlightPosition)
-    :<|> "elevationPoints" :> ReqBody '[JSON] [(GeoPoint, GeoPoint)] :> Post '[JSON] [Vector (Vector (GeoPoint, Double))]
     :<|> "elevationTile" :> Capture "zoom" Int :> Capture "x" Int :> Capture "y" Int :> Get '[OctetStream] ByteString
 
 server :: TVar FlightsTable -> Server API
@@ -263,7 +254,6 @@ server flightsTvar =
     :<|> progressDemo
     :<|> demoTask
     :<|> watchFlights flightsTvar
-    :<|> elevationPoints
     :<|> elevationTile
 
 startApp :: TVar FlightsTable -> Port -> IO ()
@@ -333,30 +323,6 @@ demoTask = do
   case (,) <$> flightTask <*> nameMatch of
     Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
     Right (Entity _ ft, nm) -> pure (ft, nm)
-
-elevationPoints :: [(GeoPoint, GeoPoint)] -> Handler [Vector (Vector (GeoPoint, Double))]
-elevationPoints tiles =
-  let resolution :: Int
-      resolution = 10
-
-      query =
-        fmap
-          ( \(from, to) ->
-              ElevationPointQuery
-                { from = from,
-                  to = to,
-                  resolution
-                }
-          )
-          tiles
-   in do
-        -- pts <- liftIO $ runExceptT $ readTiff "./demo/ASTGTMV003_N52E039_dem.tif" tiles
-        -- liftIO $ readElevations tiles
-
-        res <- liftIO $ runExceptT $ getElevationPoints query
-        case res of
-          Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
-          Right x -> pure $ fmap (unflattenVector resolution) x
 
 elevationTile :: Int -> Int -> Int -> Handler ByteString
 elevationTile zoom x y = do

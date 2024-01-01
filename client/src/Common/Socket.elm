@@ -1,4 +1,4 @@
-module Common.Socket exposing (..)
+module Common.Socket exposing (CloseEvent, MessageEvent, closeEventDecoder, closeEventEncoder, messageEventDecoder, messageEventEncoder)
 
 import Json.Decode as D
 import Json.Encode as E

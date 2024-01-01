@@ -1,4 +1,4 @@
-module FileUpload exposing (..)
+module FileUpload exposing (Model, Msg(..), init, update, uploadFileCmd, view)
 
 import Common.JsonCodecsExtra exposing (filesDecoder)
 import Env exposing (apiUrl)

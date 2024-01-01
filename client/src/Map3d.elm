@@ -1,4 +1,4 @@
-module Map3d exposing (..)
+module Map3d exposing (DragState(..), Model, Msg(..), TileData, ViewArgs, WebGLResult(..), WheelEvent, adjustViewDistance, camera, debugInfo, decodeKey, decodeMouseButtons, decodePosition, decodeWheelEvent, init, isInView, loadTextureCmd, mapItemView, pickZoom, screenRectangle, subscriptions, update, updateTiles, view, withAzimuthElevation, withFocalPoint, withPendingMeshes, withPendingTextures, xyPlane)
 
 import Angle exposing (Angle)
 import Api.Types exposing (..)
@@ -8,7 +8,7 @@ import Basics.Extra exposing (uncurry)
 import Browser.Events as BrowserEvents
 import Camera3d exposing (Camera3d)
 import Color exposing (Color)
-import Common.ApiCommands exposing (hydrateTile, loadElevationTileCmd, loadElevationsCmd)
+import Common.ApiCommands exposing (hydrateTile, loadElevationTileCmd)
 import Common.ApiResult exposing (ApiResult, DeferredResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
 import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
@@ -23,8 +23,7 @@ import Html.Attributes as HtmlAttr exposing (attribute, style, type_)
 import Html.Events as HtmlEvents exposing (on)
 import Json.Decode as D
 import Length exposing (Length, Meters)
-import List.Extra as ListX
-import Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, PlaneCoords(..), WorldCoords, fromMercatorPoint, getMercatorUnit, makeMesh, makeMesh_, makeTilePoints, makeTiles, mercatorFrame, mercatorRate, tileMesh, tileRectangle, toMercatorPoint)
+import Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, PlaneCoords(..), WorldCoords, fromMercatorPoint, getMercatorUnit, makeMesh_, makeTilePoints, makeTiles, mercatorFrame, mercatorRate, tileMesh, tileRectangle, toMercatorPoint)
 import Maybe.Extra as MaybeX
 import Pixels exposing (Pixels)
 import Plane3d
@@ -42,11 +41,6 @@ import Svg.Attributes as SvgAttr
 import Task
 import Tile exposing (TileKey, ZoomLevel, fromTileKey, tileKeyToUrl, zoomLevel)
 import Viewpoint3d
-
-
-
--- type WorldCoordinates
---     = WorldCoordinates
 
 
 type WebGLResult
@@ -95,8 +89,6 @@ withPendingTextures keys model =
                 Nothing ->
                     Just { texture = InProgress, mesh = NotStarted }
 
-        -- updateItem key dict =
-        --     Dict.update key setPendingTexture dict
         updatedTiles =
             keys
                 |> List.foldl (\key dict -> Dict.update key setPendingTexture dict) model.loadedTiles
@@ -168,20 +160,6 @@ pickZoom model =
     logBase 2 (earthCircumference * cos latRad / viewDistance)
         |> round
         |> zoomLevel
-
-
-
--- loadMissingTilesCmd : Dict TileKey TileData -> List TileKey -> Cmd Msg
--- loadMissingTilesCmd dict keys =
---     keys
---         |> List.filter
---             (\tileKey -> not (Dict.member tileKey dict))
---         >> List.map
---             (\tileKey ->
---                 Material.load (tileKeyToUrl tileKey)
---                     |> Task.attempt (Result.toMaybe >> TileLoaded tileKey)
---             )
---         >> Cmd.batch
 
 
 loadTextureCmd : TileKey -> Cmd Msg
@@ -279,64 +257,9 @@ updateTiles model =
                 loadTileElevationsCmds =
                     missingMeshes |> List.map (\tileKey -> loadElevationTileCmd (ElevationsTileLoaded tileKey) tileKey)
             in
-            -- loadElevationsCmd (Finished >> LoadElevations missingMeshes) (List.map (fromTileKey >> tileRectangle >> Tuple.mapBoth fromMercatorPoint fromMercatorPoint) missingMeshes)
             Cmd.batch loadTileElevationsCmds
                 :: (missingTextures |> List.map loadTextureCmd)
-
-        -- missingKeys ts =
-        --     List.filter
-        --         (\( tileKey, _ ) -> not (Dict.member tileKey model.loadedTiles))
-        --         ts
-        --         |> List.map Tuple.first
-        -- cmds keys =
-        -- loadElevationsCmd (Finished >> LoadElevations keys) keys
-        -- List.map
-        --     (\tileKey ->
-        --         tileKey
-        --             |> tileKeyToUrl
-        --             |> Material.load
-        --             |> Task.attempt (Result.toMaybe >> TileLoaded tileKey)
-        --     )
-        --     keys
-        -- cmds keys =
-        --     (missingKeys .mesh keys |> (\ks -> loadElevationsCmd (Finished >> LoadElevations ks) ks))
-        --         :: (missingKeys .texture keys |> List.map loadTextureCmd)
-        -- missingTextures =
-        --     List.filterMap
-        --         (\(tk, _) ->
-        --             case Maybe.map (.texture) (Dict.get tk model.loadedTiles) of
-        --                 Just (NotStarted) -> Just tk
-        --                 Just _ -> Nothing
-        --                 Nothing -> Just tk
-        --         )
-        -- missingMeshes =
-        --     List.filterMap
-        --         (\(tk, _) ->
-        --             case Maybe.map (.mesh) (Dict.get tk model.loadedTiles) of
-        --                 Just (NotStarted) -> Just tk
-        --                 Just _ -> Nothing
-        --                 Nothing -> Just tk
-        --         )
-        -- loadElevationsCmd (Finished >> LoadElevations (missingKeys ts)) (missingKeys ts)
-        -- :: List.map
-        --         (\tileKey ->
-        --             tileKey
-        --                 |> tileKeyToUrl
-        --                 |> Material.load
-        --                 |> Task.attempt (Result.toMaybe >> TileLoaded tileKey)
-        --         )
-        --         (missingKeys ts)
-        -- cmd =
-        --     List.filter
-        --         (\( tileKey, _ ) -> not (Dict.member tileKey model.loadedTiles))
-        --         >> List.map
-        --             (\( tileKey, _ ) ->
-        --                 Material.load (tileKeyToUrl tileKey)
-        --                     |> Task.attempt (Result.toMaybe >> TileLoaded tileKey)
-        --             )
-        --         >> Cmd.batch
     in
-    -- Maybe.map (\ts -> ( newModel ts, ts |> cmds |> Cmd.batch )) tiles
     ( newModel, Cmd.batch cmds )
 
 
@@ -346,8 +269,6 @@ camera viewArgs =
         { viewpoint =
             Viewpoint3d.orbitZ viewArgs
         , viewportHeight = viewArgs.distance
-
-        -- , verticalFieldOfView = Angle.degrees 30
         }
 
 
@@ -355,7 +276,6 @@ isInView : ViewArgs -> WindowSize -> Point2d Meters PlaneCoords -> Bool
 isInView viewArgs windowSize p =
     let
         p3d =
-            -- Point3d.meters x y 0
             Point3d.on xyPlane p
 
         sRect =
@@ -381,8 +301,6 @@ isInView viewArgs windowSize p =
 init : WindowSize -> GeoPoint -> ( Model, Cmd Msg )
 init windowSize origin =
     let
-        -- zoom =
-        --     Z13
         viewAzimuth =
             270
 
@@ -407,36 +325,13 @@ init windowSize origin =
             , loadedTiles = Dict.empty
             , displayedTiles = []
             }
-
-        -- tiles =
-        --     makeTiles
-        --         (isInView viewArgs windowSize)
-        --         model.mapFrame
-        --         model.mercatorRate
-        --         (Point3d.projectInto xyPlane viewArgs.focalPoint)
-        --         (pickZoom model)
-        --     |> List.map Tuple.first
-        -- zoom =
-        --     pickZoom (Tuple.first origin) windowSize viewArgs
-        -- tiles =
-        --     Maybe.map
-        --         (fillTiles (isInView viewArgs windowSize) origin)
-        --         zoom
-        --         |> Maybe.withDefault []
     in
     updateTiles model
-
-
-
--- ( model, loadMissingTilesCmd model.loadedTiles tiles)
--- updateTiles model
--- |> Maybe.withDefault ( model, Cmd.none )
 
 
 type Msg
     = SetDragControlAzimuthAndElevation Bool
     | TileLoaded TileKey (Maybe (Material.Texture Color))
-    | LoadElevations (List TileKey) (AsyncOperationStatus (ApiResult (List (Array (Array ( GeoPoint, Int ))))))
     | ElevationsTileLoaded TileKey (ApiResult ElevationPointsTile)
     | DragStart ( Float, Float )
     | DragMove Bool ( Float, Float )
@@ -461,9 +356,6 @@ update msg model =
             ( { model | dragControlsAzimuthAndElevation = b }, Cmd.none )
 
         TileLoaded tileKey texture ->
-            -- ( { model | loadedTiles = Dict.insert tileKey texture model.loadedTiles }
-            -- , Cmd.none
-            -- )
             ( { model
                 | loadedTiles =
                     Dict.update
@@ -483,12 +375,6 @@ update msg model =
 
         ElevationsTileLoaded tileKey (Ok res) ->
             let
-                -- mesh elevVals =
-                --     makeMesh
-                --         model.mapFrame
-                --         model.mercatorRate
-                --         xyPlane
-                --         elevVals
                 updateTileData : TileKey -> ElevationPointsTile -> Maybe TileData -> Maybe TileData
                 updateTileData ( tx, ty, zoom ) elevVals data =
                     case data of
@@ -503,67 +389,6 @@ update msg model =
         ElevationsTileLoaded _ (Err _) ->
             ( model, Cmd.none )
 
-        LoadElevations tiles Started ->
-            let
-                payload : List ( GeoPoint, GeoPoint )
-                payload =
-                    tiles |> List.map (fromTileKey >> tileRectangle >> Tuple.mapBoth fromMercatorPoint fromMercatorPoint)
-            in
-            ( model, loadElevationsCmd (Finished >> LoadElevations tiles) payload )
-
-        LoadElevations tiles (Finished (Ok res)) ->
-            let
-                mesh elevVals =
-                    makeMesh
-                        model.mapFrame
-                        model.mercatorRate
-                        xyPlane
-                        elevVals
-
-                -- tileMesh
-                --     xyPlane
-                --     model.mapFrame
-                --     model.mercatorRate
-                --     elevVals
-                --     { x = tx, y = ty, zoom = zoomLevel zoom }
-                updateTileData : TileKey -> Array (Array ( GeoPoint, Int )) -> Maybe TileData -> Maybe TileData
-                updateTileData ( tx, ty, zoom ) elevVals data =
-                    case data of
-                        Just val ->
-                            Just { val | mesh = mesh elevVals |> Resolved }
-
-                        Nothing ->
-                            Just { texture = NotStarted, mesh = mesh elevVals |> Resolved }
-
-                newLoadedTiles =
-                    ListX.zip tiles res
-                        |> List.foldl
-                            (\( tk, pts ) -> Dict.update tk (updateTileData tk pts))
-                            model.loadedTiles
-
-                -- showGeoPoint : GeoPoint -> String
-                -- showGeoPoint { lat, lon } =
-                --     "{ lat: " ++ String.fromFloat (degreesLatitude lat) ++ ", lon: " ++ String.fromFloat (degreesLongitude lon) ++ "}"
-                -- geoPointDifference : (GeoPoint, GeoPoint) -> GeoPoint
-                -- geoPointDifference ( p1, p2 ) =
-                --     { lat = LatitudeDegrees (degreesLatitude p1.lat - degreesLatitude p2.lat)
-                --     , lon = LongitudeDegrees (degreesLongitude p1.lon - degreesLongitude p2.lon)
-                --     }
-                -- checkPoints =
-                --     ListX.zip tiles res
-                --     |> List.map
-                --         ( Tuple.mapBoth (fromTileKey >> makeTilePoints) (List.map Tuple.first)
-                --             >> (\(a, b) -> ListX.zip a b)
-                --             >> List.map (geoPointDifference >> showGeoPoint)
-                --         )
-            in
-            ( { model | loadedTiles = newLoadedTiles }, Cmd.none )
-
-        LoadElevations tiles (Finished (Err err)) ->
-            ( model, Cmd.none )
-
-        -- LoadElevations tiles (Finished (Err err)) ->
-        --     ( model, Cmd.none )
         DragStart ( x, y ) ->
             let
                 point =
@@ -623,20 +448,10 @@ update msg model =
                                 , viewArgs =
                                     withFocalPoint newPoint model.viewArgs
                             }
-
-                        -- tiles =
-                        --     makeTiles
-                        --         (isInView newModel.viewArgs newModel.windowSize)
-                        --         newModel.mapFrame
-                        --         newModel.mercatorRate
-                        --         (Point3d.projectInto xyPlane newModel.viewArgs.focalPoint)
-                        --         (pickZoom newModel)
-                        --     |> List.map Tuple.first
                     in
                     updateTiles newModel
 
-                -- ( newModel, loadMissingTilesCmd newModel.loadedTiles tiles)
-                ( MovingFrom { azimuth, elevation, point, xy }, Just currPoint, True ) ->
+                ( MovingFrom { azimuth, elevation, xy }, Just currPoint, True ) ->
                     let
                         ( lastX, lastY ) =
                             xy
@@ -657,7 +472,7 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
-        DragStop ( x, y ) ->
+        DragStop _ ->
             ( { model
                 | dragState = Static
               }
@@ -717,10 +532,6 @@ mapItemView model mapItem =
                     (toFloat model.windowSize.height)
                 )
 
-        -- localLatitude =
-        --     Tuple.first model.origin
-        -- ( cx, cy ) =
-        --     toMercatorWeb model.origin
         to3dPoint : GeoPoint -> Elevation -> Point3d Meters WorldCoords
         to3dPoint p (ElevationMeters elev) =
             toMercatorPoint p
@@ -740,7 +551,6 @@ mapItemView model mapItem =
     in
     case mapItem of
         Point p elev ->
-            -- Scene3d.nothing
             ( Svg.g [] [], Scene3d.nothing )
 
         Marker id p elev ->
@@ -778,12 +588,6 @@ mapItemView model mapItem =
                     ]
                     [ Svg.text id ]
                 ]
-              -- , Scene3d.lineSegment
-              --     (Material.color Color.lightBlue)
-              --     (LineSegment3d.from
-              --         (Point3d.meters px py elev)
-              --         (Point3d.meters px py 0)
-              --     )
             , Scene3d.nothing
             )
 
@@ -794,24 +598,6 @@ mapItemView model mapItem =
 
                 pts =
                     xs |> List.map (uncurry to3dPoint >> project3dPoint >> coordsToString)
-
-                -- to3dLineSegment ( p1, elev1 ) ( p2, elev2 ) =
-                --     Scene3d.lineSegment
-                --         (Material.color Color.black)
-                --         (LineSegment3d.from
-                --             (to3dPoint p1 elev1)
-                --             (to3dPoint p2 elev2)
-                --         )
-                -- lineSegments =
-                --     case xs of
-                --         a :: b :: rest ->
-                --             List.foldl
-                --                 (\curr ( segments, prev ) -> ( to3dLineSegment prev curr :: segments, curr ))
-                --                 ( [ to3dLineSegment a b ], b )
-                --                 rest
-                --                 |> Tuple.first
-                --         _ ->
-                --             []
             in
             ( Svg.polyline
                 [ SvgAttr.points <| String.join " " pts
@@ -820,39 +606,11 @@ mapItemView model mapItem =
                 , SvgAttr.fill "transparent"
                 ]
                 []
-              -- ( Svg.g [] []
-              -- , Scene3d.group lineSegments
             , Scene3d.nothing
             )
 
-        -- Scene3d.quad
-        --     (Material.color (Color.rgba 0 0 0 0.2))
-        --     (Point3d.meters -1000 -1000 0)
-        --     (Point3d.meters 1000 -1000 0)
-        --     (Point3d.meters 1000 1000 0)
-        --     (Point3d.meters -1000 1000 0)
-        -- Scene3d.point
-        --     { radius = Quantity 5 }
-        --     (Material.color (Color.rgba 0 0 0 0.2))
-        --     (Point3d.meters 100 100 100)
         Cylinder p (DistanceMeters r) (ElevationMeters elev) ->
             ( Svg.g [] [], Scene3d.nothing )
-
-
-
--- Scene3d.cylinder
---     (Material.color (Color.rgba 0 0 0 0.2))
---     (Cylinder3d.centeredOn
---         (Point3d.meters 0 0 0)
---         Direction3d.positiveZ
---         { radius = Quantity r
---         , length = Quantity elev
---         }
---     )
--- Scene3d.point
---     { radius = Quantity 5 }
---     (Material.color (Color.rgba 0 0 0 0.2))
---     (Point3d.meters 100 100 100)
 
 
 debugInfo : Model -> List String
@@ -932,39 +690,6 @@ debugInfo model =
 view : List Map3dItem -> Model -> Html Msg
 view mapItems model =
     let
-        -- camera : Camera3d Meters coordinates
-        -- camera =
-        --     Camera3d.perspective
-        --         { viewpoint =
-        --             -- Viewpoint3d.lookAt
-        --             --     { eyePoint = Point3d.meters 5000 2000 3000
-        --             --     , focalPoint = Point3d.origin
-        --             --     , upDirection = Direction3d.positiveZ
-        --             --     }
-        --             Viewpoint3d.orbitZ
-        --                 { focalPoint = Point3d.origin
-        --                 , azimuth = Angle.degrees model.viewAzimuth
-        --                 , elevation = Angle.degrees model.viewElevation
-        --                 , distance = Length.meters 20000
-        --                 }
-        --         , verticalFieldOfView = Angle.degrees 30
-        --         }
-        -- center =
-        --     toMercatorWeb model.origin
-        -- pt =
-        --     Scene3d.point
-        --         { radius = Quantity 5 }
-        --         (Material.color (Color.rgba 0 0 0 0.2))
-        --         (Point3d.meters 0 0 0)
-        -- tileUrl =
-        --     "https://tile.openstreetmap.org/10/625/341.png"
-        -- base =
-        --     Scene3d.quad
-        --         (Material.color Color.lightGray)
-        --         (Point3d.meters -1000 -1000 0)
-        --         (Point3d.meters 1000 -1000 0)
-        --         (Point3d.meters 1000 1000 0)
-        --         (Point3d.meters -1000 1000 0)
         unwrapTexture =
             deferredToMaybe
                 >> MaybeX.unwrap
@@ -994,20 +719,6 @@ view mapItems model =
                                     (Point3d.xyz (Point2d.xCoordinate p0) (Point2d.yCoordinate p0) (Length.meters 0))
                    )
 
-        -- Scene3d.quad
-        --     (Dict.get tk model.loadedTiles
-        --         |> Maybe.map (\data -> data.texture)
-        --         |> Maybe.andThen (Maybe.map Material.texturedColor)
-        --         |> Maybe.withDefault (Material.color Color.lightGray)
-        --     )
-        --     -- usually quad vertices are defined in counter-clockwise order
-        --     -- but since in mercator projection y axis is inverted,
-        --     -- we need flip the texture upside down by changing the order of vertices
-        --     (Point3d.xyz (Point2d.xCoordinate p0) (Point2d.yCoordinate p1) (Length.meters 0))
-        --     (Point3d.xyz (Point2d.xCoordinate p1) (Point2d.yCoordinate p1) (Length.meters 0))
-        --     (Point3d.xyz (Point2d.xCoordinate p1) (Point2d.yCoordinate p0) (Length.meters 0))
-        --     (Point3d.xyz (Point2d.xCoordinate p0) (Point2d.yCoordinate p0) (Length.meters 0))
-        -- continue: move to init
         base =
             Scene3d.group <|
                 List.map toTile model.displayedTiles
@@ -1020,9 +731,6 @@ view mapItems model =
 
         svgs =
             List.map Tuple.first mis
-
-        --List.map (mapItemView model) mapItems
-        -- List.map mapItemView mapItems
     in
     div
         [ on "mousedown" (D.map DragStart decodePosition)
@@ -1046,17 +754,6 @@ view mapItems model =
             , style "top" "0"
             ]
             svgs
-
-        -- , div
-        --     [ style "position" "absolute"
-        --     , style "bottom" "0"
-        --     , style "right" "0"
-        --     , style "padding" "10px"
-        --     , style "background-color" "white"
-        --     , style "width" "150px"
-        --     , style "height" "50px"
-        --     ]
-        --     [ input [ type_ "range", HtmlAttr.min "1", HtmlAttr.max "100", attribute "value" "50" ] [] ]
         ]
 
 

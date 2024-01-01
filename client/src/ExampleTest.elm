@@ -1,4 +1,4 @@
-module ExampleTest exposing (..)
+module ExampleTest exposing (testFromMercator)
 
 import Api.Types exposing (..)
 import Common.GeoUtils exposing (degreesLatitude)

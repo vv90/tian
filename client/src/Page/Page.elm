@@ -1,4 +1,4 @@
-module Page.Page exposing (..)
+module Page.Page exposing (Page(..))
 
 -- import Api.Entity exposing (Entity)
 -- import Api.FlightTask exposing (FlightTask)

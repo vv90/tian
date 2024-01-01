@@ -1,4 +1,4 @@
-module Components.SearchSelect exposing (..)
+module Components.SearchSelect exposing (Model, Msg(..), filterMatchingSuggestions, init, update, view)
 
 import Common.Palette
 import Element exposing (Element, below, clipY, column, el, fill, height, maximum, mouseOver, scrollbarY, spacing, text, width)

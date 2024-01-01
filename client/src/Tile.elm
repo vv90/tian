@@ -1,4 +1,4 @@
-module Tile exposing (..)
+module Tile exposing (Tile, TileKey, ZoomLevel(..), fromTileKey, maxZoom, minZoom, tileKeyToUrl, tileLength, tileSize, toTileKey, zoomInt, zoomLevel)
 
 import Api.Types exposing (..)
 import Constants exposing (earthCircumference)

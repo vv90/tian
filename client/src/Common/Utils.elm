@@ -1,4 +1,4 @@
-module Common.Utils exposing (..)
+module Common.Utils exposing (roundN)
 
 
 roundN : Int -> Float -> Float

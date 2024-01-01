@@ -1,4 +1,4 @@
-module TimeUtils exposing (..)
+module TimeUtils exposing (addTime, formatTime, padInt)
 
 import Time exposing (..)
 

@@ -1,4 +1,4 @@
-module Components.Player exposing (..)
+module Components.Player exposing (Model, Msg(..), PlaybackState, advancePlayback, currPoints, init, paused, started, subscriptions, update, updatePlaybackState, view, withSpeed)
 
 import Api.Types exposing (..)
 import Common.GeoUtils exposing (degreesLatitude, degreesLongitude, metersDistance, metersElevation)

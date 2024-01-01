@@ -4,8 +4,7 @@ module Map exposing (..)
 -- import Geo.GeoUtils exposing (..)
 -- import Nav.Units exposing (Deg(..), Meters(..), degToRad, getDeg, getRad)
 
-import Api.Geo exposing (Distance(..), Latitude(..), Longitude(..))
-import Api.Map exposing (GeoPoint)
+import Api.Types exposing (..)
 import Browser.Events as BE
 import Canvas exposing (Point, Renderable, clear, group, rect, shapes, texture)
 import Canvas.Settings exposing (fill)

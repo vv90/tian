@@ -168,7 +168,7 @@ startLineCrossed ft lastPos currTp =
           ) -- toProgressPoint (Just targetNp) distance Nothing currTp)
 
 turnpointCrossed :: (GeoPosition3d a, RecordedGeoPosition a) => NavPoint -> a -> (NavPoint, Turnpoint) -> Maybe TpCrossing
-turnpointCrossed _targetNp currTp (np, Cylinder radius) =
+turnpointCrossed _targetNp currTp (np, TurnpointCylinder radius) =
   let (DistanceMeters npDistance) = distanceToTarget np currTp
    in if npDistance <= radius
         then -- Just $ toProgressPoint (Just targetNp) currTp

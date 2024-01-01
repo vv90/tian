@@ -8,8 +8,7 @@ module Common.GeoUtils exposing
     , metersElevation
     )
 
-import Api.Geo exposing (..)
-import Api.Map exposing (GeoPoint)
+import Api.Types exposing (..)
 
 
 type Bearing

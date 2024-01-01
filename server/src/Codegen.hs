@@ -3,6 +3,7 @@ module Codegen where
 import Data.HashMap.Lazy qualified as HashMap
 import Data.Text qualified as Text
 import Demo.NameMatch (NameMatch)
+import ElevationPointsTileData (ElevationPointsTile)
 import Entity (Entity)
 import FlightTask (FlightTask, TaskFinish, TaskStart, Turnpoint)
 import Geo (Direction, Distance, Elevation, Latitude, Longitude)
@@ -41,7 +42,8 @@ typeDefinitions =
       jsonDefinitions @ProgressPointDto,
       jsonDefinitions @TaskProgressDto,
       jsonDefinitions @NameMatch,
-      jsonDefinitions @GeoPoint
+      jsonDefinitions @GeoPoint,
+      jsonDefinitions @ElevationPointsTile
     ]
 
 elmSrcPath :: FilePath

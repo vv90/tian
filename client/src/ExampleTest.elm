@@ -1,6 +1,6 @@
 module ExampleTest exposing (..)
 
-import Api.Geo exposing (Latitude(..), Longitude(..))
+import Api.Types exposing (..)
 import Common.GeoUtils exposing (degreesLatitude)
 import Expect exposing (FloatingPointTolerance(..))
 import Fuzz exposing (Fuzzer, int, list, string)

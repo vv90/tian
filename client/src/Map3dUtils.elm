@@ -1,7 +1,6 @@
 module Map3dUtils exposing (..)
 
-import Api.Geo exposing (Distance(..), Elevation, Latitude(..), Longitude(..))
-import Api.Map exposing (GeoPoint)
+import Api.Types exposing (..)
 import Array exposing (Array)
 import Array.Extra
 import Color exposing (Color)

@@ -24,7 +24,7 @@ data MercatorTileKey = MercatorTileKey
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.Mercator" MercatorTileKey
+    via ElmType "Api.Types.Mercator" MercatorTileKey
 
 toMercatorWeb :: GeoPoint -> (Double, Double)
 toMercatorWeb (GeoPoint (LatitudeDegrees latDeg) (LongitudeDegrees lonDeg)) =

@@ -4,12 +4,7 @@ module Main exposing (..)
 -- import Utils exposing (..)
 -- import MapUtils exposing (..)
 
-import Api.Entity exposing (Entity)
-import Api.FlightTask exposing (FlightTask, flightTaskDecoder)
-import Api.Geo exposing (Elevation, Latitude(..), Longitude(..), elevationDecoder)
-import Api.Map exposing (GeoPoint, geoPointDecoder)
-import Api.NavPoint exposing (NavPoint, navPointDecoder)
-import Api.TaskProgress exposing (progressPointDecoder)
+import Api.Types exposing (..)
 import AppState
 import Browser
 import Common.ApiResult exposing (ApiResult)

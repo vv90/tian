@@ -15,7 +15,6 @@ import Data.Vector (Vector)
 import Demo.DemoConduit (demoC)
 import Demo.DemoTask (loadDemoTask)
 import Demo.NameMatch (NameMatch, loadNames)
-import Network.Wai.Middleware.Gzip
 import Entity (Entity (..))
 import FlightTask (FlightTask)
 import FlightTrack (FlightTrack (..))
@@ -25,6 +24,7 @@ import GeoPoint (GeoPoint (..))
 import Hasql.Session qualified as Session
 import NavPoint (NavPoint, name, navPointLinesParser)
 import Network.Wai.Handler.Warp (Port, run)
+import Network.Wai.Middleware.Gzip
 import Persistence.Connection (getConnection)
 import Persistence.Session (deleteDuplicateNavPointsSession, generateElevationPointsSession, getAllFlightTasksSession, getFlightTaskSession, getNavPointsSession, saveFlightTaskSession, saveNavPointsSession)
 import Persistence.Statement (ElevationPointQuery (..))
@@ -271,13 +271,11 @@ startApp flightsTvar port = do
   putStrLn ("Server started on port " <> show port)
   run port (app flightsTvar)
 
-
 app :: TVar FlightsTable -> Application
 app flightsTvar =
-  server flightsTvar 
+  server flightsTvar
     & serve api
     & gzip def
-
 
 api :: Proxy API
 api = Proxy

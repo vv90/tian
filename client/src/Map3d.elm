@@ -1,8 +1,7 @@
 module Map3d exposing (..)
 
 import Angle exposing (Angle)
-import Api.Geo exposing (Distance(..), Elevation(..), Latitude(..), Longitude(..))
-import Api.Map exposing (GeoPoint)
+import Api.Types exposing (..)
 import Array exposing (Array)
 import Axis3d exposing (at_)
 import Basics.Extra exposing (uncurry)

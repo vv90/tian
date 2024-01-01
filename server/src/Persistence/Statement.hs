@@ -229,11 +229,11 @@ decodeStartType = \case
 
 encodeTurnpointType :: Turnpoint -> Text
 encodeTurnpointType = \case
-  Cylinder _ -> "Cylinder"
+  TurnpointCylinder _ -> "Cylinder"
 
 decodeTurnpointType :: Text -> Either Text (Double -> Turnpoint)
 decodeTurnpointType = \case
-  "Cylinder" -> Right Cylinder
+  "Cylinder" -> Right TurnpointCylinder
   x -> Left $ "Failed to parse turnpoint type: unrecognized value '" <> x <> "'"
 
 encodeFinishType :: TaskFinish -> Text
@@ -567,6 +567,6 @@ saveFlightTaskTurnpointsStatement =
         |]
   where
     turnpointType = \case
-      Cylinder _ -> "Cylinder" :: Text
+      TurnpointCylinder _ -> "Cylinder" :: Text
     turnpointRadius = \case
-      Cylinder r -> r
+      TurnpointCylinder r -> r

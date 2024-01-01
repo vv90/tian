@@ -1,6 +1,6 @@
 module Tile exposing (..)
 
-import Api.Geo exposing (Latitude(..))
+import Api.Types exposing (..)
 import Constants exposing (earthCircumference)
 
 

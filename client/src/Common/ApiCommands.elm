@@ -1,7 +1,6 @@
 module Common.ApiCommands exposing (..)
 
-import Api.Geo exposing (Latitude(..), Longitude(..), latitudeDecoder, longitudeDecoder)
-import Api.Map exposing (GeoPoint, geoPointDecoder, geoPointEncoder)
+import Api.Types exposing (..)
 import Array exposing (Array)
 import Common.ApiResult exposing (ApiResult)
 import Common.JsonCodecsExtra exposing (tripleDecoder, tupleDecoder, tupleEncoder)

@@ -1,8 +1,6 @@
 module Page.Test.TestProgress exposing (..)
 
-import Api.Geo exposing (latitudeEncoder, longitudeEncoder)
-import Api.Map exposing (GeoPoint, geoPointDecoder, geoPointEncoder)
-import Api.TaskProgress exposing (ProgressPoint, TaskProgress, taskProgressDecoder)
+import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
 import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)

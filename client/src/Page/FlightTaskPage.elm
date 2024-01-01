@@ -1,8 +1,6 @@
 module Page.FlightTaskPage exposing (..)
 
-import Api.Entity exposing (Entity, entityDecoder)
-import Api.FlightTask exposing (FlightTask, flightTaskDecoder)
-import Api.NavPoint exposing (NavPoint)
+import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPending)
 import Common.Effect as Effect exposing (EffectSet, effect)

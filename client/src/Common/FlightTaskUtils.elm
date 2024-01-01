@@ -1,8 +1,6 @@
 module Common.FlightTaskUtils exposing (..)
 
-import Api.FlightTask exposing (FlightTask, TaskFinish(..), TaskStart(..), Turnpoint(..))
-import Api.Geo exposing (Distance(..), Elevation(..))
-import Api.NavPoint exposing (NavPoint)
+import Api.Types exposing (..)
 import Common.GeoUtils exposing (bearing, linePerpendicularToBearing)
 import List.Extra as ListX
 import Map3dUtils as M3d exposing (Map3dItem)
@@ -66,14 +64,14 @@ finishToMap3dItem prevPoint ( np, finish ) =
 turnpointToMapItem : ( NavPoint, Turnpoint ) -> MapItem
 turnpointToMapItem ( np, tp ) =
     case tp of
-        Cylinder r ->
+        TurnpointCylinder r ->
             Circle { lat = np.lat, lon = np.lon } (DistanceMeters r)
 
 
 turnpointToMap3dItem : ( NavPoint, Turnpoint ) -> Map3dItem
 turnpointToMap3dItem ( np, tp ) =
     case tp of
-        Cylinder r ->
+        TurnpointCylinder r ->
             M3d.Cylinder { lat = np.lat, lon = np.lon } (DistanceMeters r) (ElevationMeters 10000)
 
 

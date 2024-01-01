@@ -15,7 +15,7 @@ data NameMatch = NameMatch
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.FromJSON, Aeson.ToJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.Demo.NameMatch" NameMatch
+    via ElmType "Api.Types.NameMatch" NameMatch
 
 loadNames :: ExceptT String IO [NameMatch]
 loadNames =

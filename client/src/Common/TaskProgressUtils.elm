@@ -1,8 +1,6 @@
 module Common.TaskProgressUtils exposing (..)
 
-import Api.Geo exposing (Latitude(..))
-import Api.NavPoint exposing (NavPoint)
-import Api.TaskProgress exposing (ProgressPoint)
+import Api.Types exposing (..)
 import MapUtils exposing (LineStyle(..), MapItem(..), PointStyle(..))
 
 

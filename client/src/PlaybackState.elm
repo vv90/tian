@@ -1,6 +1,6 @@
 module PlaybackState exposing (..)
 
-import Api.TaskProgress exposing (ProgressPoint, TaskProgress)
+import Api.Types exposing (..)
 import List.Extra as ListX
 import Time exposing (Posix, millisToPosix, posixToMillis)
 

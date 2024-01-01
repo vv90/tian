@@ -1,8 +1,6 @@
 module Page.Demo exposing (..)
 
-import Api.Demo exposing (NameMatch, nameMatchDecoder)
-import Api.FlightTask exposing (FlightTask, flightTaskDecoder)
-import Api.TaskProgress exposing (ProgressPoint, progressPointDecoder)
+import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult, DeferredResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredIsPending, deferredToMaybe)
 import Common.FlightTaskUtils exposing (taskToMap3dItems, taskToMapItems)

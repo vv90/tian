@@ -32,7 +32,7 @@ data WaypointStyle
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.NavPoint.WaypointStyle" WaypointStyle
+    via ElmType "Api.Types.WaypointStyle" WaypointStyle
 
 data NavPoint = NavPoint
   { name :: Text,
@@ -52,7 +52,7 @@ data NavPoint = NavPoint
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.NavPoint.NavPoint" NavPoint
+    via ElmType "Api.Types.NavPoint" NavPoint
 
 instance GeoPosition NavPoint where
   latitude = lat

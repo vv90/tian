@@ -1,7 +1,6 @@
 module Components.Player exposing (..)
 
-import Api.Map exposing (GeoPoint)
-import Api.TaskProgress exposing (ProgressPoint, TaskProgress)
+import Api.Types exposing (..)
 import Common.GeoUtils exposing (degreesLatitude, degreesLongitude, metersDistance, metersElevation)
 import Common.Utils exposing (roundN)
 import Components.PlaybackSpeed exposing (PlaybackSpeed(..), increaseSpeed, lowerSpeed, playbackCoefficient)

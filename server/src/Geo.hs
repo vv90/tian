@@ -14,7 +14,7 @@ newtype Latitude = LatitudeDegrees Double
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.Geo.Latitude" Latitude
+    via ElmType "Api.Types.Latitude" Latitude
 
 degreesLatitude :: Latitude -> Double
 degreesLatitude (LatitudeDegrees x) = x
@@ -45,7 +45,7 @@ newtype Longitude = LongitudeDegrees Double
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.Geo.Longitude" Longitude
+    via ElmType "Api.Types.Longitude" Longitude
 
 degreesLongitude :: Longitude -> Double
 degreesLongitude (LongitudeDegrees x) = x
@@ -76,7 +76,7 @@ newtype Elevation = ElevationMeters Double
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.Geo.Elevation" Elevation
+    via ElmType "Api.Types.Elevation" Elevation
 
 metersElevation :: Elevation -> Double
 metersElevation (ElevationMeters x) = x
@@ -86,7 +86,7 @@ newtype Direction = DirectionDegrees Int32
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.Geo.Direction" Direction
+    via ElmType "Api.Types.Direction" Direction
 
 degreesDirection :: Direction -> Int32
 degreesDirection (DirectionDegrees x) = x
@@ -96,7 +96,7 @@ newtype Distance = DistanceMeters Double
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.Geo.Distance" Distance
+    via ElmType "Api.Types.Distance" Distance
 
 metersDistance :: Distance -> Double
 metersDistance (DistanceMeters x) = x

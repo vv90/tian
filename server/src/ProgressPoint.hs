@@ -65,7 +65,7 @@ data ProgressPointDto = ProgressPointDto
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
-    via ElmType "Api.TaskProgress.ProgressPoint" ProgressPointDto
+    via ElmType "Api.Types.ProgressPoint" ProgressPointDto
 
 toDto :: ProgressPoint -> ProgressPointDto
 toDto (ProgressPoint time' lat' lon' altitude' target' distance' speed') =

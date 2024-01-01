@@ -2,8 +2,7 @@ module MapUtils exposing (..)
 
 -- import Geo.GeoUtils exposing (..)
 
-import Api.Geo exposing (Distance(..), Latitude(..), Longitude(..))
-import Api.Map exposing (GeoPoint)
+import Api.Types exposing (..)
 import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Dict exposing (Dict)
 import List.Extra as ListX

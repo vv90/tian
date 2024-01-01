@@ -15,9 +15,11 @@ import Hasql.Transaction.Sessions (IsolationLevel (Serializable), Mode (Write), 
 import NavPoint (NavPoint)
 import Persistence.Statement
   ( ElevationPointQuery,
+    ElevationPointQuery',
     checkImportedFileStatement,
     deleteDuplicateNavPointsStatement,
     generateElevationPointsStatement,
+    generateElevationPointsStatement',
     getAllFlightTasksStatement,
     getFlightTaskStatement,
     getNavPointsStatement,
@@ -77,3 +79,7 @@ saveElevationPointsSession fileName points =
 generateElevationPointsSession :: ElevationPointQuery -> Session (Vector (GeoPoint, Double))
 generateElevationPointsSession query =
   statement query generateElevationPointsStatement
+
+generateElevationPointsSession' :: ElevationPointQuery' -> Session (Vector (GeoPoint, Int))
+generateElevationPointsSession' query =
+  statement query generateElevationPointsStatement'

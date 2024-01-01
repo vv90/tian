@@ -3,6 +3,7 @@ module Common.ApiCommands exposing (..)
 import Api.Types exposing (..)
 import Array exposing (Array)
 import Common.ApiResult exposing (ApiResult)
+import Common.GeoUtils exposing (degreesLatitude, degreesLongitude, scaleLatitude, scaleLongitude, sumLatitude, sumLongitude)
 import Common.JsonCodecsExtra exposing (tripleDecoder, tupleDecoder, tupleEncoder)
 import Env exposing (apiUrl)
 import Http
@@ -25,7 +26,7 @@ loadElevationsCmd onLoaded tiles =
                 }
 
 
-loadElevationTileCmd : (ApiResult (Array (Array ( GeoPoint, Int ))) -> msg) -> TileKey -> Cmd msg
+loadElevationTileCmd : (ApiResult ElevationPointsTile -> msg) -> TileKey -> Cmd msg
 loadElevationTileCmd onLoaded ( x, y, zoom ) =
     Http.get
         { url =
@@ -36,10 +37,31 @@ loadElevationTileCmd onLoaded ( x, y, zoom ) =
                     ++ String.fromInt x
                     ++ "/"
                     ++ String.fromInt y
-        , expect =
-            tripleDecoder ( latitudeDecoder, longitudeDecoder, D.int )
-                |> D.map (\( lat, lon, elev ) -> ( { lat = lat, lon = lon }, elev ))
-                |> D.array
-                |> D.array
-                |> Http.expectJson onLoaded
+        , expect = Http.expectJson onLoaded elevationPointsTileDecoder
         }
+
+
+
+-- unflattenVector : Int -> Array a -> Array (Array a)
+-- unflattenVector rowLength items =
+--     if rowLength <= 0 then
+--         Array.empty
+--     else if not Array.isEmptyitems then
+--         Array.cons (Array.take rowLength items) (unflattenVector rowLength (Array.drop rowLength items))
+--     else
+--         Array.empty
+
+
+hydrateTile : ElevationPointsTile -> Array ( GeoPoint, Int )
+hydrateTile tile =
+    let
+        makeGeoPoint : Int -> Int -> GeoPoint
+        makeGeoPoint i j =
+            { lat = sumLatitude tile.origin.lat (scaleLatitude (toFloat i) tile.latStep)
+            , lon = sumLongitude tile.origin.lon (scaleLongitude (toFloat j) tile.lonStep)
+            }
+
+        -- xa =
+        --     Array.initialize tile.rowLength (\rl -> Array.initialize tile.rowLength (\cl -> Array.get (rl * tile.rowLength + cl) points |> Maybe.map (Tuple.pair (makeGeoPoint cl rl))))
+    in
+    Array.indexedMap (\i elev -> ( makeGeoPoint (i // tile.rowLength) (modBy tile.rowLength i), elev )) tile.elevations

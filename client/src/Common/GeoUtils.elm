@@ -6,6 +6,10 @@ module Common.GeoUtils exposing
     , linePerpendicularToBearing
     , metersDistance
     , metersElevation
+    , scaleLatitude
+    , scaleLongitude
+    , sumLatitude
+    , sumLongitude
     )
 
 import Api.Types exposing (..)
@@ -38,6 +42,26 @@ degreesLongitude (LongitudeDegrees degrees) =
 degreesLatitude : Latitude -> Float
 degreesLatitude (LatitudeDegrees degrees) =
     degrees
+
+
+sumLatitude : Latitude -> Latitude -> Latitude
+sumLatitude (LatitudeDegrees lat1) (LatitudeDegrees lat2) =
+    LatitudeDegrees (lat1 + lat2)
+
+
+sumLongitude : Longitude -> Longitude -> Longitude
+sumLongitude (LongitudeDegrees lon1) (LongitudeDegrees lon2) =
+    LongitudeDegrees (lon1 + lon2)
+
+
+scaleLatitude : Float -> Latitude -> Latitude
+scaleLatitude scale (LatitudeDegrees lat) =
+    LatitudeDegrees (lat * scale)
+
+
+scaleLongitude : Float -> Longitude -> Longitude
+scaleLongitude scale (LongitudeDegrees lon) =
+    LongitudeDegrees (lon * scale)
 
 
 metersDistance : Distance -> Float

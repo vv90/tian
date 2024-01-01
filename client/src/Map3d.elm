@@ -8,7 +8,7 @@ import Basics.Extra exposing (uncurry)
 import Browser.Events as BrowserEvents
 import Camera3d exposing (Camera3d)
 import Color exposing (Color)
-import Common.ApiCommands exposing (loadElevationTileCmd, loadElevationsCmd)
+import Common.ApiCommands exposing (hydrateTile, loadElevationTileCmd, loadElevationsCmd)
 import Common.ApiResult exposing (ApiResult, DeferredResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
 import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
@@ -24,7 +24,7 @@ import Html.Events as HtmlEvents exposing (on)
 import Json.Decode as D
 import Length exposing (Length, Meters)
 import List.Extra as ListX
-import Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, PlaneCoords(..), WorldCoords, fromMercatorPoint, getMercatorUnit, makeMesh, makeTilePoints, makeTiles, mercatorFrame, mercatorRate, tileMesh, tileRectangle, toMercatorPoint)
+import Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, PlaneCoords(..), WorldCoords, fromMercatorPoint, getMercatorUnit, makeMesh, makeMesh_, makeTilePoints, makeTiles, mercatorFrame, mercatorRate, tileMesh, tileRectangle, toMercatorPoint)
 import Maybe.Extra as MaybeX
 import Pixels exposing (Pixels)
 import Plane3d
@@ -437,7 +437,7 @@ type Msg
     = SetDragControlAzimuthAndElevation Bool
     | TileLoaded TileKey (Maybe (Material.Texture Color))
     | LoadElevations (List TileKey) (AsyncOperationStatus (ApiResult (List (Array (Array ( GeoPoint, Int ))))))
-    | ElevationsTileLoaded TileKey (ApiResult (Array (Array ( GeoPoint, Int ))))
+    | ElevationsTileLoaded TileKey (ApiResult ElevationPointsTile)
     | DragStart ( Float, Float )
     | DragMove Bool ( Float, Float )
     | DragStop ( Float, Float )
@@ -483,21 +483,20 @@ update msg model =
 
         ElevationsTileLoaded tileKey (Ok res) ->
             let
-                mesh elevVals =
-                    makeMesh
-                        model.mapFrame
-                        model.mercatorRate
-                        xyPlane
-                        elevVals
-
-                updateTileData : TileKey -> Array (Array ( GeoPoint, Int )) -> Maybe TileData -> Maybe TileData
+                -- mesh elevVals =
+                --     makeMesh
+                --         model.mapFrame
+                --         model.mercatorRate
+                --         xyPlane
+                --         elevVals
+                updateTileData : TileKey -> ElevationPointsTile -> Maybe TileData -> Maybe TileData
                 updateTileData ( tx, ty, zoom ) elevVals data =
                     case data of
                         Just val ->
-                            Just { val | mesh = mesh elevVals |> Resolved }
+                            Just { val | mesh = makeMesh_ model.mapFrame model.mercatorRate xyPlane elevVals |> Resolved }
 
                         Nothing ->
-                            Just { texture = NotStarted, mesh = mesh elevVals |> Resolved }
+                            Just { texture = NotStarted, mesh = makeMesh_ model.mapFrame model.mercatorRate xyPlane elevVals |> Resolved }
             in
             ( { model | loadedTiles = Dict.update tileKey (updateTileData tileKey res) model.loadedTiles }, Cmd.none )
 

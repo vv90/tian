@@ -14,7 +14,7 @@ data ElevationPointsTile = ElevationPointsTile
     latStep :: Latitude,
     lonStep :: Longitude,
     rowLength :: Int,
-    elevations :: Vector Int16
+    elevations :: Vector Int
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)

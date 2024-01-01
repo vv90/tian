@@ -4,6 +4,7 @@ import Api.Types exposing (..)
 import Array exposing (Array)
 import Array.Extra
 import Color exposing (Color)
+import Common.ApiCommands exposing (hydrateTile)
 import Common.GeoUtils exposing (metersDistance)
 import Dict exposing (Dict)
 import Direction3d
@@ -332,6 +333,62 @@ makeTilePoints tile =
     List.range 0 yCount
         |> ListX.andThen (\j -> List.range 0 xCount |> List.map (\i -> makePoint i j))
         |> List.map fromMercatorPoint
+
+
+makeMesh_ :
+    Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
+    -> Quantity Float (Rate Meters MercatorUnit)
+    -> SketchPlane3d Meters WorldCoords { defines : PlaneCoords }
+    -> ElevationPointsTile
+    -> Mesh.Textured WorldCoords
+makeMesh_ mFrame mRate xyPlane tile =
+    let
+        points =
+            hydrateTile tile
+
+        numRows =
+            Array.length tile.elevations // tile.rowLength
+
+        yCount =
+            numRows - 1
+
+        xCount =
+            tile.rowLength - 1
+
+        in3d : Quantity Float Meters -> Point2d Meters PlaneCoords -> Point3d Meters WorldCoords
+        in3d elev p =
+            Point3d.on xyPlane p
+                |> Point3d.translateIn Direction3d.positiveZ elev
+
+        makePoint : ( GeoPoint, Int ) -> Point3d Meters WorldCoords
+        makePoint ( p, e ) =
+            p
+                |> toMercatorPoint
+                |> Point2d.placeIn mFrame
+                |> Point2d.at mRate
+                |> in3d (Length.meters <| toFloat e)
+
+        meshOriginPoint : () -> Point3d Meters WorldCoords
+        meshOriginPoint () =
+            points
+                |> Array.get 0
+                |> Maybe.map makePoint
+                |> Maybe.withDefault Point3d.origin
+
+        withRelativeTextureCoords ( dx, dy ) p =
+            { position = p
+            , uv = ( dx, -dy )
+            }
+
+        pointAt i j =
+            points
+                |> Array.get (j * tile.rowLength + i)
+                -- |> Maybe.andThen (Array.get i)
+                |> Maybe.Extra.unpack meshOriginPoint makePoint
+                |> withRelativeTextureCoords ( toFloat i / toFloat xCount, toFloat j / toFloat yCount )
+    in
+    TriangularMesh.indexedGrid xCount yCount pointAt
+        |> Mesh.texturedFacets
 
 
 makeMesh :

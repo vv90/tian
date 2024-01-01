@@ -2,14 +2,14 @@
 import { Elm } from "./src/Main.elm";
 import { displayErrorMessage } from "./errors";
 
-// @ts-ignore
-if (process.env.NODE_ENV === "development") {
-  const ElmDebugTransform = await import("elm-debug-transformer");
+// // @ts-ignore
+// if (process.env.NODE_ENV === "development") {
+//   const ElmDebugTransform = await import("elm-debug-transformer");
 
-  ElmDebugTransform.register({
-    simple_mode: true,
-  });
-}
+//   ElmDebugTransform.register({
+//     simple_mode: true,
+//   });
+// }
 
 const getConfig = async () => {
   const res = await fetch("/nocache/config.json").catch((e) => {

@@ -3,37 +3,49 @@ module Seed.Utils where
 import Control.Monad.Except (withExceptT)
 import Data.Aeson (encode)
 import Data.Aeson.Types ()
+-- import Utils (unflattenVector)
+import ElevationPointsTileData (ElevationPointsTile (..))
 import Geo (Latitude (..), Longitude (..))
 import GeoPoint (GeoPoint (..))
 import Hasql.Session qualified as Session
 import Mercator (MercatorTileKey (..), tileBoundingGeoPoints)
 import Persistence.Connection (getConnection)
-import Persistence.Session (generateElevationPointsSession)
-import Persistence.Statement (ElevationPointQuery (..))
+import Persistence.Session (generateElevationPointsSession')
+import Persistence.Statement (ElevationPointQuery' (..))
 import Relude
-import Utils (unflattenVector)
 
 generateTileElevationPoints :: MercatorTileKey -> ExceptT String IO ()
 generateTileElevationPoints tileKey =
   let resolution :: Int
       resolution = 32
       (from, to) = tileBoundingGeoPoints tileKey
-      query = ElevationPointQuery from to resolution
 
-      asTuple :: (GeoPoint, Double) -> (Double, Double, Int)
-      asTuple (GeoPoint (LatitudeDegrees lat) (LongitudeDegrees lon), elev) =
-        (lat, lon, floor elev)
+      latStep :: Latitude
+      latStep = (to.lat - from.lat) / fromIntegral (resolution - 1)
+
+      lonStep :: Longitude
+      lonStep = (to.lon - from.lon) / fromIntegral (resolution - 1)
+
+      query = ElevationPointQuery' from lonStep latStep resolution
+
+      -- asTuple :: (GeoPoint, Int) -> (Int)
+      -- asTuple (GeoPoint (LatitudeDegrees lat) (LongitudeDegrees lon), elev) =
+      --   (lat, lon, elev)
+
+      makeTile = ElevationPointsTile from latStep lonStep resolution
    in do
+        putTextLn $ "generating tile " <> show tileKey
+        putTextLn $ "query: " <> show query
         conn <- withExceptT show getConnection
         result <-
           withExceptT show
             $ ExceptT
-            $ Session.run (generateElevationPointsSession query) conn
+            $ Session.run (generateElevationPointsSession' query) conn
 
         writeFileLBS ("./tiles/12/" <> show tileKey.x <> "_" <> show tileKey.y <> ".json")
           $ encode
-          $ unflattenVector resolution
-          $ fmap asTuple result
+          $ makeTile
+          $ fmap snd result
 
         pass
 
@@ -41,12 +53,14 @@ seed :: ExceptT String IO ()
 seed =
   let startX :: Int
       startX = 2109
+      -- startX = 2117
 
       startY :: Int
       startY = 1466
 
       endX :: Int
       endX = 2116
+      -- endX = 2124
 
       endY :: Int
       endY = 1473

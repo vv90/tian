@@ -1,4 +1,4 @@
-module TimeUtils exposing (addTime, formatTime, padInt)
+module Common.TimeUtils exposing (addTime, formatTime, padInt)
 
 import Time exposing (..)
 

@@ -3,8 +3,8 @@ module Page.Test.TestProgress exposing (Model, Msg(..), getTaskStartLine, init, 
 import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
-import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Common.JsonCodecsExtra exposing (tupleDecoder, tupleEncoder)
+import Domain.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Element exposing (Element, column, spacing, text)
 import Element.Input as Input
 import Env exposing (apiUrl)

@@ -1,7 +1,7 @@
-module Common.FlightTaskUtils exposing (finishToMap3dItem, finishToMapItem, firstNavPointAfterStart, lastNavPointBeforeFinish, navPoints, startToMap3dItem, startToMapItem, taskToMap3dItems, taskToMapItems, turnpointToMap3dItem, turnpointToMapItem)
+module Domain.FlightTaskUtils exposing (finishToMap3dItem, finishToMapItem, firstNavPointAfterStart, lastNavPointBeforeFinish, navPoints, startToMap3dItem, startToMapItem, taskToMap3dItems, taskToMapItems, turnpointToMap3dItem, turnpointToMapItem)
 
 import Api.Types exposing (..)
-import Common.GeoUtils exposing (bearing, linePerpendicularToBearing)
+import Domain.GeoUtils exposing (bearing, linePerpendicularToBearing)
 import List.Extra as ListX
 import Map3dUtils as M3d exposing (Map3dItem)
 import MapUtils exposing (LineStyle(..), MapItem(..))

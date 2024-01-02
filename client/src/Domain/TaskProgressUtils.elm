@@ -1,4 +1,4 @@
-module Common.TaskProgressUtils exposing (progressPointsToMapItems, targetToMapItem)
+module Domain.TaskProgressUtils exposing (progressPointsToMapItems, targetToMapItem)
 
 import Api.Types exposing (..)
 import MapUtils exposing (LineStyle(..), MapItem(..), PointStyle(..))

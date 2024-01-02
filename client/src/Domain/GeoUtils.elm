@@ -1,4 +1,4 @@
-module Common.GeoUtils exposing
+module Domain.GeoUtils exposing
     ( Bearing
     , bearing
     , degreesLatitude

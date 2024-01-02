@@ -11,8 +11,9 @@ import Canvas.Settings exposing (fill)
 import Canvas.Settings.Advanced exposing (scale, transform, translate)
 import Canvas.Texture as Texture exposing (..)
 import Color exposing (..)
-import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
+import Common.TimeUtils exposing (..)
 import Dict exposing (Dict)
+import Domain.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Flags exposing (WindowSize)
 import Html exposing (Html, button, div, h2, h5, img, label, object, option, p, select, text)
 import Html.Attributes exposing (attribute, class, height, src, style, value, width)
@@ -24,7 +25,6 @@ import Maybe.Extra as MaybeX
 import Svg exposing (Svg)
 import Svg.Attributes as SvgAttr
 import Tile exposing (TileKey, maxZoom, minZoom, tileSize)
-import TimeUtils exposing (..)
 
 
 type DragState

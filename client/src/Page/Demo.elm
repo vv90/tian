@@ -3,12 +3,12 @@ module Page.Demo exposing (Model, Msg(..), ProgressPointStats, getDemoTaskCmd, i
 import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult, DeferredResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredIsPending, deferredToMaybe)
-import Common.FlightTaskUtils exposing (taskToMap3dItems, taskToMapItems)
-import Common.GeoUtils exposing (metersElevation)
 import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Common.Palette as Palette
 import Common.Utils exposing (roundN)
 import Dict exposing (Dict)
+import Domain.FlightTaskUtils exposing (taskToMap3dItems, taskToMapItems)
+import Domain.GeoUtils exposing (metersElevation)
 import Element exposing (Element, alignRight, column, el, fill, onLeft, paddingXY, paragraph, row, shrink, spacing, spacingXY, table, text)
 import Element.Font as Font
 import Element.Input as Input

@@ -3,9 +3,9 @@ module Page.FlightTrack.FlightTrackUpload exposing (Model, Msg(..), Props, init,
 import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPending)
-import Common.FlightTaskUtils exposing (taskToMap3dItems, taskToMapItems)
 import Common.JsonCodecsExtra exposing (filesDecoder)
 import Components.Player as Player
+import Domain.FlightTaskUtils exposing (taskToMap3dItems, taskToMapItems)
 import Element exposing (Element, html, row, spacing, text)
 import Element.Input as Input
 import Env exposing (apiUrl)

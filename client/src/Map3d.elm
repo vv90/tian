@@ -11,11 +11,11 @@ import Color exposing (Color)
 import Common.ApiCommands exposing (hydrateTile, loadElevationTileCmd)
 import Common.ApiResult exposing (ApiResult, DeferredResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
-import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Constants exposing (earthCircumference)
 import Dict exposing (Dict)
 import Dict.Extra as DictX
 import Direction3d
+import Domain.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Flags exposing (WindowSize)
 import Frame2d exposing (Frame2d)
 import Html exposing (Html, div, input, text)

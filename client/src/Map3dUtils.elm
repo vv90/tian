@@ -5,9 +5,9 @@ import Array exposing (Array)
 import Array.Extra
 import Color exposing (Color)
 import Common.ApiCommands exposing (hydrateTile)
-import Common.GeoUtils exposing (metersDistance)
 import Dict exposing (Dict)
 import Direction3d
+import Domain.GeoUtils exposing (metersDistance)
 import Frame2d exposing (Frame2d)
 import Length exposing (Length, Meters)
 import List.Extra as ListX

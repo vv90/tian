@@ -3,7 +3,7 @@ module Common.ApiCommands exposing (hydrateTile, loadElevationTileCmd)
 import Api.Types exposing (..)
 import Array exposing (Array)
 import Common.ApiResult exposing (ApiResult)
-import Common.GeoUtils exposing (scaleLatitude, scaleLongitude, sumLatitude, sumLongitude)
+import Domain.GeoUtils exposing (scaleLatitude, scaleLongitude, sumLatitude, sumLongitude)
 import Env exposing (apiUrl)
 import Http
 import Tile exposing (TileKey)

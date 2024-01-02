@@ -587,7 +587,7 @@ mapItemView model mapItem =
                 |> Tuple.mapSecond (\n -> toFloat model.windowSize.height - n)
     in
     case mapItem of
-        Point p elev ->
+        Point _ _ ->
             ( Svg.g [] [], Scene3d.nothing )
 
         Marker id p elev ->
@@ -648,7 +648,7 @@ mapItemView model mapItem =
             , Scene3d.nothing
             )
 
-        Cylinder p (DistanceMeters r) (ElevationMeters elev) ->
+        Cylinder _ (DistanceMeters _) (ElevationMeters _) ->
             ( Svg.g [] [], Scene3d.nothing )
 
 

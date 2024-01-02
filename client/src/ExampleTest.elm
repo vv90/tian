@@ -1,12 +1,8 @@
 module ExampleTest exposing (testFromMercator)
 
-import Api.Types exposing (..)
-import Common.GeoUtils exposing (degreesLatitude)
+import Domain.GeoUtils exposing (degreesLatitude, fromMercatorWeb)
 import Expect exposing (FloatingPointTolerance(..))
-import Fuzz exposing (Fuzzer, int, list, string)
-import List.Extra as ListX
-import MapUtils exposing (fromMercatorWeb)
-import Test exposing (..)
+import Test exposing (Test, describe, test)
 
 
 testFromMercator : Test
@@ -15,15 +11,17 @@ testFromMercator =
         [ test "latMin" <|
             \_ ->
                 let
+                    latMin : Float
                     latMin =
-                        fromMercatorWeb ( 1250 / (2 ^ 11), 674 / (2 ^ 11) ) |> .lat |> degreesLatitude
+                        fromMercatorWeb ( 1250 / 2048, 674 / 2048 ) |> .lat |> degreesLatitude
                 in
                 Expect.within (Absolute 1.0e-13) latMin 52.268157373768176
         , test "latMax" <|
             \_ ->
                 let
+                    latMax : Float
                     latMax =
-                        fromMercatorWeb ( 1251 / (2 ^ 11), 675 / (2 ^ 11) ) |> .lat |> degreesLatitude
+                        fromMercatorWeb ( 1251 / 2048, 675 / 2048 ) |> .lat |> degreesLatitude
                 in
                 Expect.within (Absolute 1.0e-13) latMax 52.160454557747045
         ]

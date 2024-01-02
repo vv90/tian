@@ -1,4 +1,13 @@
-module AppState exposing (Model, Msg(..), getFlightTasksCmd, getFlightTasksTask, getNavPointsCmd, init, jsonResponse, resolvedTasks, saveFlightTaskCmd, saveFlightTaskTask, update, withFlightTasks, withPendingFlightTasks, withPendingNavPoints)
+module AppState exposing
+    ( Model
+    , Msg(..)
+    , getFlightTasksCmd
+    , getNavPointsCmd
+    , init
+    , update
+    , withPendingFlightTasks
+    , withPendingNavPoints
+    )
 
 import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)
@@ -6,7 +15,6 @@ import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPend
 import Env exposing (apiUrl)
 import Http
 import Json.Decode as D
-import Task exposing (Task)
 
 
 type alias Model =
@@ -20,19 +28,6 @@ init =
     { navPoints = NotStarted
     , flightTasks = NotStarted
     }
-
-
-resolvedTasks : Model -> List (Entity Int FlightTask)
-resolvedTasks model =
-    case model.flightTasks of
-        Resolved (Ok tasks) ->
-            tasks
-
-        Updating (Ok tasks) ->
-            tasks
-
-        _ ->
-            []
 
 
 withPendingNavPoints : Model -> Model
@@ -74,72 +69,6 @@ getNavPointsCmd =
     Http.get
         { url = apiUrl "navpoints"
         , expect = Http.expectJson (Finished >> GetNavPoints) (D.list <| entityDecoder D.int navPointDecoder)
-        }
-
-
-jsonResponse : D.Decoder a -> Http.Response String -> Result Http.Error a
-jsonResponse decoder response =
-    case response of
-        Http.BadUrl_ s ->
-            Err <| Http.BadUrl s
-
-        Http.Timeout_ ->
-            Err Http.Timeout
-
-        Http.NetworkError_ ->
-            Err Http.NetworkError
-
-        Http.BadStatus_ meta body ->
-            Err <| Http.BadStatus meta.statusCode
-
-        Http.GoodStatus_ meta body ->
-            body
-                |> D.decodeString decoder
-                |> Result.mapError (D.errorToString >> Http.BadBody)
-
-
-saveFlightTaskTask : FlightTask -> Task Http.Error ( Int, List (Entity Int FlightTask) )
-saveFlightTaskTask flightTask =
-    Http.task
-        { method = "POST"
-        , url = apiUrl "task"
-        , headers = []
-        , body = Http.jsonBody <| flightTaskEncoder flightTask
-        , timeout = Nothing
-        , resolver = Http.stringResolver (jsonResponse D.int)
-        }
-        |> Task.andThen
-            (\ftId ->
-                Task.map (Tuple.pair ftId) getFlightTasksTask
-            )
-
-
-getFlightTasksTask : Task Http.Error (List (Entity Int FlightTask))
-getFlightTasksTask =
-    Http.task
-        { method = "GET"
-        , url = apiUrl "task"
-        , headers = []
-        , body = Http.emptyBody
-        , timeout = Nothing
-        , resolver =
-            Http.stringResolver <|
-                jsonResponse <|
-                    D.list <|
-                        entityDecoder D.int flightTaskDecoder
-        }
-
-
-saveFlightTaskCmd : (ApiResult Int -> msg) -> FlightTask -> Cmd msg
-saveFlightTaskCmd toMsg flightTask =
-    Http.request
-        { method = "POST"
-        , url = apiUrl "task"
-        , headers = []
-        , body = Http.jsonBody <| flightTaskEncoder flightTask
-        , expect = Http.expectJson toMsg D.int
-        , timeout = Nothing
-        , tracker = Nothing
         }
 
 

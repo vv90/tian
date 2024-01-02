@@ -13,6 +13,12 @@ import Persistence.Connection (getConnection)
 import Persistence.Session (generateElevationPointsSession)
 import Persistence.Statement (ElevationPointQuery (..))
 import Relude
+import Utils (writeFileCompressed)
+
+compressFile :: IO ()
+compressFile = do
+  content <- readFileLBS "./tiles/12/2109_1466.json"
+  writeFileCompressed "./tiles/12/2109_1466_compressed.json.gz" content
 
 generateTileElevationPoints :: MercatorTileKey -> ExceptT String IO ()
 generateTileElevationPoints tileKey =

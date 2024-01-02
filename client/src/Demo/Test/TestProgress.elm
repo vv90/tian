@@ -1,10 +1,14 @@
-module Page.Test.TestProgress exposing (Model, Msg(..), getTaskStartLine, init, toMapItems, update, updateProgressCmd, view)
+module Demo.Test.TestProgress exposing
+    ( Model
+    , Msg(..)
+    , init
+    )
 
 import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
-import Common.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Common.JsonCodecsExtra exposing (tupleDecoder, tupleEncoder)
+import Domain.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Element exposing (Element, column, spacing, text)
 import Element.Input as Input
 import Env exposing (apiUrl)
@@ -12,8 +16,6 @@ import Http
 import Json.Decode as D
 import Json.Encode as E
 import List.Nonempty as NE exposing (Nonempty)
-import MapUtils exposing (LineStyle(..), MapItem(..))
-import Maybe.Extra as MaybeX
 
 
 type alias Model =
@@ -33,30 +35,6 @@ init =
     { progress = NotStarted
     , startLine = NotStarted
     }
-
-
-toMapItems : Model -> List MapItem
-toMapItems model =
-    let
-        progressPointItem : ProgressPoint -> Maybe MapItem
-        progressPointItem p =
-            Maybe.map
-                (Marker { lat = p.lat, lon = p.lon })
-                p.target
-
-        taskProgressItems =
-            deferredToMaybe model.progress
-                |> Maybe.andThen Result.toMaybe
-                |> Maybe.andThen (.points >> List.map progressPointItem >> MaybeX.combine)
-                |> Maybe.withDefault []
-
-        startLineItems =
-            deferredToMaybe model.startLine
-                |> Maybe.andThen Result.toMaybe
-                |> Maybe.map (\( p1, p2 ) -> [ Line TaskLine [ p1, p2 ] ])
-                |> Maybe.withDefault []
-    in
-    taskProgressItems ++ startLineItems
 
 
 updateProgressCmd : Int -> Nonempty GeoPoint -> Cmd Msg
@@ -115,12 +93,14 @@ view model =
                     ++ " "
                     ++ Maybe.withDefault " - " p.target
 
+        points : List (Element Msg)
         points =
             deferredToMaybe model.progress
                 |> Maybe.andThen Result.toMaybe
                 |> Maybe.map (.points >> List.map viewPoint)
                 |> Maybe.withDefault []
 
+        resetBtn : Element Msg
         resetBtn =
             Input.button
                 []

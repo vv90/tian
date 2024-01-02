@@ -1,26 +1,17 @@
-module Common.FlightTaskUtils exposing (finishToMap3dItem, finishToMapItem, firstNavPointAfterStart, lastNavPointBeforeFinish, navPoints, startToMap3dItem, startToMapItem, taskToMap3dItems, taskToMapItems, turnpointToMap3dItem, turnpointToMapItem)
+module Domain.FlightTaskUtils exposing
+    ( finishToMap3dItem
+    , firstNavPointAfterStart
+    , lastNavPointBeforeFinish
+    , navPoints
+    , startToMap3dItem
+    , taskToMap3dItems
+    , turnpointToMap3dItem
+    )
 
 import Api.Types exposing (..)
-import Common.GeoUtils exposing (bearing, linePerpendicularToBearing)
+import Components.Map3dUtils as M3d exposing (Map3dItem)
+import Domain.GeoUtils exposing (bearing, linePerpendicularToBearing)
 import List.Extra as ListX
-import Map3dUtils as M3d exposing (Map3dItem)
-import MapUtils exposing (LineStyle(..), MapItem(..))
-
-
-startToMapItem : NavPoint -> ( NavPoint, TaskStart ) -> MapItem
-startToMapItem nextPoint ( np, start ) =
-    case start of
-        StartLine r ->
-            let
-                startBearing =
-                    bearing { lat = np.lat, lon = np.lon } { lat = nextPoint.lat, lon = nextPoint.lon }
-
-                ( lp1, lp2 ) =
-                    linePerpendicularToBearing (DistanceMeters r) { lat = np.lat, lon = np.lon } startBearing
-            in
-            -- makePerpendicularLine r np nextPoint
-            -- Circle { lat = np.lat, lon = np.lon } (DistanceMeters r)
-            Line TaskLine [ lp1, lp2 ]
 
 
 startToMap3dItem : NavPoint -> ( NavPoint, TaskStart ) -> Map3dItem
@@ -39,17 +30,6 @@ startToMap3dItem nextPoint ( np, start ) =
             M3d.Line [ ( lp1, ElevationMeters 0 ), ( lp2, ElevationMeters 0 ) ]
 
 
-finishToMapItem : NavPoint -> ( NavPoint, TaskFinish ) -> MapItem
-finishToMapItem prevPoint ( np, finish ) =
-    case finish of
-        FinishLine r ->
-            -- makePerpendicularLine r np prevPoint
-            Circle { lat = np.lat, lon = np.lon } (DistanceMeters r)
-
-        FinishCylinder r ->
-            Circle { lat = np.lat, lon = np.lon } (DistanceMeters r)
-
-
 finishToMap3dItem : NavPoint -> ( NavPoint, TaskFinish ) -> Map3dItem
 finishToMap3dItem prevPoint ( np, finish ) =
     case finish of
@@ -59,13 +39,6 @@ finishToMap3dItem prevPoint ( np, finish ) =
 
         FinishCylinder r ->
             M3d.Cylinder { lat = np.lat, lon = np.lon } (DistanceMeters r) (ElevationMeters 10000)
-
-
-turnpointToMapItem : ( NavPoint, Turnpoint ) -> MapItem
-turnpointToMapItem ( np, tp ) =
-    case tp of
-        TurnpointCylinder r ->
-            Circle { lat = np.lat, lon = np.lon } (DistanceMeters r)
 
 
 turnpointToMap3dItem : ( NavPoint, Turnpoint ) -> Map3dItem
@@ -89,34 +62,6 @@ lastNavPointBeforeFinish task =
         |> ListX.last
         |> Maybe.map Tuple.first
         |> Maybe.withDefault (Tuple.first task.start)
-
-
-taskToMapItems : FlightTask -> List MapItem
-taskToMapItems task =
-    List.foldl
-        -- at each step take the current turnpoint (`(np, tp)`) and add the corresponding circle for it and a line from the previous nav point (`prev`)
-        (\( np, tp ) ( prev, lines ) ->
-            ( np
-            , turnpointToMapItem ( np, tp )
-                :: Line TaskLine [ { lat = prev.lat, lon = prev.lon }, { lat = np.lat, lon = np.lon } ]
-                :: lines
-            )
-        )
-        -- initialize with the start nav point and a map item for the start
-        ( Tuple.first task.start
-        , [ startToMapItem (firstNavPointAfterStart task) task.start ]
-        )
-        task.turnpoints
-        -- add a map item for the finish and a line to it from the last nav point (`lastBeforeFinish`)
-        |> (\( prev, lines ) ->
-                finishToMapItem (lastNavPointBeforeFinish task) task.finish
-                    :: Line
-                        TaskLine
-                        [ { lat = prev.lat, lon = prev.lon }
-                        , (Tuple.first >> (\x -> { lat = x.lat, lon = x.lon })) task.finish
-                        ]
-                    :: lines
-           )
 
 
 taskToMap3dItems : FlightTask -> List Map3dItem

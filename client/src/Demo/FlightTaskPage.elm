@@ -1,16 +1,22 @@
-module Page.FlightTaskPage exposing (Effect(..), Model(..), Msg(..), Props, init, subscriptions, update, view)
+module Demo.FlightTaskPage exposing
+    ( Effect(..)
+    , Model(..)
+    , Msg(..)
+    , Props
+    , subscriptions
+    , update
+    , view
+    )
 
 import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)
-import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPending)
+import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..))
 import Common.Effect as Effect exposing (EffectSet, effect)
-import Element exposing (Element, text)
-import Http
-import Json.Decode as D
-import Page.Demo as Demo
-import Page.FlightTask.FlightTaskForm as FlightTaskForm
-import Page.FlightTask.FlightTaskList as FlightTaskList
-import Page.FlightTrack.FlightTrackUpload as FlightTrackUpload
+import Demo.Demo as Demo
+import Demo.FlightTask.FlightTaskForm as FlightTaskForm
+import Demo.FlightTask.FlightTaskList as FlightTaskList
+import Demo.FlightTrack.FlightTrackUpload as FlightTrackUpload
+import Element exposing (Element)
 
 
 type Model
@@ -87,7 +93,7 @@ type Msg
 
 
 type Effect
-    = FlightTaskSaved Int
+    = FlightTaskSaved
 
 
 update : Msg -> Model -> ( Model, Cmd Msg, EffectSet Effect )
@@ -131,10 +137,11 @@ update msg model =
                 ( newFlightTaskForm, flightTaskFormCmd, flightTaskFormEffects ) =
                     FlightTaskForm.update flightTaskFormMsg flightTaskForm
 
+                applyEffect : FlightTaskForm.Effect -> ( a -> a, Cmd msg, EffectSet Effect )
                 applyEffect eff =
                     case eff of
                         FlightTaskForm.FlightTaskSaved taskId ->
-                            ( identity, Cmd.none, (FlightTaskSaved >> effect) taskId )
+                            ( identity, Cmd.none, (always FlightTaskSaved >> effect) taskId )
             in
             ( AddTask newFlightTaskForm
             , Cmd.map FlightTaskFormMsg flightTaskFormCmd

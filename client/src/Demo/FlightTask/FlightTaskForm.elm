@@ -1,11 +1,22 @@
-module Page.FlightTask.FlightTaskForm exposing (Effect(..), FinishModel, FlightTaskRow(..), FlightTaskSelection(..), Model, Msg(..), Props, StartModel, TurnpointModel, init, initFinishModel, initStartModel, mapItems, radiusCodec, result, saveFlightTaskCmd, taskSelectionTable, update, view, viewLoaded, withFinishRadius, withFinishSelectModel, withSearchSelectModel, withSelectedItem, withStartRadius, withTurnpointRadius)
+module Demo.FlightTask.FlightTaskForm exposing
+    ( Effect(..)
+    , FinishModel
+    , FlightTaskSelection(..)
+    , Model
+    , Msg(..)
+    , Props
+    , StartModel
+    , TurnpointModel
+    , init
+    , update
+    , view
+    )
 
 import Api.Types exposing (..)
 import AppState
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..))
 import Common.Effect as Effect exposing (EffectSet, effect)
-import Common.FlightTaskUtils exposing (taskToMapItems)
 import Common.FormField exposing (FormField, getRaw, getVal, initFormFieldRaw, updateFormField)
 import Common.Validation as V
 import Components.SearchSelect as SearchSelect
@@ -15,7 +26,6 @@ import Element.Input as Input
 import Env exposing (apiUrl)
 import Http
 import Json.Decode as D
-import MapUtils exposing (MapItem)
 import Parser
 import Result.Extra as ResultX
 
@@ -70,9 +80,11 @@ initStartModel np =
 initFinishModel : NavPoint -> FinishModel
 initFinishModel np =
     let
+        line : ( String, Float -> TaskFinish )
         line =
             ( "Finish line", FinishLine )
 
+        cylinder : ( String, Float -> TaskFinish )
         cylinder =
             ( "Finish cylinder", FinishCylinder )
     in
@@ -91,13 +103,6 @@ type alias Model =
     }
 
 
-mapItems : Model -> List MapItem
-mapItems model =
-    result model
-        |> Result.map taskToMapItems
-        |> Result.withDefault []
-
-
 result : Model -> Result String FlightTask
 result model =
     case model.taskSelection of
@@ -109,20 +114,24 @@ result model =
 
         Complete start turnpoints finish ->
             let
+                startRadius : Result String (V.Positive Float)
                 startRadius =
                     getVal start.radius
                         |> Result.mapError V.showError
 
+                turnpointRadii : Result String (List ( NavPoint, V.Positive Float ))
                 turnpointRadii =
                     turnpoints
                         |> List.map (\tp -> getVal tp.radius |> Result.map (Tuple.pair tp.point))
                         |> ResultX.combine
                         |> Result.mapError V.showError
 
+                finishRadius : Result String (V.Positive Float)
                 finishRadius =
                     getVal finish.radius
                         |> Result.mapError V.showError
 
+                finishType : Result String (Float -> TaskFinish)
                 finishType =
                     finish.pointTypeSelect.selected
                         |> Result.fromMaybe "Finish type not selected"
@@ -371,6 +380,7 @@ update msg model =
 taskSelectionTable : FlightTaskSelection -> Element Msg
 taskSelectionTable ftSelection =
     let
+        rows : List FlightTaskRow
         rows =
             case ftSelection of
                 NothingSelected ->
@@ -458,6 +468,7 @@ taskSelectionTable ftSelection =
 viewLoaded : List (Entity Int NavPoint) -> Model -> Element Msg
 viewLoaded navPoints model =
     let
+        searchSelect : Element (SearchSelect.Msg (Entity Int NavPoint))
         searchSelect =
             SearchSelect.view
                 { suggestions = navPoints
@@ -466,6 +477,7 @@ viewLoaded navPoints model =
                 }
                 model.searchSelectModel
 
+        saveFlightTaskBtn : Element Msg
         saveFlightTaskBtn =
             result model
                 |> Result.map
@@ -493,6 +505,7 @@ type alias Props msg =
 view : (Msg -> msg) -> Props msg -> Model -> Element msg
 view mapMsg { navPoints, backTriggered } model =
     let
+        backBtn : Element msg
         backBtn =
             Input.button []
                 { label = text "Back"

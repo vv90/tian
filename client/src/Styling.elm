@@ -1,20 +1,10 @@
-module Styling exposing (buttonBase, buttonDefault, buttonDisabled, shadowDefault)
+module Styling exposing (buttonDefault, buttonDisabled)
 
 import Common.Palette as Palette
-import Element exposing (Attribute, Color, Element, focused, padding)
+import Element exposing (Attribute, padding)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
-
-
-shadowDefault : Attribute msg
-shadowDefault =
-    Border.shadow
-        { offset = ( 2, 2 )
-        , size = 0
-        , blur = 5
-        , color = Palette.shadow
-        }
 
 
 buttonBase : List (Attribute msg)

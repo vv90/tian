@@ -1,11 +1,20 @@
-module Page.FlightTrack.FlightTrackUpload exposing (Model, Msg(..), Props, init, map3dItems, mapItems, subscriptions, update, uploadTrackCmd, view, withPendingTaskProgress)
+module Demo.FlightTrack.FlightTrackUpload exposing
+    ( Model
+    , Msg(..)
+    , Props
+    , init
+    , subscriptions
+    , update
+    , view
+    )
 
 import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPending)
-import Common.FlightTaskUtils exposing (taskToMap3dItems, taskToMapItems)
 import Common.JsonCodecsExtra exposing (filesDecoder)
+import Components.Map3dUtils exposing (Map3dItem)
 import Components.Player as Player
+import Domain.FlightTaskUtils exposing (taskToMap3dItems)
 import Element exposing (Element, html, row, spacing, text)
 import Element.Input as Input
 import Env exposing (apiUrl)
@@ -16,8 +25,6 @@ import Html.Events exposing (on)
 import Http
 import Json.Decode as D
 import List.Extra as ListX
-import Map3dUtils exposing (Map3dItem)
-import MapUtils exposing (MapItem(..))
 
 
 type alias Model =
@@ -27,32 +34,10 @@ type alias Model =
     }
 
 
-mapItems : List (Entity Int FlightTask) -> Model -> List MapItem
-mapItems tasks model =
-    let
-        task =
-            ListX.find (\{ key } -> key == model.taskId) tasks
-
-        taskItems =
-            task
-                |> Maybe.map (.entity >> taskToMapItems)
-                |> Maybe.withDefault []
-
-        points =
-            model.playerModel |> Maybe.map Player.currPoints
-
-        pointItems =
-            Maybe.map
-                (List.map (\( id, alt, pos ) -> Marker pos (id ++ " " ++ String.fromFloat alt ++ "m")))
-                points
-                |> Maybe.withDefault []
-    in
-    taskItems ++ pointItems
-
-
 map3dItems : List (Entity Int FlightTask) -> Model -> List Map3dItem
 map3dItems tasks model =
     let
+        task : Maybe { entity : FlightTask, key : Int }
         task =
             ListX.find (\{ key } -> key == model.taskId) tasks
     in

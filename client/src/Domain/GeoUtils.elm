@@ -1,8 +1,9 @@
-module Common.GeoUtils exposing
+module Domain.GeoUtils exposing
     ( Bearing
     , bearing
     , degreesLatitude
     , degreesLongitude
+    , fromMercatorWeb
     , linePerpendicularToBearing
     , metersDistance
     , metersElevation
@@ -10,9 +11,11 @@ module Common.GeoUtils exposing
     , scaleLongitude
     , sumLatitude
     , sumLongitude
+    , toMercatorWeb
     )
 
 import Api.Types exposing (..)
+import Common.Utils exposing (sinh)
 
 
 type Bearing
@@ -69,6 +72,48 @@ metersDistance (DistanceMeters meters) =
     meters
 
 
+toMercatorWeb : GeoPoint -> ( Float, Float )
+toMercatorWeb { lat, lon } =
+    let
+        latRad : Float
+        latRad =
+            -- lat |> (\(LatDeg latVal) -> degToRad latVal) |> getRad
+            lat |> degreesLatitude |> degrees
+
+        lonDeg : Float
+        lonDeg =
+            -- lon |> (\(LonDeg lonVal) -> getDeg lonVal)
+            lon |> degreesLongitude
+
+        sec : Float -> Float
+        sec x =
+            1 / cos x
+
+        resY : Float
+        resY =
+            logBase e (tan latRad + sec latRad)
+    in
+    ( (lonDeg + 180) / 360, (1 - resY / pi) / 2 )
+
+
+fromMercatorWeb : ( Float, Float ) -> GeoPoint
+fromMercatorWeb ( x, y ) =
+    let
+        lonDeg : Float
+        lonDeg =
+            x * 360 - 180
+
+        latRad : Float
+        latRad =
+            atan (sinh (pi * (1 - 2 * y)))
+
+        latDeg : Float
+        latDeg =
+            latRad * 180 / pi
+    in
+    { lat = LatitudeDegrees latDeg, lon = LongitudeDegrees lonDeg }
+
+
 
 -- showGeoPoint : GeoPoint -> String
 -- showGeoPoint geoPoint =
@@ -99,11 +144,6 @@ radToDeg x =
 -- lon_deg = xtile / n * 360.0 - 180.0
 -- lat_rad = arctan(sinh(pi * (1 - 2 * ytile / n)))
 -- lat_deg = lat_rad * 180.0 / pi
-
-
-sinh : Float -> Float
-sinh x =
-    (e ^ x - e ^ -x) / 2
 
 
 {-| Converts from degrees, minutes, seconds to decimal degrees

@@ -41,31 +41,39 @@ config : List Rule
 config =
     [ NoDebug.Log.rule
     , NoDebug.TodoOrToString.rule
-
-    -- , NoUnoptimizedRecursion.rule (NoUnoptimizedRecursion.optOutWithComment "IGNORE TCO")
+    , NoUnoptimizedRecursion.rule (NoUnoptimizedRecursion.optOutWithComment "IGNORE TCO")
+        |> Rule.ignoreErrorsForDirectories [ "src/Components" ]
     , Simplify.rule Simplify.defaults
     , NoTestValuesInProductionCode.rule
         (NoTestValuesInProductionCode.startsWith "stub_")
     , NoMissingSubscriptionsCall.rule
     , NoRecursiveUpdate.rule
     , NoUselessSubscriptions.rule
-
-    -- , NoUnsafeDivision.rule
-    -- , NoUnused.CustomTypeConstructors.rule []
-    -- , NoUnused.CustomTypeConstructorArgs.rule
+    , NoUnsafeDivision.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
+    , NoUnused.CustomTypeConstructors.rule []
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components", "src/Demo" ]
+    , NoUnused.CustomTypeConstructorArgs.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
     , NoUnused.Dependencies.rule
-
-    -- , NoUnused.Exports.rule
-    -- , NoUnused.Modules.rule
-    -- , NoUnused.Parameters.rule
-    -- , NoUnused.Patterns.rule
-    -- , NoUnused.Variables.rule
-    -- , NoImportingEverything.rule [ "Element" ]
+    , NoUnused.Exports.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
+    , NoUnused.Modules.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
+    , NoUnused.Parameters.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
+    , NoUnused.Patterns.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
+    , NoUnused.Variables.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components", "src/Demo" ]
+    , NoImportingEverything.rule [ "Element", "Api.Types" ]
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
     , NoExposingEverything.rule
-
-    -- , NoMissingTypeAnnotation.rule
-    -- , NoMissingTypeAnnotationInLetIn.rule
-    -- , NoPrematureLetComputation.rule
+    , NoMissingTypeAnnotation.rule
+    , NoMissingTypeAnnotationInLetIn.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
+    , NoPrematureLetComputation.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
     , NoSimpleLetBody.rule
     ]
         |> List.map (Rule.ignoreErrorsForDirectories [ "src/Api/" ])

@@ -1,22 +1,15 @@
-module Tile exposing (Tile, TileKey, ZoomLevel(..), fromTileKey, maxZoom, minZoom, tileKeyToUrl, tileLength, tileSize, toTileKey, zoomInt, zoomLevel)
+module Tile exposing
+    ( TileKey
+    , ZoomLevel(..)
+    , tileKeyToUrl
+    , tileLength
+    , zoomInt
+    , zoomLevel
+    )
 
 import Api.Types exposing (..)
+import Basics.Extra exposing (safeDivide)
 import Constants exposing (earthCircumference)
-
-
-tileSize : Int
-tileSize =
-    256
-
-
-minZoom : Float
-minZoom =
-    0
-
-
-maxZoom : Float
-maxZoom =
-    19
 
 
 type ZoomLevel
@@ -47,26 +40,6 @@ type alias TileKey =
     ( Int, Int, Int )
 
 
-type alias Tile =
-    { x : Int
-    , y : Int
-    , zoom : ZoomLevel
-    }
-
-
-fromTileKey : TileKey -> Tile
-fromTileKey ( x, y, zoom ) =
-    { x = x
-    , y = y
-    , zoom = zoomLevel zoom
-    }
-
-
-toTileKey : Tile -> TileKey
-toTileKey { x, y, zoom } =
-    ( x, y, zoomInt zoom )
-
-
 tileKeyToUrl : TileKey -> String
 tileKeyToUrl ( x, y, zoom ) =
     String.concat
@@ -82,7 +55,13 @@ tileKeyToUrl ( x, y, zoom ) =
 
 tileLength : Latitude -> ZoomLevel -> Float
 tileLength (LatitudeDegrees lat) zoom =
-    earthCircumference * cos (degrees lat) / 2 ^ toFloat (zoomInt zoom)
+    let
+        numerator : Float
+        numerator =
+            earthCircumference * cos (degrees lat)
+    in
+    safeDivide numerator (2 ^ toFloat (zoomInt zoom))
+        |> Maybe.withDefault numerator
 
 
 zoomInt : ZoomLevel -> Int

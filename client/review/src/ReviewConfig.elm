@@ -66,8 +66,8 @@ config =
     , NoImportingEverything.rule [ "Element", "Api.Types" ]
         |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
     , NoExposingEverything.rule
+    , NoMissingTypeAnnotation.rule
 
-    -- , NoMissingTypeAnnotation.rule
     -- , NoMissingTypeAnnotationInLetIn.rule
     -- , NoPrematureLetComputation.rule
     , NoSimpleLetBody.rule

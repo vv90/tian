@@ -69,8 +69,8 @@ config =
     , NoMissingTypeAnnotation.rule
     , NoMissingTypeAnnotationInLetIn.rule
         |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
-
-    -- , NoPrematureLetComputation.rule
+    , NoPrematureLetComputation.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
     , NoSimpleLetBody.rule
     ]
         |> List.map (Rule.ignoreErrorsForDirectories [ "src/Api/" ])

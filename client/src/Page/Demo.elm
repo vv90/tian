@@ -15,9 +15,7 @@ import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Common.Palette as Palette
 import Common.Utils exposing (roundN)
 import Dict exposing (Dict)
-import Domain.FlightTaskUtils exposing (taskToMap3dItems)
-import Domain.GeoUtils exposing (metersElevation)
-import Element exposing (Element, alignRight, column, el, fill, onLeft, paddingXY, paragraph, row, shrink, spacing, spacingXY, table, text)
+import Element exposing (Element, column, el, fill, paddingXY, paragraph, shrink, spacing, spacingXY, table, text)
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
@@ -25,8 +23,6 @@ import Env exposing (apiUrl)
 import Http
 import Json.Decode as D
 import List.Extra as ListX
-import Map3dUtils exposing (Map3dItem)
-import Maybe.Extra as MaybeX
 import Ports
 import Styling
 
@@ -42,24 +38,6 @@ init =
     { demoData = NotStarted
     , points = Dict.empty
     }
-
-
-map3dItems : Model -> List Map3dItem
-map3dItems model =
-    let
-        pointItems : List Map3dItem
-        pointItems =
-            model.points
-                |> Dict.toList
-                |> List.map (\( id, p ) -> Map3dUtils.Marker id { lat = p.lat, lon = p.lon } p.altitude)
-
-        taskItems : List Map3dItem
-        taskItems =
-            model.demoData
-                |> (deferredToMaybe >> Maybe.andThen Result.toMaybe)
-                |> MaybeX.unwrap [] (Tuple.first >> taskToMap3dItems)
-    in
-    taskItems ++ pointItems
 
 
 withPointUpdate : String -> ProgressPoint -> Model -> Model
@@ -142,6 +120,67 @@ type alias ProgressPointStats =
 
 view : Model -> Element Msg
 view model =
+    case deferredToMaybe model.demoData of
+        Nothing ->
+            greeting model.demoData
+
+        Just _ ->
+            leaderboard model
+
+
+greeting : DeferredResult ( FlightTask, List NameMatch ) -> Element Msg
+greeting demoData =
+    let
+        item : String -> Element msg
+        item txt =
+            el
+                [ paddingXY 10 0
+                ]
+                (text txt)
+    in
+    column
+        [ spacing 20
+        , Font.color Palette.darkGray
+        ]
+        [ el
+            [ Region.heading 1
+            , Font.center
+            , Font.size 27
+            , Font.bold
+            , Font.color Palette.darkerGray
+            ]
+            (text "Competition Tracking")
+        , paragraph
+            [ Region.mainContent ]
+            [ column [ spacing 10 ]
+                [ text "This is a proof of concept demonstration that includes:"
+                , item "• 3D map"
+                , item "• Position tracking"
+                , item "• Task progress"
+                , item "• Real-time scoring"
+                ]
+            ]
+        , paragraph
+            [ Region.mainContent ]
+            [ text "For this demo real time tracking is replaced with pre-recorded flight tracks played back at 5x speed" ]
+        , if deferredIsPending demoData then
+            Input.button
+                Styling.buttonDisabled
+                { onPress = Nothing
+                , label = text "Starting demo..."
+                }
+
+          else
+            Input.button
+                Styling.buttonDefault
+                { onPress = Just (DemoInit Started)
+                , label = text "Start Demo"
+                }
+        ]
+
+
+leaderboard : Model -> Element msg
+leaderboard model =
     let
         findName : String -> Maybe String
         findName id =
@@ -163,116 +202,36 @@ view model =
                 )
                 point.speed
                 point.target
-
-        -- leaderboard =
-        --     model.points
-        --         |> Dict.toList
-        --         |> List.filterMap (\( id, point ) -> toStats id point)
-        --         |> List.sortBy (\stats -> -stats.speed)
-        --         |> List.map
-        --             (\stats ->
-        --                 row
-        --                     [ spacing 10 ]
-        --                     [ text stats.id
-        --                     , text <| String.fromFloat stats.speed ++ " km/h"
-        --                     , text <| String.fromFloat stats.distance ++ " km"
-        --                     , text stats.target
-        --                     ]
-        --             )
-        leaderboard : Element msg
-        leaderboard =
-            table
-                [ spacingXY 20 10
-                , Font.family [ Font.typeface "Roboto Mono" ]
-                ]
-                { data =
-                    model.points
-                        |> Dict.toList
-                        |> List.filterMap (\( id, point ) -> toStats id point)
-                        |> List.sortBy (\stats -> -stats.speed)
-                , columns =
-                    [ { header = text ""
-                      , width = shrink
-                      , view =
-                            \stats -> text <| stats.id
-                      }
-                    , { header = text "Name"
-                      , width = shrink
-                      , view =
-                            \stats -> text <| stats.name
-                      }
-                    , { header = el [ Font.alignRight ] <| text "Task speed"
-                      , width = fill
-                      , view =
-                            \stats -> el [ Font.alignRight ] <| text <| String.fromFloat stats.speed ++ " km/h"
-                      }
-                    , { header = el [ Font.alignRight ] <| text "Distance"
-                      , width = fill
-                      , view =
-                            \stats -> el [ Font.alignRight ] <| text <| String.fromFloat stats.distance ++ " km"
-                      }
-
-                    -- , { header = el [ Font.center ] <| text "Target"
-                    --   , width = fill
-                    --   , view =
-                    --         \stats -> text stats.target
-                    --   }
-                    ]
-                }
-
-        greeting : Element Msg
-        greeting =
-            let
-                item : String -> Element msg
-                item txt =
-                    el
-                        [ paddingXY 10 0
-                        ]
-                        (text txt)
-            in
-            column
-                [ spacing 20
-                , Font.color Palette.darkGray
-                ]
-                [ el
-                    [ Region.heading 1
-                    , Font.center
-                    , Font.size 27
-                    , Font.bold
-                    , Font.color Palette.darkerGray
-                    ]
-                    (text "Competition Tracking")
-                , paragraph
-                    [ Region.mainContent ]
-                    [ column [ spacing 10 ]
-                        [ text "This is a proof of concept demonstration that includes:"
-                        , item "• 3D map"
-                        , item "• Position tracking"
-                        , item "• Task progress"
-                        , item "• Real-time scoring"
-                        ]
-                    ]
-                , paragraph
-                    [ Region.mainContent ]
-                    [ text "For this demo real time tracking is replaced with pre-recorded flight tracks played back at 5x speed" ]
-                , if deferredIsPending model.demoData then
-                    Input.button
-                        Styling.buttonDisabled
-                        { onPress = Nothing
-                        , label = text "Starting demo..."
-                        }
-
-                  else
-                    Input.button
-                        Styling.buttonDefault
-                        { onPress = Just (DemoInit Started)
-                        , label = text "Start Demo"
-                        }
-                ]
     in
-    case deferredToMaybe model.demoData of
-        Nothing ->
-            greeting
-
-        Just _ ->
-            leaderboard
+    table
+        [ spacingXY 20 10
+        , Font.family [ Font.typeface "Roboto Mono" ]
+        ]
+        { data =
+            model.points
+                |> Dict.toList
+                |> List.filterMap (\( id, point ) -> toStats id point)
+                |> List.sortBy (\stats -> -stats.speed)
+        , columns =
+            [ { header = text ""
+              , width = shrink
+              , view =
+                    \stats -> text <| stats.id
+              }
+            , { header = text "Name"
+              , width = shrink
+              , view =
+                    \stats -> text <| stats.name
+              }
+            , { header = el [ Font.alignRight ] <| text "Task speed"
+              , width = fill
+              , view =
+                    \stats -> el [ Font.alignRight ] <| text <| String.fromFloat stats.speed ++ " km/h"
+              }
+            , { header = el [ Font.alignRight ] <| text "Distance"
+              , width = fill
+              , view =
+                    \stats -> el [ Font.alignRight ] <| text <| String.fromFloat stats.distance ++ " km"
+              }
+            ]
+        }

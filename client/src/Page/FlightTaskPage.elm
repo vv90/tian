@@ -1,4 +1,12 @@
-module Page.FlightTaskPage exposing (Effect(..), Model(..), Msg(..), Props, init, subscriptions, update, view)
+module Page.FlightTaskPage exposing
+    ( Effect(..)
+    , Model(..)
+    , Msg(..)
+    , Props
+    , subscriptions
+    , update
+    , view
+    )
 
 import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)

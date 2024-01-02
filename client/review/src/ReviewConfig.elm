@@ -54,8 +54,9 @@ config =
     -- , NoUnused.CustomTypeConstructors.rule []
     -- , NoUnused.CustomTypeConstructorArgs.rule
     , NoUnused.Dependencies.rule
+    , NoUnused.Exports.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
 
-    -- , NoUnused.Exports.rule
     -- , NoUnused.Modules.rule
     -- , NoUnused.Parameters.rule
     -- , NoUnused.Patterns.rule

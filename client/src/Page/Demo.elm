@@ -1,4 +1,13 @@
-module Page.Demo exposing (Model, Msg(..), ProgressPointStats, getDemoTaskCmd, init, map3dItems, mapItems, subscriptions, update, view, withPointUpdate)
+module Page.Demo exposing
+    ( Model
+    , Msg(..)
+    , init
+    , mapItems
+    , subscriptions
+    , update
+    , view
+    , withPointUpdate
+    )
 
 import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult, DeferredResult)

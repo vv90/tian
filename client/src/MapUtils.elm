@@ -1,4 +1,22 @@
-module MapUtils exposing (LineStyle(..), MapItem(..), MapView, MarkerType(..), PointStyle(..), addTileSources, changeZoom, fromMercatorWeb, geoPointToViewCoords, isInView, isPointInRect, isPointInView, isValidTileKey, metersPerPixel, normalizeTileKey, scaleCoords, scaleFromZoom, scaleOffset, stringFromBool, stringFromTuple, tilesInView, toMercatorWeb, viewCoordsToGeoPoint)
+module MapUtils exposing
+    ( LineStyle(..)
+    , MapItem(..)
+    , MapView
+    , PointStyle(..)
+    , addTileSources
+    , changeZoom
+    , fromMercatorWeb
+    , geoPointToViewCoords
+    , metersPerPixel
+    , normalizeTileKey
+    , scaleCoords
+    , scaleFromZoom
+    , scaleOffset
+    , stringFromTuple
+    , tilesInView
+    , toMercatorWeb
+    , viewCoordsToGeoPoint
+    )
 
 -- import Geo.GeoUtils exposing (..)
 

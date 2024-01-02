@@ -1,4 +1,9 @@
-module Main exposing (DetachedPosition(..), Model, Msg(..), detachedView, init, main, selectedFlightTask, sidebar, sidebarWidth, subscriptions, update, view, withAppState, withFlightTaskPage, withSidebarOffset)
+module Main exposing
+    ( DetachedPosition(..)
+    , Model
+    , Msg(..)
+    , main
+    )
 
 import Api.Types exposing (..)
 import AppState

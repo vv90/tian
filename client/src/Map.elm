@@ -1,4 +1,12 @@
-module Map exposing (DragState(..), Model, Msg(..), WheelEvent, decodeButtons, decodePosition, decodeWheelEvent, init, renderCircle, renderLine, renderMarker, renderPoint, renderPolygon, renderTile, renderVectorItem, setMapView, subscriptions, update, view)
+module Map exposing
+    ( DragState(..)
+    , Model
+    , Msg(..)
+    , WheelEvent
+    , init
+    , subscriptions
+    , update
+    )
 
 -- import Geo.Constants exposing (metersPerPixel)
 -- import Geo.GeoUtils exposing (..)

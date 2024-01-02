@@ -1,4 +1,4 @@
-module Page.FlightTask.FlightTaskList exposing (Props, view, viewLoaded)
+module Page.FlightTask.FlightTaskList exposing (Props, view)
 
 import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)

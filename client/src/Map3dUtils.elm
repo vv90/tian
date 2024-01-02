@@ -1,4 +1,20 @@
-module Map3dUtils exposing (Map3dItem(..), MercatorCoords(..), MercatorUnit(..), PlaneCoords(..), SomeCoords(..), WorldCoords(..), fromMercatorPoint, getMercatorUnit, makeMesh_, makeTilePoints, makeTiles, mercatorFrame, mercatorRate, mercatorUnit, tileMesh, tileOrigin, tileRectangle, toMercatorPoint)
+module Map3dUtils exposing
+    ( Map3dItem(..)
+    , MercatorCoords(..)
+    , MercatorUnit(..)
+    , PlaneCoords(..)
+    , WorldCoords(..)
+    , fromMercatorPoint
+    , getMercatorUnit
+    , makeMesh_
+    , makeTilePoints
+    , makeTiles
+    , mercatorFrame
+    , mercatorRate
+    , tileMesh
+    , tileRectangle
+    , toMercatorPoint
+    )
 
 import Api.Types exposing (..)
 import Array exposing (Array)

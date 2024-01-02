@@ -13,7 +13,7 @@ testFromMercator =
                 let
                     latMin : Float
                     latMin =
-                        fromMercatorWeb ( 1250 / (2 ^ 11), 674 / (2 ^ 11) ) |> .lat |> degreesLatitude
+                        fromMercatorWeb ( 1250 / 2048, 674 / 2048 ) |> .lat |> degreesLatitude
                 in
                 Expect.within (Absolute 1.0e-13) latMin 52.268157373768176
         , test "latMax" <|
@@ -21,7 +21,7 @@ testFromMercator =
                 let
                     latMax : Float
                     latMax =
-                        fromMercatorWeb ( 1251 / (2 ^ 11), 675 / (2 ^ 11) ) |> .lat |> degreesLatitude
+                        fromMercatorWeb ( 1251 / 2048, 675 / 2048 ) |> .lat |> degreesLatitude
                 in
                 Expect.within (Absolute 1.0e-13) latMax 52.160454557747045
         ]

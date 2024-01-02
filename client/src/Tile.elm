@@ -8,6 +8,7 @@ module Tile exposing
     )
 
 import Api.Types exposing (..)
+import Basics.Extra exposing (safeDivide)
 import Constants exposing (earthCircumference)
 
 
@@ -54,7 +55,13 @@ tileKeyToUrl ( x, y, zoom ) =
 
 tileLength : Latitude -> ZoomLevel -> Float
 tileLength (LatitudeDegrees lat) zoom =
-    earthCircumference * cos (degrees lat) / 2 ^ toFloat (zoomInt zoom)
+    let
+        numerator : Float
+        numerator =
+            earthCircumference * cos (degrees lat)
+    in
+    safeDivide numerator (2 ^ toFloat (zoomInt zoom))
+        |> Maybe.withDefault numerator
 
 
 zoomInt : ZoomLevel -> Int

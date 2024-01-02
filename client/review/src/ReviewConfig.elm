@@ -49,8 +49,8 @@ config =
     , NoMissingSubscriptionsCall.rule
     , NoRecursiveUpdate.rule
     , NoUselessSubscriptions.rule
-
-    -- , NoUnsafeDivision.rule
+    , NoUnsafeDivision.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
     , NoUnused.CustomTypeConstructors.rule []
         |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components", "src/Demo" ]
     , NoUnused.CustomTypeConstructorArgs.rule

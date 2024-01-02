@@ -87,17 +87,21 @@ type alias MapView =
 toMercatorWeb : GeoPoint -> ( Float, Float )
 toMercatorWeb { lat, lon } =
     let
+        latRad : Float
         latRad =
             -- lat |> (\(LatDeg latVal) -> degToRad latVal) |> getRad
             lat |> degreesLatitude |> degrees
 
+        lonDeg : Float
         lonDeg =
             -- lon |> (\(LonDeg lonVal) -> getDeg lonVal)
             lon |> degreesLongitude
 
+        sec : Float -> Float
         sec x =
             1 / cos x
 
+        resY : Float
         resY =
             logBase e (tan latRad + sec latRad)
     in
@@ -107,15 +111,19 @@ toMercatorWeb { lat, lon } =
 fromMercatorWeb : ( Float, Float ) -> GeoPoint
 fromMercatorWeb ( x, y ) =
     let
+        sinh : Float -> Float
         sinh a =
             (e ^ a - e ^ -a) / 2
 
+        lonDeg : Float
         lonDeg =
             x * 360 - 180
 
+        latRad : Float
         latRad =
             atan (sinh (pi * (1 - 2 * y)))
 
+        latDeg : Float
         latDeg =
             latRad * 180 / pi
     in
@@ -139,6 +147,7 @@ changeZoom scaleCoeffcitient mapView =
         ( offsetX, offsetY ) =
             mapView.offset
 
+        center : ( Float, Float )
         center =
             ( offsetX + toFloat mapView.width / 2, offsetY + toFloat mapView.height / 2 )
     in
@@ -151,6 +160,7 @@ changeZoom scaleCoeffcitient mapView =
 isPointInView : MapView -> ( Float, Float ) -> Bool
 isPointInView mapView point =
     let
+        viewRect : ( ( Float, Float ), Float, Float )
         viewRect =
             ( mapView.offset, toFloat mapView.width, toFloat mapView.height )
     in
@@ -174,21 +184,27 @@ isPointInRect ( ( rectX, rectY ), width, height ) ( px, py ) =
 isInView : MapView -> TileKey -> Bool
 isInView mapView ( x, y, zoom ) =
     let
+        scaleCoefficient : Float
         scaleCoefficient =
             scaleFromZoom mapView.zoom
 
+        left : Float
         left =
             x * tileSize |> toFloat
 
+        right : Float
         right =
             (x + 1) * tileSize |> toFloat
 
+        top : Float
         top =
             y * tileSize |> toFloat
 
+        bottom : Float
         bottom =
             (y + 1) * tileSize |> toFloat
 
+        viewRect : ( ( Float, Float ), Float, Float )
         viewRect =
             ( scaleCoords scaleCoefficient mapView.offset
             , toFloat mapView.width / scaleCoefficient
@@ -210,33 +226,42 @@ isInView mapView ( x, y, zoom ) =
 tilesInView : MapView -> List TileKey
 tilesInView mapView =
     let
+        fTileSize : Float
         fTileSize =
             toFloat tileSize
 
+        zoom : Int
         zoom =
             floor mapView.zoom
 
+        scaleCoefficient : Float
         scaleCoefficient =
             scaleFromZoom mapView.zoom
 
         ( offsetX, offsetY ) =
             scaleCoords scaleCoefficient mapView.offset
 
+        width : Float
         width =
             toFloat mapView.width / scaleCoefficient
 
+        height : Float
         height =
             toFloat mapView.height / scaleCoefficient
 
+        minTileX : Int
         minTileX =
             offsetX / fTileSize |> floor
 
+        minTileY : Int
         minTileY =
             offsetY / fTileSize |> floor
 
+        maxTileX : Int
         maxTileX =
             (offsetX + width) / fTileSize |> floor
 
+        maxTileY : Int
         maxTileY =
             (offsetY + height) / fTileSize |> floor
     in
@@ -249,15 +274,18 @@ tilesInView mapView =
 geoPointToViewCoords : MapView -> GeoPoint -> ( Float, Float )
 geoPointToViewCoords mapView point =
     let
+        zoom : Int
         zoom =
             floor mapView.zoom
 
         ( offsetX, offsetY ) =
             mapView.offset
 
+        scaleCoefficient : Float
         scaleCoefficient =
             scaleFromZoom mapView.zoom
 
+        toCoord : Float -> Float
         toCoord n =
             n * toFloat (2 ^ zoom) * toFloat tileSize * scaleCoefficient
 
@@ -274,15 +302,18 @@ geoPointToViewCoords mapView point =
 viewCoordsToGeoPoint : MapView -> ( Float, Float ) -> GeoPoint
 viewCoordsToGeoPoint mapView coords =
     let
+        zoom : Int
         zoom =
             floor mapView.zoom
 
         ( offsetX, offsetY ) =
             mapView.offset
 
+        scaleCoefficient : Float
         scaleCoefficient =
             scaleFromZoom mapView.zoom
 
+        fromCoord : Float -> Float
         fromCoord n =
             n / (toFloat tileSize * toFloat (2 ^ zoom) * scaleCoefficient)
     in
@@ -296,6 +327,7 @@ viewCoordsToGeoPoint mapView coords =
 isValidTileKey : TileKey -> Bool
 isValidTileKey ( x, y, zoom ) =
     let
+        n : Int
         n =
             2 ^ zoom
     in
@@ -305,6 +337,7 @@ isValidTileKey ( x, y, zoom ) =
 normalizeTileKey : TileKey -> TileKey
 normalizeTileKey ( x, y, zoom ) =
     let
+        n : Int
         n =
             2 ^ zoom
     in
@@ -328,6 +361,7 @@ scaleFromZoom zoom =
 scaleCoords : Float -> ( Float, Float ) -> ( Float, Float )
 scaleCoords scaleCoeffcitient offset =
     let
+        applyScale : Float -> Float
         applyScale x =
             x / scaleCoeffcitient
     in
@@ -342,6 +376,7 @@ scaleCoords scaleCoeffcitient offset =
 metersPerPixel : Int -> Maybe Distance
 metersPerPixel zoom =
     let
+        mpp : Maybe Float
         mpp =
             case zoom of
                 0 ->

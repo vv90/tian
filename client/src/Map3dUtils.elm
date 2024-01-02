@@ -144,6 +144,7 @@ fromMercatorPoint =
 tileOrigin : Tile -> Point2d MercatorUnit MercatorCoords
 tileOrigin tile =
     let
+        numTiles : Int
         numTiles =
             2 ^ zoomInt tile.zoom
 
@@ -158,6 +159,7 @@ tileOrigin tile =
 tileRectangle : Tile -> ( Point2d MercatorUnit MercatorCoords, Point2d MercatorUnit MercatorCoords )
 tileRectangle tile =
     let
+        numTiles : Int
         numTiles =
             2 ^ zoomInt tile.zoom
 
@@ -201,6 +203,7 @@ mercatorRate lat =
 mercatorFrame : GeoPoint -> Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
 mercatorFrame center =
     let
+        rate : Quantity Float (Rate Meters MercatorUnit)
         rate =
             mercatorRate center.lat
 
@@ -238,6 +241,7 @@ makeTiles :
     -> List ( TileKey, ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords ) )
 makeTiles isInView mFrame mRate focalPoint zoom =
     let
+        numTiles : Int
         numTiles =
             2 ^ zoomInt zoom
 
@@ -266,6 +270,7 @@ makeTiles isInView mFrame mRate focalPoint zoom =
                 |> Point2d.at mRate
             )
 
+        firstTile : TileKey
         firstTile =
             focalPoint
                 |> Point2d.at_ mRate
@@ -315,6 +320,7 @@ makeTiles isInView mFrame mRate focalPoint zoom =
 makeTilePoints : Tile -> List GeoPoint
 makeTilePoints tile =
     let
+        numTiles : Int
         numTiles =
             2 ^ zoomInt tile.zoom
 
@@ -336,6 +342,7 @@ makeTilePoints tile =
             , (yEnd - yStart) / yCount
             )
 
+        makePoint : Int -> Int -> Point2d MercatorUnit coordinates
         makePoint i j =
             Point2d.xy
                 (mercatorUnit <| xStart + toFloat i * xStep)
@@ -359,15 +366,19 @@ makeMesh_ :
     -> Mesh.Textured WorldCoords
 makeMesh_ mFrame mRate xyPlane tile =
     let
+        points : Array ( GeoPoint, Int )
         points =
             hydrateTile tile
 
+        numRows : Int
         numRows =
             Array.length tile.elevations // tile.rowLength
 
+        yCount : Int
         yCount =
             numRows - 1
 
+        xCount : Int
         xCount =
             tile.rowLength - 1
 
@@ -391,11 +402,16 @@ makeMesh_ mFrame mRate xyPlane tile =
                 |> Maybe.map makePoint
                 |> Maybe.withDefault Point3d.origin
 
+        withRelativeTextureCoords :
+            ( Float, Float )
+            -> Point3d Meters WorldCoords
+            -> { position : Point3d Meters WorldCoords, uv : ( Float, Float ) }
         withRelativeTextureCoords ( dx, dy ) p =
             { position = p
             , uv = ( dx, -dy )
             }
 
+        pointAt : Int -> Int -> { position : Point3d Meters WorldCoords, uv : ( Float, Float ) }
         pointAt i j =
             points
                 |> Array.get (j * tile.rowLength + i)
@@ -416,6 +432,7 @@ tileMesh :
     -> Mesh.Textured WorldCoords
 tileMesh xyPlane mFrame mRate elevValues tile =
     let
+        numTiles : Int
         numTiles =
             2 ^ zoomInt tile.zoom
 
@@ -437,6 +454,7 @@ tileMesh xyPlane mFrame mRate elevValues tile =
             , (yEnd - yStart) / yCount
             )
 
+        elevAt : Int -> Int -> Maybe Length
         elevAt i j =
             elevValues
                 |> ListX.getAt (j * xCount + i)
@@ -447,6 +465,7 @@ tileMesh xyPlane mFrame mRate elevValues tile =
         -- 8 9   10 11
         -- 4  5  6  7
         -- 0  1  2  3
+        in3d : Maybe (Quantity Float Meters) -> Point2d Meters PlaneCoords -> Point3d Meters WorldCoords
         in3d elev p =
             case elev of
                 Just z ->
@@ -456,6 +475,7 @@ tileMesh xyPlane mFrame mRate elevValues tile =
                 Nothing ->
                     Point3d.on xyPlane p
 
+        withRelativeTextureCoords : ( a, number ) -> b -> { position : b, uv : ( a, number ) }
         withRelativeTextureCoords ( dx, dy ) p =
             { position = p
             , uv = ( dx, -dy )
@@ -467,6 +487,7 @@ tileMesh xyPlane mFrame mRate elevValues tile =
         --         (mercatorUnit <| xStart + toFloat i * xStep)
         --         (mercatorUnit <| yStart + toFloat j * yStep)
         --         |> Point2d.at mRate
+        pointAt : Int -> Int -> { position : Point3d Meters WorldCoords, uv : ( Float, Float ) }
         pointAt i j =
             Point2d.xyIn
                 mFrame

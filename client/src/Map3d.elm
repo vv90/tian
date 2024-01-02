@@ -34,7 +34,24 @@ import Html.Attributes as HtmlAttr exposing (attribute, style, type_)
 import Html.Events as HtmlEvents exposing (on)
 import Json.Decode as D
 import Length exposing (Length, Meters)
-import Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, PlaneCoords(..), WorldCoords, fromMercatorPoint, getMercatorUnit, makeMesh_, makeTilePoints, makeTiles, mercatorFrame, mercatorRate, tileMesh, tileRectangle, toMercatorPoint)
+import Map3dUtils
+    exposing
+        ( Map3dItem(..)
+        , MercatorCoords
+        , MercatorUnit
+        , PlaneCoords(..)
+        , WorldCoords
+        , fromMercatorPoint
+        , getMercatorUnit
+        , makeMesh_
+        , makeTilePoints
+        , makeTiles
+        , mercatorFrame
+        , mercatorRate
+        , tileMesh
+        , tileRectangle
+        , toMercatorPoint
+        )
 import Maybe.Extra as MaybeX
 import Pixels exposing (Pixels)
 import Plane3d
@@ -52,10 +69,6 @@ import Svg.Attributes as SvgAttr
 import Task
 import Tile exposing (TileKey, ZoomLevel, fromTileKey, tileKeyToUrl, zoomLevel)
 import Viewpoint3d
-
-
-type WebGLResult
-    = Web
 
 
 type DragState
@@ -92,6 +105,7 @@ type alias Model =
 withPendingTextures : List TileKey -> Model -> Model
 withPendingTextures keys model =
     let
+        setPendingTexture : Maybe TileData -> Maybe TileData
         setPendingTexture item =
             case item of
                 Just data ->
@@ -100,6 +114,7 @@ withPendingTextures keys model =
                 Nothing ->
                     Just { texture = InProgress, mesh = NotStarted }
 
+        updatedTiles : Dict TileKey TileData
         updatedTiles =
             keys
                 |> List.foldl (\key dict -> Dict.update key setPendingTexture dict) model.loadedTiles
@@ -110,6 +125,7 @@ withPendingTextures keys model =
 withPendingMeshes : List TileKey -> Model -> Model
 withPendingMeshes keys model =
     let
+        setPendingMesh : Maybe TileData -> Maybe TileData
         setPendingMesh item =
             case item of
                 Just data ->
@@ -118,6 +134,7 @@ withPendingMeshes keys model =
                 Nothing ->
                     Just { texture = NotStarted, mesh = InProgress }
 
+        updatedTiles : Dict TileKey TileData
         updatedTiles =
             keys
                 |> List.foldl (\key dict -> Dict.update key setPendingMesh dict) model.loadedTiles
@@ -138,9 +155,11 @@ withAzimuthElevation azimuth elevation viewArgs =
 adjustViewDistance : Length -> ViewArgs -> ViewArgs
 adjustViewDistance delta viewArgs =
     let
+        newDistance : Quantity Float Meters
         newDistance =
             viewArgs.distance |> Quantity.plus delta
 
+        minDistance : Length
         minDistance =
             Length.meters 100
     in
@@ -155,6 +174,7 @@ xyPlane =
 pickZoom : Model -> ZoomLevel
 pickZoom model =
     let
+        latRad : Float
         latRad =
             SketchPlane3d.originPoint xyPlane
                 |> Point3d.projectInto xyPlane
@@ -165,6 +185,7 @@ pickZoom model =
                 |> degreesLatitude
                 |> degrees
 
+        viewDistance : Float
         viewDistance =
             Length.inMeters model.viewArgs.distance
     in
@@ -184,29 +205,37 @@ loadTextureCmd tileKey =
 updateTiles : Model -> ( Model, Cmd Msg )
 updateTiles model =
     let
+        numTiles : Int
         numTiles =
             round (toFloat model.windowSize.width / 256)
 
+        cmr : Camera3d Meters WorldCoords
         cmr =
             camera model.viewArgs
 
+        sRect : Rectangle2d Pixels screenCoords
         sRect =
             screenRectangle model.windowSize
 
+        pLeft : Maybe (Point3d Meters WorldCoords)
         pLeft =
             Camera3d.ray cmr sRect (Point2d.pixels 0 0)
                 |> Axis3d.intersectionWithPlane Plane3d.xy
 
+        pRight : Maybe (Point3d Meters WorldCoords)
         pRight =
             Camera3d.ray cmr sRect (Point2d.pixels (toFloat model.windowSize.width) 0)
                 |> Axis3d.intersectionWithPlane Plane3d.xy
 
+        dist : Maybe (Quantity Float Meters)
         dist =
             Maybe.map2 Point3d.distanceFrom pLeft pRight
 
+        tLen : Maybe Float
         tLen =
             Maybe.map (Length.inMeters >> (\d -> d / toFloat numTiles)) dist
 
+        letRad : Float
         letRad =
             SketchPlane3d.originPoint xyPlane
                 |> Point3d.projectInto xyPlane
@@ -217,12 +246,14 @@ updateTiles model =
                 |> degreesLatitude
                 |> degrees
 
+        zoom : Maybe ZoomLevel
         zoom =
             Maybe.map ((\l -> logBase 2 (earthCircumference * cos letRad / l)) >> round >> zoomLevel) tLen
 
         -- focusedGeoPoint =
         --     Point3d.toMeters model.viewArgs.focalPoint
         --         |> (\{ x, y } -> localToGeoPoint model.origin ( x, y ))
+        tiles : List ( TileKey, ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords ) )
         tiles =
             zoom
                 |> MaybeX.unwrap
@@ -238,6 +269,7 @@ updateTiles model =
             tiles |> List.map Tuple.first
 
         -- gets tile keys that are missing the given property
+        missingKeys : (TileData -> Deferred a) -> List ( TileKey, b ) -> List TileKey
         missingKeys prop =
             List.filterMap
                 (\( tk, _ ) ->
@@ -252,19 +284,24 @@ updateTiles model =
                             Just tk
                 )
 
+        missingTextures : List TileKey
         missingTextures =
             missingKeys .texture tiles
 
+        missingMeshes : List TileKey
         missingMeshes =
             missingKeys .mesh tiles
 
+        newModel : Model
         newModel =
             { model | displayedTiles = tiles }
                 |> withPendingTextures missingTextures
                 |> withPendingMeshes missingMeshes
 
+        cmds : List (Cmd Msg)
         cmds =
             let
+                loadTileElevationsCmds : List (Cmd Msg)
                 loadTileElevationsCmds =
                     missingMeshes |> List.map (\tileKey -> loadElevationTileCmd (ElevationsTileLoaded tileKey) tileKey)
             in
@@ -286,21 +323,26 @@ camera viewArgs =
 isInView : ViewArgs -> WindowSize -> Point2d Meters PlaneCoords -> Bool
 isInView viewArgs windowSize p =
     let
+        p3d : Point3d Meters WorldCoords
         p3d =
             Point3d.on xyPlane p
 
+        sRect : Rectangle2d Pixels screenCoords
         sRect =
             screenRectangle windowSize
 
+        cmr : Camera3d Meters WorldCoords
         cmr =
             camera viewArgs
 
+        projectedPoint : Point2d Pixels screenCoords
         projectedPoint =
             Projection.toScreenSpace
                 cmr
                 sRect
                 p3d
 
+        depth : Quantity Float Meters
         depth =
             Projection.depth cmr p3d
     in
@@ -312,9 +354,11 @@ isInView viewArgs windowSize p =
 init : WindowSize -> GeoPoint -> ( Model, Cmd Msg )
 init windowSize origin =
     let
+        viewAzimuth : Float
         viewAzimuth =
             270
 
+        viewElevation : Float
         viewElevation =
             35
 
@@ -326,6 +370,7 @@ init windowSize origin =
             , distance = Length.meters 25000
             }
 
+        model : Model
         model =
             { windowSize = windowSize
             , dragControlsAzimuthAndElevation = False
@@ -402,6 +447,7 @@ update msg model =
 
         DragStart ( x, y ) ->
             let
+                point : Maybe (Point3d Meters WorldCoords)
                 point =
                     Camera3d.ray
                         (camera model.viewArgs)
@@ -418,6 +464,7 @@ update msg model =
 
         DragMove isDown ( x, y ) ->
             let
+                projectedPoint : Maybe (Point3d Meters WorldCoords)
                 projectedPoint =
                     Camera3d.ray
                         (camera model.viewArgs)
@@ -431,6 +478,7 @@ update msg model =
                     , Point3d.yCoordinate p1 |> minus (Point3d.yCoordinate p2)
                     )
 
+                move : Point3d Meters WorldCoords -> ( Quantity Float Meters, Quantity Float Meters ) -> Point3d Meters WorldCoords
                 move p ( dx, dy ) =
                     Point3d.xyz
                         (Point3d.xCoordinate p |> minus dx)
@@ -440,14 +488,17 @@ update msg model =
             case ( model.dragState, projectedPoint, model.dragControlsAzimuthAndElevation ) of
                 ( MovingFrom { azimuth, elevation, point }, Just currPoint, False ) ->
                     let
+                        d : ( Length, Length )
                         d =
                             delta currPoint point
 
+                        newPoint : Point3d Meters WorldCoords
                         newPoint =
                             move
                                 model.viewArgs.focalPoint
                                 d
 
+                        newModel : Model
                         newModel =
                             { model
                                 | dragState =
@@ -467,9 +518,11 @@ update msg model =
                         ( lastX, lastY ) =
                             xy
 
+                        newAzimuth : Angle
                         newAzimuth =
                             Angle.degrees (Angle.inDegrees azimuth + ((lastX - x) * 0.1))
 
+                        newElevation : Angle
                         newElevation =
                             Angle.degrees (Angle.inDegrees elevation + ((y - lastY) * 0.1))
                     in
@@ -492,6 +545,7 @@ update msg model =
 
         ZoomChanged wheelEvent ->
             let
+                newModel : Model
                 newModel =
                     { model
                         | viewArgs =
@@ -509,12 +563,14 @@ subscriptions model =
         isShiftKey =
             (==) "Shift"
 
+        keyModSub : Sub Msg
         keyModSub =
             Sub.batch
                 [ BrowserEvents.onKeyDown (D.map (isShiftKey >> SetDragControlAzimuthAndElevation) decodeKey)
                 , BrowserEvents.onKeyUp (D.map (isShiftKey >> not >> SetDragControlAzimuthAndElevation) decodeKey)
                 ]
 
+        mouseSub : Sub Msg
         mouseSub =
             case model.dragState of
                 Static ->
@@ -532,9 +588,11 @@ subscriptions model =
 mapItemView : Model -> Map3dItem -> ( Svg Msg, Scene3d.Entity WorldCoords )
 mapItemView model mapItem =
     let
+        cmr : Camera3d Meters WorldCoords
         cmr =
             camera model.viewArgs
 
+        screenRect : Rectangle2d Pixels coordinates
         screenRect =
             Rectangle2d.from
                 Point2d.origin
@@ -604,9 +662,11 @@ mapItemView model mapItem =
 
         Line xs ->
             let
+                coordsToString : ( Float, Float ) -> String
                 coordsToString ( a, b ) =
                     String.fromFloat a ++ "," ++ String.fromFloat b
 
+                pts : List String
                 pts =
                     xs |> List.map (uncurry to3dPoint >> project3dPoint >> coordsToString)
             in
@@ -627,12 +687,14 @@ mapItemView model mapItem =
 view : List Map3dItem -> Model -> Html Msg
 view mapItems model =
     let
+        unwrapTexture : Deferred (Material.Texture Color) -> Material.Material coordinates { a | uvs : () }
         unwrapTexture =
             deferredToMaybe
                 >> MaybeX.unwrap
                     (Material.color Color.lightGray)
                     Material.texturedColor
 
+        toTile : ( TileKey, ( Point2d Meters coordinates, Point2d Meters a ) ) -> Scene3d.Entity WorldCoords
         toTile ( tk, ( p0, p1 ) ) =
             Dict.get tk model.loadedTiles
                 |> Maybe.withDefault
@@ -656,16 +718,20 @@ view mapItems model =
                                     (Point3d.xyz (Point2d.xCoordinate p0) (Point2d.yCoordinate p0) (Length.meters 0))
                    )
 
+        base : Scene3d.Entity WorldCoords
         base =
             Scene3d.group <|
                 List.map toTile model.displayedTiles
 
+        mis : List ( Svg Msg, Scene3d.Entity WorldCoords )
         mis =
             List.map (mapItemView model) mapItems
 
+        entities : List (Scene3d.Entity WorldCoords)
         entities =
             base :: List.map Tuple.second mis
 
+        svgs : List (Svg Msg)
         svgs =
             List.map Tuple.first mis
     in

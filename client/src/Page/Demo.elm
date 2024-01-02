@@ -2,7 +2,6 @@ module Page.Demo exposing
     ( Model
     , Msg(..)
     , init
-    , mapItems
     , subscriptions
     , update
     , view
@@ -49,16 +48,19 @@ init =
 mapItems : Model -> List MapItem
 mapItems model =
     let
+        toMarker : ( String, { a | lat : Latitude, lon : Longitude, altitude : Elevation } ) -> MapItem
         toMarker ( id, p ) =
             Marker
                 { lat = p.lat, lon = p.lon }
                 (id ++ " " ++ (p.altitude |> metersElevation |> roundN 2 |> String.fromFloat) ++ "m")
 
+        pointItems : List MapItem
         pointItems =
             model.points
                 |> Dict.toList
                 |> List.map toMarker
 
+        taskItems : List MapItem
         taskItems =
             model.demoData
                 |> (deferredToMaybe >> Maybe.andThen Result.toMaybe)
@@ -70,11 +72,13 @@ mapItems model =
 map3dItems : Model -> List Map3dItem
 map3dItems model =
     let
+        pointItems : List Map3dItem
         pointItems =
             model.points
                 |> Dict.toList
                 |> List.map (\( id, p ) -> Map3dUtils.Marker id { lat = p.lat, lon = p.lon } p.altitude)
 
+        taskItems : List Map3dItem
         taskItems =
             model.demoData
                 |> (deferredToMaybe >> Maybe.andThen Result.toMaybe)
@@ -128,6 +132,7 @@ update msg model =
 
         MessageReceived str ->
             let
+                upd : Result D.Error ( String, ProgressPoint )
                 upd =
                     D.decodeString (tupleDecoder ( D.string, progressPointDecoder )) str
             in
@@ -163,6 +168,7 @@ type alias ProgressPointStats =
 view : Model -> Element Msg
 view model =
     let
+        findName : String -> Maybe String
         findName id =
             model.demoData
                 |> (deferredToMaybe >> Maybe.andThen Result.toMaybe)
@@ -198,6 +204,7 @@ view model =
         --                     , text stats.target
         --                     ]
         --             )
+        leaderboard : Element msg
         leaderboard =
             table
                 [ spacingXY 20 10
@@ -238,8 +245,10 @@ view model =
                     ]
                 }
 
+        greeting : Element Msg
         greeting =
             let
+                item : String -> Element msg
                 item txt =
                     el
                         [ paddingXY 10 0

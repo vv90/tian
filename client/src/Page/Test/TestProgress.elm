@@ -49,12 +49,14 @@ toMapItems model =
                 (Marker { lat = p.lat, lon = p.lon })
                 p.target
 
+        taskProgressItems : List MapItem
         taskProgressItems =
             deferredToMaybe model.progress
                 |> Maybe.andThen Result.toMaybe
                 |> Maybe.andThen (.points >> List.map progressPointItem >> MaybeX.combine)
                 |> Maybe.withDefault []
 
+        startLineItems : List MapItem
         startLineItems =
             deferredToMaybe model.startLine
                 |> Maybe.andThen Result.toMaybe
@@ -120,12 +122,14 @@ view model =
                     ++ " "
                     ++ Maybe.withDefault " - " p.target
 
+        points : List (Element Msg)
         points =
             deferredToMaybe model.progress
                 |> Maybe.andThen Result.toMaybe
                 |> Maybe.map (.points >> List.map viewPoint)
                 |> Maybe.withDefault []
 
+        resetBtn : Element Msg
         resetBtn =
             Input.button
                 []

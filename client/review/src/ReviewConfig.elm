@@ -67,8 +67,9 @@ config =
         |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
     , NoExposingEverything.rule
     , NoMissingTypeAnnotation.rule
+    , NoMissingTypeAnnotationInLetIn.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
 
-    -- , NoMissingTypeAnnotationInLetIn.rule
     -- , NoPrematureLetComputation.rule
     , NoSimpleLetBody.rule
     ]

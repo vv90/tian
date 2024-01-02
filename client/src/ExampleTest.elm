@@ -15,6 +15,7 @@ testFromMercator =
         [ test "latMin" <|
             \_ ->
                 let
+                    latMin : Float
                     latMin =
                         fromMercatorWeb ( 1250 / (2 ^ 11), 674 / (2 ^ 11) ) |> .lat |> degreesLatitude
                 in
@@ -22,6 +23,7 @@ testFromMercator =
         , test "latMax" <|
             \_ ->
                 let
+                    latMax : Float
                     latMax =
                         fromMercatorWeb ( 1251 / (2 ^ 11), 675 / (2 ^ 11) ) |> .lat |> degreesLatitude
                 in

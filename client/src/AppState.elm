@@ -4,7 +4,6 @@ module AppState exposing
     , getFlightTasksCmd
     , getNavPointsCmd
     , init
-    , resolvedTasks
     , update
     , withPendingFlightTasks
     , withPendingNavPoints

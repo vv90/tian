@@ -83,6 +83,7 @@ withFlightTaskPage ftpModel model =
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
+        mapModel : Map.Model
         mapModel =
             Map.init
                 (withSidebarOffset flags.windowSize)
@@ -138,39 +139,8 @@ update msg model =
     case msg of
         MapMsg m ->
             let
-                ( nextModel, cmd, point ) =
+                ( nextModel, cmd, _ ) =
                     Map.update m model.mapModel
-
-                selectedTaskId =
-                    case model.flightTaskPage of
-                        FlightTaskPage.UploadTrack utm ->
-                            Just utm.taskId
-
-                        _ ->
-                            Nothing
-
-                -- for debugging
-                selectedPoints =
-                    case model.testProgressModel.progress of
-                        NotStarted ->
-                            Just []
-
-                        InProgress ->
-                            Nothing
-
-                        Updating _ ->
-                            Nothing
-
-                        Resolved pts ->
-                            Result.toMaybe pts
-                                |> Maybe.map (.points >> List.map (\p -> ( p.lat, p.lon )))
-
-                -- for debugging
-                appendPoint ps p =
-                    MaybeX.unwrap
-                        (NE.fromElement p)
-                        (\xs -> NE.append xs (NE.fromElement p))
-                        (NE.fromList ps)
             in
             ( { model | mapModel = nextModel }
             , Cmd.map MapMsg cmd
@@ -202,6 +172,7 @@ update msg model =
                 ( nextModel, cmd, effs ) =
                     FlightTaskPage.update ftPageMsg model.flightTaskPage
 
+                applyEffect : FlightTaskPage.Effect -> ( Model -> Model, Cmd Msg )
                 applyEffect e =
                     case e of
                         FlightTaskPage.FlightTaskSaved _ ->
@@ -240,6 +211,7 @@ update msg model =
 
         MessageReceived str ->
             let
+                upd : Result D.Error ( String, ProgressPoint )
                 upd =
                     D.decodeString (tupleDecoder ( D.string, progressPointDecoder )) str
             in
@@ -257,6 +229,7 @@ update msg model =
 
         FlightPositionReceived str ->
             let
+                pos : Result D.Error ( String, ( GeoPoint, Elevation ) )
                 pos =
                     D.decodeString (tupleDecoder ( D.string, tupleDecoder ( geoPointDecoder, elevationDecoder ) )) str
             in
@@ -310,6 +283,7 @@ type DetachedPosition
 detachedView : DetachedPosition -> Element msg -> Html msg
 detachedView pos content =
     let
+        viewStyle : List (Html.Attribute msg)
         viewStyle =
             [ style "position" "absolute"
             , style "margin" "10px"
@@ -321,6 +295,7 @@ detachedView pos content =
             , style "font-family" "Roboto"
             ]
 
+        positionStyle : List (Html.Attribute msg)
         positionStyle =
             case pos of
                 TopLeft ->
@@ -398,21 +373,19 @@ selectedFlightTask flightTasksD taskId =
 view : Model -> Html Msg
 view model =
     let
-        mapItems =
-            case model.flightTaskPage of
-                FlightTaskPage.AddTask pm ->
-                    FlightTaskForm.mapItems pm
-
-                FlightTaskPage.UploadTrack pm ->
-                    -- taskItems ++ pointItems ++ TestProgress.toMapItems model.testProgressModel
-                    FlightTrackUpload.mapItems (AppState.resolvedTasks model.appState) pm
-
-                FlightTaskPage.SelectTask ->
-                    []
-
-                FlightTaskPage.DemoPage pm ->
-                    Demo.mapItems pm
-
+        -- mapItems : List MapItem
+        -- mapItems =
+        --     case model.flightTaskPage of
+        --         FlightTaskPage.AddTask pm ->
+        --             FlightTaskForm.mapItems pm
+        --         FlightTaskPage.UploadTrack pm ->
+        --             -- taskItems ++ pointItems ++ TestProgress.toMapItems model.testProgressModel
+        --             FlightTrackUpload.mapItems (AppState.resolvedTasks model.appState) pm
+        --         FlightTaskPage.SelectTask ->
+        --             []
+        --         FlightTaskPage.DemoPage pm ->
+        --             Demo.mapItems pm
+        map3dItems : List Map3dItem
         map3dItems =
             model.flightPositions |> Dict.toList |> List.map (\( key, ( pt, elev ) ) -> Marker key pt elev)
 

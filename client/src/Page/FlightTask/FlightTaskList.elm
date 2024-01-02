@@ -81,6 +81,7 @@ type alias Props msg =
 view : Props msg -> Element msg
 view { flightTasks, onTaskSelected, onCreateTaskTriggered } =
     let
+        backBtn : Element msg
         backBtn =
             Input.button
                 [ mouseOver [ Background.color Palette.lightGray ] ]

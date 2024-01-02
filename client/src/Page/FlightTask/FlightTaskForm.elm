@@ -8,7 +8,6 @@ module Page.FlightTask.FlightTaskForm exposing
     , StartModel
     , TurnpointModel
     , init
-    , mapItems
     , update
     , view
     )
@@ -83,9 +82,11 @@ initStartModel np =
 initFinishModel : NavPoint -> FinishModel
 initFinishModel np =
     let
+        line : ( String, Float -> TaskFinish )
         line =
             ( "Finish line", FinishLine )
 
+        cylinder : ( String, Float -> TaskFinish )
         cylinder =
             ( "Finish cylinder", FinishCylinder )
     in
@@ -122,20 +123,24 @@ result model =
 
         Complete start turnpoints finish ->
             let
+                startRadius : Result String (V.Positive Float)
                 startRadius =
                     getVal start.radius
                         |> Result.mapError V.showError
 
+                turnpointRadii : Result String (List ( NavPoint, V.Positive Float ))
                 turnpointRadii =
                     turnpoints
                         |> List.map (\tp -> getVal tp.radius |> Result.map (Tuple.pair tp.point))
                         |> ResultX.combine
                         |> Result.mapError V.showError
 
+                finishRadius : Result String (V.Positive Float)
                 finishRadius =
                     getVal finish.radius
                         |> Result.mapError V.showError
 
+                finishType : Result String (Float -> TaskFinish)
                 finishType =
                     finish.pointTypeSelect.selected
                         |> Result.fromMaybe "Finish type not selected"
@@ -384,6 +389,7 @@ update msg model =
 taskSelectionTable : FlightTaskSelection -> Element Msg
 taskSelectionTable ftSelection =
     let
+        rows : List FlightTaskRow
         rows =
             case ftSelection of
                 NothingSelected ->
@@ -471,6 +477,7 @@ taskSelectionTable ftSelection =
 viewLoaded : List (Entity Int NavPoint) -> Model -> Element Msg
 viewLoaded navPoints model =
     let
+        searchSelect : Element (SearchSelect.Msg (Entity Int NavPoint))
         searchSelect =
             SearchSelect.view
                 { suggestions = navPoints
@@ -479,6 +486,7 @@ viewLoaded navPoints model =
                 }
                 model.searchSelectModel
 
+        saveFlightTaskBtn : Element Msg
         saveFlightTaskBtn =
             result model
                 |> Result.map
@@ -506,6 +514,7 @@ type alias Props msg =
 view : (Msg -> msg) -> Props msg -> Model -> Element msg
 view mapMsg { navPoints, backTriggered } model =
     let
+        backBtn : Element msg
         backBtn =
             Input.button []
                 { label = text "Back"

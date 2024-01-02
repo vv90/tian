@@ -139,6 +139,7 @@ update msg model =
                 ( newFlightTaskForm, flightTaskFormCmd, flightTaskFormEffects ) =
                     FlightTaskForm.update flightTaskFormMsg flightTaskForm
 
+                applyEffect : FlightTaskForm.Effect -> ( a -> a, Cmd msg, EffectSet Effect )
                 applyEffect eff =
                     case eff of
                         FlightTaskForm.FlightTaskSaved taskId ->

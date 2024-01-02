@@ -3,7 +3,6 @@ module Page.FlightTrack.FlightTrackUpload exposing
     , Msg(..)
     , Props
     , init
-    , mapItems
     , subscriptions
     , update
     , view
@@ -39,17 +38,21 @@ type alias Model =
 mapItems : List (Entity Int FlightTask) -> Model -> List MapItem
 mapItems tasks model =
     let
+        task : Maybe { entity : FlightTask, key : Int }
         task =
             ListX.find (\{ key } -> key == model.taskId) tasks
 
+        taskItems : List MapItem
         taskItems =
             task
                 |> Maybe.map (.entity >> taskToMapItems)
                 |> Maybe.withDefault []
 
+        points : Maybe (List ( String, Float, GeoPoint ))
         points =
             model.playerModel |> Maybe.map Player.currPoints
 
+        pointItems : List MapItem
         pointItems =
             Maybe.map
                 (List.map (\( id, alt, pos ) -> Marker pos (id ++ " " ++ String.fromFloat alt ++ "m")))
@@ -62,6 +65,7 @@ mapItems tasks model =
 map3dItems : List (Entity Int FlightTask) -> Model -> List Map3dItem
 map3dItems tasks model =
     let
+        task : Maybe { entity : FlightTask, key : Int }
         task =
             ListX.find (\{ key } -> key == model.taskId) tasks
     in

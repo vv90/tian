@@ -70,6 +70,7 @@ type alias Model =
 init : WindowSize -> Float -> GeoPoint -> Model
 init windowSize zoom point =
     let
+        toTileCoord : Float -> Int
         toTileCoord =
             (*) (2 ^ zoom) >> floor
 
@@ -79,9 +80,11 @@ init windowSize zoom point =
         ( centerX, centerY ) =
             ( x * tileSize + tileSize // 2, y * tileSize + tileSize // 2 )
 
+        offset : ( Float, Float )
         offset =
             ( toFloat centerX - toFloat windowSize.width / 2, toFloat centerY - toFloat windowSize.height / 2 )
 
+        mapView : { height : Int, width : Int, zoom : Float, offset : ( Float, Float ) }
         mapView =
             { height = windowSize.height
             , width = windowSize.width
@@ -134,6 +137,7 @@ update msg model =
 
         Resized w h ->
             let
+                mapView : MapView
                 mapView =
                     model.mapView
             in
@@ -162,27 +166,34 @@ update msg model =
 
         ZoomChanged e ->
             let
+                mapView : MapView
                 mapView =
                     model.mapView
 
                 ( offsetX, offsetY ) =
                     model.mapView.offset
 
+                point : ( Float, Float )
                 point =
                     ( offsetX + e.offsetX, offsetY + e.offsetY )
 
+                scaleDelta : Float
                 scaleDelta =
                     negate e.deltaY * (1 / 960)
 
+                newZoom : Float
                 newZoom =
                     clamp minZoom maxZoom (model.mapView.zoom + scaleDelta)
 
+                scaleCoefficient : Float
                 scaleCoefficient =
                     2 ^ scaleDelta
 
+                newOffset : ( Float, Float )
                 newOffset =
                     scaleOffset point scaleCoefficient model.mapView.offset
 
+                newMapView : MapView
                 newMapView =
                     { mapView
                         | offset = newOffset
@@ -210,12 +221,15 @@ update msg model =
                 ( offsetX, offsetY ) =
                     model.mapView.offset
 
+                newOffset : ( Float, Float )
                 newOffset =
                     ( offsetX - (x - fromX), offsetY - (y - fromY) )
 
+                mapView : MapView
                 mapView =
                     model.mapView
 
+                newMapView : MapView
                 newMapView =
                     { mapView | offset = newOffset }
             in
@@ -234,6 +248,7 @@ update msg model =
 
         DragStop coords ->
             let
+                clickedPoint : Maybe GeoPoint
                 clickedPoint =
                     case model.dragState of
                         MovingFrom oldCoords ->
@@ -260,6 +275,7 @@ update msg model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     let
+        dragSubs : Sub Msg
         dragSubs =
             case model.dragState of
                 Static ->
@@ -284,6 +300,7 @@ view : List MapItem -> Model -> Html Msg
 view mapItems model =
     let
         -- scaleCoefficient = getScaleCoefficient model.mapView
+        scaleCoefficient : Float
         scaleCoefficient =
             2 ^ (model.mapView.zoom - (floor >> toFloat) model.mapView.zoom)
 
@@ -293,13 +310,16 @@ view mapItems model =
         ( cursorLocalX, cursorLocalY ) =
             model.mousePosition
 
+        cursorGlobal : ( Float, Float )
         cursorGlobal =
             Tuple.mapBoth ((+) cursorLocalX) ((+) cursorLocalY) model.mapView.offset
 
         -- cursorGeoPoint = model.mousePosition |> Tuple.mapBoth toFloat toFloat |> viewCoordsToGeoPoint model.mapView
+        clearAll : Renderable
         clearAll =
             clear ( 0, 0 ) (toFloat model.mapView.width) (toFloat model.mapView.height)
 
+        lookupTileTexture : TileKey -> ( TileKey, Maybe Texture )
         lookupTileTexture tileKey =
             case Dict.get (normalizeTileKey tileKey) model.tiles of
                 Just txtr ->
@@ -308,6 +328,7 @@ view mapItems model =
                 Nothing ->
                     ( tileKey, Nothing )
 
+        renderedTiles : List Renderable
         renderedTiles =
             tilesInView model.mapView
                 |> List.map (lookupTileTexture >> renderTile)
@@ -318,6 +339,7 @@ view mapItems model =
         -- renderedDemoPoints =
         --     getDemoPoints model.demoModel
         --         |> List.map (renderPoint model.mapView)
+        renderedMapItems : List (Svg Msg)
         renderedMapItems =
             -- ResultX.unpack
             -- (always [])
@@ -490,6 +512,7 @@ renderPoint mapView style point =
         ( x, y ) =
             geoPointToViewCoords mapView point
 
+        pointStyleAttrs : List (Svg.Attribute msg)
         pointStyleAttrs =
             case style of
                 TrackPoint ->
@@ -534,11 +557,13 @@ renderCircle mapView point (DistanceMeters radius) =
 
         -- ( LatitudeDegrees lat, LongitudeDegrees lon ) =
         --     point
+        rPixels : Float
         rPixels =
             metersPerPixel (floor mapView.zoom)
                 |> Maybe.map
                     (\(DistanceMeters m) ->
                         let
+                            scaleCoefficient : Float
                             scaleCoefficient =
                                 scaleFromZoom mapView.zoom
                         in
@@ -560,11 +585,13 @@ renderCircle mapView point (DistanceMeters radius) =
 renderLine : MapView -> LineStyle -> List GeoPoint -> Svg Msg
 renderLine mapView style points =
     let
+        xys : List String
         xys =
             List.map
                 (geoPointToViewCoords mapView >> (\( x, y ) -> String.join "," [ String.fromFloat x, String.fromFloat y ]))
                 points
 
+        lineStyleAttrs : List (Svg.Attribute msg)
         lineStyleAttrs =
             case style of
                 TrackLine ->
@@ -589,6 +616,7 @@ renderLine mapView style points =
 renderPolygon : MapView -> List GeoPoint -> Svg Msg
 renderPolygon mapView points =
     let
+        xys : List String
         xys =
             List.map
                 (geoPointToViewCoords mapView >> (\( x, y ) -> String.join "," [ String.fromFloat x, String.fromFloat y ]))
@@ -623,12 +651,6 @@ renderPolygon mapView points =
 renderMarker : MapView -> GeoPoint -> String -> Svg Msg
 renderMarker mapView point label =
     let
-        w =
-            40
-
-        h =
-            40
-
         -- markerSrc =
         --   case marker.markerType of
         --     Glider -> VitePluginHelper.asset "/assets/images/glider.svg"

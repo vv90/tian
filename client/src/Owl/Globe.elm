@@ -1,7 +1,7 @@
 module Owl.Globe exposing (ViewArgs, WGS84Coords(..), WGS84Degrees(..), WorldCoords(..), camera, screenRectangle)
 
 import Angle exposing (Angle)
-import Api.Geo exposing (Distance)
+import Api.Types exposing (Distance)
 import Axis3d exposing (Axis3d)
 import Camera3d exposing (Camera3d)
 import Flags exposing (WindowSize)

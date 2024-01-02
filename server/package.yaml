@@ -153,6 +153,8 @@ dependencies:
 - directory
 # for gzip support (for http server)
 - wai-extra
+# for compressing and decompressing files
+- zlib
 
 library:
   source-dirs: src

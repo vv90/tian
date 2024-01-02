@@ -115,6 +115,7 @@ library
     , wai-cors
     , wai-extra
     , warp
+    , zlib
   default-language: GHC2021
 
 executable codegen-exe
@@ -175,6 +176,7 @@ executable codegen-exe
     , wai-cors
     , wai-extra
     , warp
+    , zlib
   default-language: GHC2021
 
 executable seed-exe
@@ -235,6 +237,7 @@ executable seed-exe
     , wai-cors
     , wai-extra
     , warp
+    , zlib
   default-language: GHC2021
 
 executable server-exe
@@ -295,6 +298,7 @@ executable server-exe
     , wai-cors
     , wai-extra
     , warp
+    , zlib
   default-language: GHC2021
 
 test-suite server-test
@@ -364,4 +368,5 @@ test-suite server-test
     , wai-cors
     , wai-extra
     , warp
+    , zlib
   default-language: GHC2021

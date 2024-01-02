@@ -41,8 +41,8 @@ config : List Rule
 config =
     [ NoDebug.Log.rule
     , NoDebug.TodoOrToString.rule
-
-    -- , NoUnoptimizedRecursion.rule (NoUnoptimizedRecursion.optOutWithComment "IGNORE TCO")
+    , NoUnoptimizedRecursion.rule (NoUnoptimizedRecursion.optOutWithComment "IGNORE TCO")
+        |> Rule.ignoreErrorsForDirectories [ "src/Components" ]
     , Simplify.rule Simplify.defaults
     , NoTestValuesInProductionCode.rule
         (NoTestValuesInProductionCode.startsWith "stub_")

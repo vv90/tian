@@ -11,15 +11,15 @@ module Map exposing
 -- import Geo.Constants exposing (metersPerPixel)
 -- import Geo.GeoUtils exposing (..)
 -- import Nav.Units exposing (Deg(..), Meters(..), degToRad, getDeg, getRad)
+-- import Common.TimeUtils exposing (..)
 
 import Api.Types exposing (..)
 import Browser.Events as BE
 import Canvas exposing (Point, Renderable, clear, group, rect, shapes, texture)
 import Canvas.Settings exposing (fill)
 import Canvas.Settings.Advanced exposing (scale, transform, translate)
-import Canvas.Texture as Texture exposing (..)
-import Color exposing (..)
-import Common.TimeUtils exposing (..)
+import Canvas.Texture as Texture exposing (Texture)
+import Color
 import Dict exposing (Dict)
 import Domain.GeoUtils exposing (degreesLatitude, degreesLongitude)
 import Flags exposing (WindowSize)
@@ -28,7 +28,25 @@ import Html.Attributes exposing (attribute, class, height, src, style, value, wi
 import Html.Events exposing (on, onClick)
 import Json.Decode as D
 import List.Extra as ListX
-import MapUtils exposing (..)
+import MapUtils
+    exposing
+        ( LineStyle(..)
+        , MapItem(..)
+        , MapView
+        , PointStyle(..)
+        , addTileSources
+        , changeZoom
+        , fromMercatorWeb
+        , geoPointToViewCoords
+        , metersPerPixel
+        , normalizeTileKey
+        , scaleCoords
+        , scaleFromZoom
+        , scaleOffset
+        , stringFromTuple
+        , tilesInView
+        , toMercatorWeb
+        )
 import Maybe.Extra as MaybeX
 import Svg exposing (Svg)
 import Svg.Attributes as SvgAttr

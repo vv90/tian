@@ -6,7 +6,7 @@ import Expect exposing (FloatingPointTolerance(..))
 import Fuzz exposing (Fuzzer, int, list, string)
 import List.Extra as ListX
 import MapUtils exposing (fromMercatorWeb)
-import Test exposing (..)
+import Test exposing (Test, describe, test)
 
 
 testFromMercator : Test

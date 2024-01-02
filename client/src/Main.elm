@@ -13,17 +13,17 @@ import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..))
 import Common.Effect as Effect
 import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Common.Palette as Palette
-import Dict exposing (Dict, empty)
-import Element exposing (Element, alignBottom, column, el, fill, height, layout, link, onRight, padding, paddingEach, px, rgba255, row, spacing, text, width)
+import Dict exposing (Dict)
+import Element exposing (..)
 import Element.Font as Font
-import Flags exposing (..)
+import Flags exposing (Flags, WindowSize)
 import Html exposing (Html, button, div)
 import Html.Attributes exposing (style)
 import Json.Decode as D
 import List.Extra as ListX
 import List.Nonempty as NE exposing (Nonempty(..))
-import Map exposing (..)
-import Map3d exposing (..)
+import Map
+import Map3d
 import Map3dUtils exposing (Map3dItem(..))
 import Maybe.Extra as MaybeX
 import Page.Demo as Demo

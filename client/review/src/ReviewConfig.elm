@@ -63,7 +63,8 @@ config =
 
     -- , NoUnused.Patterns.rule
     -- , NoUnused.Variables.rule
-    -- , NoImportingEverything.rule [ "Element" ]
+    , NoImportingEverything.rule [ "Element", "Api.Types" ]
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
     , NoExposingEverything.rule
 
     -- , NoMissingTypeAnnotation.rule

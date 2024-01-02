@@ -104,14 +104,10 @@ init flags =
 type Msg
     = Map3dMsg Map3d.Msg
     | FlightTaskPageMsg FlightTaskPage.Msg
-      -- | FlightTrackPageMsg FlightTrackUpload.Msg
-    | TestProgressMsg TestProgress.Msg
     | AppStateMsg AppState.Msg
-    | MessageReceived String
       -- | GotDemoFlightTask (ApiResult FlightTask)
       -- | DemoInit (AsyncOperationStatus (ApiResult FlightTask))
     | FlightPositionReceived String
-    | NoMsg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -142,49 +138,12 @@ update msg model =
             ( model |> withFlightTaskPage nextModel, Cmd.map FlightTaskPageMsg cmd )
                 |> Effect.applyAll applyEffect effs
 
-        -- FlightTrackPageMsg ftPageMsg ->
-        --     case model.flightTrackPage of
-        --         Just ftpModel ->
-        --             let
-        --                 ( nextModel, cmd ) =
-        --                     FlightTrackUpload.update ftPageMsg ftpModel
-        --             in
-        --             ( { model | flightTrackPage = Just nextModel }
-        --             , Cmd.map FlightTrackPageMsg cmd
-        --             )
-        --         Nothing ->
-        --             ( model, Cmd.none )
-        TestProgressMsg tpMsg ->
-            let
-                ( nextModel, cmd ) =
-                    TestProgress.update tpMsg model.testProgressModel
-            in
-            ( { model | testProgressModel = nextModel }, Cmd.map TestProgressMsg cmd )
-
         AppStateMsg m ->
             let
                 ( nextModel, cmd ) =
                     AppState.update m model.appState
             in
             ( { model | appState = nextModel }, Cmd.map AppStateMsg cmd )
-
-        MessageReceived str ->
-            let
-                upd : Result D.Error ( String, ProgressPoint )
-                upd =
-                    D.decodeString (tupleDecoder ( D.string, progressPointDecoder )) str
-            in
-            case ( upd, model.flightTaskPage ) of
-                ( Ok ( id, p ), FlightTaskPage.DemoPage pm ) ->
-                    ( { model
-                        | flightTaskPage =
-                            FlightTaskPage.DemoPage (pm |> Demo.withPointUpdate id p)
-                      }
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
 
         FlightPositionReceived str ->
             let
@@ -198,26 +157,6 @@ update msg model =
 
                 Err _ ->
                     ( model, Cmd.none )
-
-        -- ( { model | messages = str :: model.messages }, Cmd.none )
-        -- GotDemoFlightTask (Ok task) ->
-        --     ( { model | flightTaskPage = FlightTaskPage.DemoPage (Demo.init task) }
-        --       , startDemo ()
-        --     )
-        -- GotDemoFlightTask (Err _) ->
-        --     ( model, Cmd.none )
-        -- DemoInitiated ->
-        --     ( model, startDemoCmd )
-        -- DemoInit Started ->
-        --     ( model, getDemoTaskCmd )
-        -- DemoInit (Finished (Ok task)) ->
-        --     ( { model | flightTaskPage = FlightTaskPage.DemoPage  }
-        --     , startDemo ()
-        --     )
-        -- DemoInit (Finished (Err e)) ->
-        --     ( model, Cmd.none )
-        NoMsg ->
-            ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg

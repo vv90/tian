@@ -51,7 +51,8 @@ config =
     , NoUselessSubscriptions.rule
 
     -- , NoUnsafeDivision.rule
-    -- , NoUnused.CustomTypeConstructors.rule []
+    , NoUnused.CustomTypeConstructors.rule []
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components", "src/Demo" ]
     , NoUnused.CustomTypeConstructorArgs.rule
         |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
     , NoUnused.Dependencies.rule

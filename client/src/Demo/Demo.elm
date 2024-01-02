@@ -5,7 +5,6 @@ module Demo.Demo exposing
     , subscriptions
     , update
     , view
-    , withPointUpdate
     )
 
 import Api.Types exposing (..)

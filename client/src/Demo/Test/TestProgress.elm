@@ -2,7 +2,6 @@ module Demo.Test.TestProgress exposing
     ( Model
     , Msg(..)
     , init
-    , update
     )
 
 import Api.Types exposing (..)

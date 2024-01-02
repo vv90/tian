@@ -253,7 +253,7 @@ makeTiles isInView mFrame mRate focalPoint zoom =
             )
 
         tileCoords : TileKey -> ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords )
-        tileCoords ( kx, ky, kz ) =
+        tileCoords ( kx, ky, _ ) =
             ( Point2d.xyIn
                 mFrame
                 (mercatorUnit (toFloat kx / toFloat numTiles))

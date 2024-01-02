@@ -56,9 +56,11 @@ config =
     , NoUnused.Dependencies.rule
     , NoUnused.Exports.rule
         |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
+    , NoUnused.Modules.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
+    , NoUnused.Parameters.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
 
-    -- , NoUnused.Modules.rule
-    -- , NoUnused.Parameters.rule
     -- , NoUnused.Patterns.rule
     -- , NoUnused.Variables.rule
     -- , NoImportingEverything.rule [ "Element" ]

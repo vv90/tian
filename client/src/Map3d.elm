@@ -386,8 +386,8 @@ update msg model =
 
         ElevationsTileLoaded tileKey (Ok res) ->
             let
-                updateTileData : TileKey -> ElevationPointsTile -> Maybe TileData -> Maybe TileData
-                updateTileData ( tx, ty, zoom ) elevVals data =
+                updateTileData : ElevationPointsTile -> Maybe TileData -> Maybe TileData
+                updateTileData elevVals data =
                     case data of
                         Just val ->
                             Just { val | mesh = makeMesh_ model.mapFrame model.mercatorRate xyPlane elevVals |> Resolved }
@@ -395,7 +395,7 @@ update msg model =
                         Nothing ->
                             Just { texture = NotStarted, mesh = makeMesh_ model.mapFrame model.mercatorRate xyPlane elevVals |> Resolved }
             in
-            ( { model | loadedTiles = Dict.update tileKey (updateTileData tileKey res) model.loadedTiles }, Cmd.none )
+            ( { model | loadedTiles = Dict.update tileKey (updateTileData res) model.loadedTiles }, Cmd.none )
 
         ElevationsTileLoaded _ (Err _) ->
             ( model, Cmd.none )
@@ -622,80 +622,6 @@ mapItemView model mapItem =
 
         Cylinder p (DistanceMeters r) (ElevationMeters elev) ->
             ( Svg.g [] [], Scene3d.nothing )
-
-
-debugInfo : Model -> List String
-debugInfo model =
-    let
-        n =
-            0
-
-        showGeoPoint ( LatitudeDegrees lat, LongitudeDegrees lon ) =
-            String.fromFloat lat ++ ", " ++ String.fromFloat lon
-
-        show2dPoint fromQty p =
-            Point2d.toTuple fromQty p
-                |> (\( x, y ) -> String.fromFloat x ++ ", " ++ String.fromFloat y)
-
-        show3dPoint fromQty p =
-            Point3d.toTuple fromQty p
-                |> (\( x, y, z ) -> String.fromFloat x ++ ", " ++ String.fromFloat y ++ ", " ++ String.fromFloat z)
-
-        -- (Quantity depth) =
-        --     Projection.depth (camera (Point3d.meters 0 0 0)
-        -- ( ( Quantity fromX, Quantity fromY ), ( Quantity toX, Quantity toY ) ) =
-        --     Rectangle2d.vertices screenRectangle
-        --         |> List.filterMap
-        --             (Camera3d.ray model.camera screenRectangle
-        --                 >> Axis3d.intersectionWithPlane Plane3d.xy
-        --                 >> Maybe.map (\p -> ( Point3d.xCoordinate p, Point3d.yCoordinate p ))
-        --             )
-        --         |> List.foldr
-        --             (\( x, y ) ( ( minx, miny ), ( maxx, maxy ) ) ->
-        --                 ( ( Quantity.min x minx, Quantity.min y miny )
-        --                 , ( Quantity.max x maxx, Quantity.max y maxy )
-        --                 )
-        --             )
-        --             ( ( Length.meters 0, Length.meters 0 )
-        --             , ( Length.meters 0, Length.meters 0 )
-        --             )
-    in
-    [-- model.displayedTiles |> List.length |> String.fromInt |> (++) "Tiles in view: "
-     -- , showGeoPoint model.origin
-     -- , toMercatorPoint model.origin |> show2dPoint getMercatorUnit
-     -- , toMercatorPoint model.origin |> Point2d.placeIn model.mapFrame |> show2dPoint getMercatorUnit
-     -- , "( ("
-     --     ++ String.fromFloat fromX
-     --     ++ ", "
-     --     ++ String.fromFloat fromY
-     --     ++ "), ("
-     --     ++ String.fromFloat toX
-     --     ++ ", "
-     --     ++ String.fromFloat toY
-     --     ++ ") )"
-     -- , model.displayedTiles
-     --     |> List.map
-     --         (\( ( x, y, z ), ( p0, p1 ) ) ->
-     --             String.fromInt x
-     --                 ++ "/"
-     --                 ++ String.fromInt y
-     --                 ++ "/"
-     --                 ++ String.fromInt z
-     --                 ++ " "
-     --                 ++ (if isInView model.camera model.windowSize ( 0, 0 ) then
-     --                         "True"
-     --                     else
-     --                         "False"
-     --                    )
-     --         )
-     --     |> String.join "\n"
-     -- , "zoom: " ++ String.fromInt model.zoom
-     -- , Maybe.Extra.unwrap "" (\(DistanceMeters x) -> String.fromFloat x) (tileLength model.zoom)
-    ]
-
-
-
--- ++ tls
 
 
 view : List Map3dItem -> Model -> Html Msg

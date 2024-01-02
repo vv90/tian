@@ -1,6 +1,5 @@
 module Main exposing
-    ( DetachedPosition(..)
-    , Model
+    ( Model
     , Msg(..)
     , main
     )
@@ -8,28 +7,21 @@ module Main exposing
 import Api.Types exposing (..)
 import AppState
 import Browser
-import Common.ApiResult exposing (ApiResult)
-import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..))
 import Common.Effect as Effect
 import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Common.Palette as Palette
+import Demo.Demo as Demo
+import Demo.FlightTaskPage as FlightTaskPage
+import Demo.Test.TestProgress as TestProgress
 import Dict exposing (Dict)
 import Element exposing (..)
 import Element.Font as Font
 import Flags exposing (Flags, WindowSize)
-import Html exposing (Html, button, div)
+import Html exposing (Html, div)
 import Html.Attributes exposing (style)
 import Json.Decode as D
-import List.Extra as ListX
-import List.Nonempty as NE exposing (Nonempty(..))
 import Map3d
 import Map3dUtils exposing (Map3dItem(..))
-import Maybe.Extra as MaybeX
-import Page.Demo as Demo
-import Page.FlightTask.FlightTaskForm as FlightTaskForm
-import Page.FlightTaskPage as FlightTaskPage
-import Page.FlightTrack.FlightTrackUpload as FlightTrackUpload
-import Page.Test.TestProgress as TestProgress
 import Ports exposing (flightPositionReceiver, watchFlight)
 
 
@@ -239,53 +231,6 @@ subscriptions model =
         ]
 
 
-type DetachedPosition
-    = TopLeft
-    | TopRight
-    | BottomLeft
-    | BottomRight
-
-
-detachedView : DetachedPosition -> Element msg -> Html msg
-detachedView pos content =
-    let
-        viewStyle : List (Html.Attribute msg)
-        viewStyle =
-            [ style "position" "absolute"
-            , style "margin" "10px"
-            , style "padding" "10px"
-            , style "background" "rgba(255, 255, 255, 0.8)"
-            , style "border" "1px solid rgba(37, 37, 37, 0.5)"
-            , style "border-radius" "5px"
-            , style "color" "#252525"
-            , style "font-family" "Roboto"
-            ]
-
-        positionStyle : List (Html.Attribute msg)
-        positionStyle =
-            case pos of
-                TopLeft ->
-                    [ style "top" "0", style "left" "0" ]
-
-                TopRight ->
-                    [ style "top" "0", style "right" "0" ]
-
-                BottomLeft ->
-                    [ style "bottom" "0", style "left" "0" ]
-
-                BottomRight ->
-                    [ style "bottom" "0", style "right" "0" ]
-    in
-    div
-        (viewStyle ++ positionStyle)
-        [ Element.layout
-            [ Font.size 16
-            , Font.family [ Font.typeface "Roboto" ]
-            ]
-            content
-        ]
-
-
 sidebar : Element msg -> Html msg
 sidebar content =
     div
@@ -324,16 +269,6 @@ sidebar content =
                 ]
             )
         ]
-
-
-selectedFlightTask : Deferred (ApiResult (List (Entity Int FlightTask))) -> Int -> Maybe (Entity Int FlightTask)
-selectedFlightTask flightTasksD taskId =
-    case flightTasksD of
-        Resolved (Ok items) ->
-            ListX.find (\{ key } -> key == taskId) items
-
-        _ ->
-            Nothing
 
 
 view : Model -> Html Msg

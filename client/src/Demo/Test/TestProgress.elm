@@ -1,4 +1,4 @@
-module Page.Test.TestProgress exposing
+module Demo.Test.TestProgress exposing
     ( Model
     , Msg(..)
     , init

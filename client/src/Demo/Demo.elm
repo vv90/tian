@@ -1,4 +1,4 @@
-module Page.Demo exposing
+module Demo.Demo exposing
     ( Model
     , Msg(..)
     , init

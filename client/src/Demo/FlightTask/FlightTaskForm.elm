@@ -1,4 +1,4 @@
-module Page.FlightTask.FlightTaskForm exposing
+module Demo.FlightTask.FlightTaskForm exposing
     ( Effect(..)
     , FinishModel
     , FlightTaskSelection(..)

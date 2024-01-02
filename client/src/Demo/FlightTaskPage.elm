@@ -1,4 +1,4 @@
-module Page.FlightTaskPage exposing
+module Demo.FlightTaskPage exposing
     ( Effect(..)
     , Model(..)
     , Msg(..)
@@ -12,13 +12,13 @@ import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPending)
 import Common.Effect as Effect exposing (EffectSet, effect)
+import Demo.Demo as Demo
+import Demo.FlightTask.FlightTaskForm as FlightTaskForm
+import Demo.FlightTask.FlightTaskList as FlightTaskList
+import Demo.FlightTrack.FlightTrackUpload as FlightTrackUpload
 import Element exposing (Element, text)
 import Http
 import Json.Decode as D
-import Page.Demo as Demo
-import Page.FlightTask.FlightTaskForm as FlightTaskForm
-import Page.FlightTask.FlightTaskList as FlightTaskList
-import Page.FlightTrack.FlightTrackUpload as FlightTrackUpload
 
 
 type Model

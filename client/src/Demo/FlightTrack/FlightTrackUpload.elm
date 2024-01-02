@@ -1,4 +1,4 @@
-module Page.FlightTrack.FlightTrackUpload exposing
+module Demo.FlightTrack.FlightTrackUpload exposing
     ( Model
     , Msg(..)
     , Props

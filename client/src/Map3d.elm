@@ -13,25 +13,23 @@ module Map3d exposing
 
 import Angle exposing (Angle)
 import Api.Types exposing (..)
-import Array exposing (Array)
-import Axis3d exposing (at_)
+import Axis3d
 import Basics.Extra exposing (uncurry)
 import Browser.Events as BrowserEvents
 import Camera3d exposing (Camera3d)
 import Color exposing (Color)
-import Common.ApiCommands exposing (hydrateTile, loadElevationTileCmd)
-import Common.ApiResult exposing (ApiResult, DeferredResult)
-import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredToMaybe, setPending)
+import Common.ApiCommands exposing (loadElevationTileCmd)
+import Common.ApiResult exposing (ApiResult)
+import Common.Deferred exposing (Deferred(..), deferredToMaybe, setPending)
 import Constants exposing (earthCircumference)
 import Dict exposing (Dict)
-import Dict.Extra as DictX
 import Direction3d
-import Domain.GeoUtils exposing (degreesLatitude, degreesLongitude)
+import Domain.GeoUtils exposing (degreesLatitude)
 import Flags exposing (WindowSize)
 import Frame2d exposing (Frame2d)
-import Html exposing (Html, div, input, text)
-import Html.Attributes as HtmlAttr exposing (attribute, style, type_)
-import Html.Events as HtmlEvents exposing (on)
+import Html exposing (Html, div)
+import Html.Attributes exposing (style)
+import Html.Events exposing (on)
 import Json.Decode as D
 import Length exposing (Length, Meters)
 import Map3dUtils
@@ -39,17 +37,13 @@ import Map3dUtils
         ( Map3dItem(..)
         , MercatorCoords
         , MercatorUnit
-        , PlaneCoords(..)
+        , PlaneCoords
         , WorldCoords
         , fromMercatorPoint
-        , getMercatorUnit
-        , makeMesh_
-        , makeTilePoints
+        , makeMesh
         , makeTiles
         , mercatorFrame
         , mercatorRate
-        , tileMesh
-        , tileRectangle
         , toMercatorPoint
         )
 import Maybe.Extra as MaybeX
@@ -58,16 +52,16 @@ import Plane3d
 import Point2d exposing (Point2d)
 import Point3d exposing (Point3d)
 import Point3d.Projection as Projection
-import Quantity exposing (Quantity(..), Rate, minus, plus)
+import Quantity exposing (Quantity, Rate, minus, plus)
 import Rectangle2d exposing (Rectangle2d)
 import Scene3d
 import Scene3d.Material as Material
-import Scene3d.Mesh as Mesh exposing (Mesh)
+import Scene3d.Mesh as Mesh
 import SketchPlane3d exposing (SketchPlane3d)
 import Svg exposing (Svg)
 import Svg.Attributes as SvgAttr
 import Task
-import Tile exposing (TileKey, ZoomLevel, fromTileKey, tileKeyToUrl, zoomLevel)
+import Tile exposing (TileKey, ZoomLevel, tileKeyToUrl, zoomLevel)
 import Viewpoint3d
 
 
@@ -171,29 +165,6 @@ xyPlane =
     SketchPlane3d.xy
 
 
-pickZoom : Model -> ZoomLevel
-pickZoom model =
-    let
-        latRad : Float
-        latRad =
-            SketchPlane3d.originPoint xyPlane
-                |> Point3d.projectInto xyPlane
-                |> Point2d.at_ model.mercatorRate
-                |> Point2d.relativeTo model.mapFrame
-                |> fromMercatorPoint
-                |> .lat
-                |> degreesLatitude
-                |> degrees
-
-        viewDistance : Float
-        viewDistance =
-            Length.inMeters model.viewArgs.distance
-    in
-    logBase 2 (earthCircumference * cos latRad / viewDistance)
-        |> round
-        |> zoomLevel
-
-
 loadTextureCmd : TileKey -> Cmd Msg
 loadTextureCmd tileKey =
     tileKey
@@ -264,9 +235,6 @@ updateTiles model =
                         model.mercatorRate
                         (Point3d.projectInto xyPlane model.viewArgs.focalPoint)
                     )
-
-        _ =
-            tiles |> List.map Tuple.first
 
         -- gets tile keys that are missing the given property
         missingKeys : (TileData -> Deferred a) -> List ( TileKey, b ) -> List TileKey
@@ -435,10 +403,10 @@ update msg model =
                 updateTileData elevVals data =
                     case data of
                         Just val ->
-                            Just { val | mesh = makeMesh_ model.mapFrame model.mercatorRate xyPlane elevVals |> Resolved }
+                            Just { val | mesh = makeMesh model.mapFrame model.mercatorRate xyPlane elevVals |> Resolved }
 
                         Nothing ->
-                            Just { texture = NotStarted, mesh = makeMesh_ model.mapFrame model.mercatorRate xyPlane elevVals |> Resolved }
+                            Just { texture = NotStarted, mesh = makeMesh model.mapFrame model.mercatorRate xyPlane elevVals |> Resolved }
             in
             ( { model | loadedTiles = Dict.update tileKey (updateTileData res) model.loadedTiles }, Cmd.none )
 

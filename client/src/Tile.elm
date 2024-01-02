@@ -1,8 +1,6 @@
 module Tile exposing
-    ( Tile
-    , TileKey
+    ( TileKey
     , ZoomLevel(..)
-    , fromTileKey
     , tileKeyToUrl
     , tileLength
     , zoomInt
@@ -39,26 +37,6 @@ type ZoomLevel
 
 type alias TileKey =
     ( Int, Int, Int )
-
-
-type alias Tile =
-    { x : Int
-    , y : Int
-    , zoom : ZoomLevel
-    }
-
-
-fromTileKey : TileKey -> Tile
-fromTileKey ( x, y, zoom ) =
-    { x = x
-    , y = y
-    , zoom = zoomLevel zoom
-    }
-
-
-toTileKey : Tile -> TileKey
-toTileKey { x, y, zoom } =
-    ( x, y, zoomInt zoom )
 
 
 tileKeyToUrl : TileKey -> String

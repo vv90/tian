@@ -62,7 +62,8 @@ config =
         |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
 
     -- , NoUnused.Patterns.rule
-    -- , NoUnused.Variables.rule
+    , NoUnused.Variables.rule
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components", "src/Demo" ]
     , NoImportingEverything.rule [ "Element", "Api.Types" ]
         |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
     , NoExposingEverything.rule

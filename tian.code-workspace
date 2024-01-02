@@ -46,7 +46,10 @@
       "editor.formatOnSave": true,
       "editor.defaultFormatter": "ms-azuretools.vscode-docker"
     },
-    "files.insertFinalNewline": true
+    "files.insertFinalNewline": true,
+    "editor.unicodeHighlight.invisibleCharacters": true,
+    "editor.unicodeHighlight.ambiguousCharacters": true,
+    "editor.unicodeHighlight.nonBasicASCII": true
   },
   "extensions": {
     "recommendations": [

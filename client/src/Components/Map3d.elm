@@ -1,4 +1,4 @@
-module Map3d exposing
+module Components.Map3d exposing
     ( DragState(..)
     , Model
     , Msg(..)
@@ -21,18 +21,7 @@ import Color exposing (Color)
 import Common.ApiCommands exposing (loadElevationTileCmd)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (Deferred(..), deferredToMaybe, setPending)
-import Constants exposing (earthCircumference)
-import Dict exposing (Dict)
-import Direction3d
-import Domain.GeoUtils exposing (degreesLatitude)
-import Flags exposing (WindowSize)
-import Frame2d exposing (Frame2d)
-import Html exposing (Html, div)
-import Html.Attributes exposing (style)
-import Html.Events exposing (on)
-import Json.Decode as D
-import Length exposing (Length, Meters)
-import Map3dUtils
+import Components.Map3dUtils
     exposing
         ( Map3dItem(..)
         , MercatorCoords
@@ -46,6 +35,17 @@ import Map3dUtils
         , mercatorRate
         , toMercatorPoint
         )
+import Constants exposing (earthCircumference)
+import Dict exposing (Dict)
+import Direction3d
+import Domain.GeoUtils exposing (degreesLatitude)
+import Flags exposing (WindowSize)
+import Frame2d exposing (Frame2d)
+import Html exposing (Html, div)
+import Html.Attributes exposing (style)
+import Html.Events exposing (on)
+import Json.Decode as D
+import Length exposing (Length, Meters)
 import Maybe.Extra as MaybeX
 import Pixels exposing (Pixels)
 import Plane3d
@@ -587,8 +587,22 @@ mapItemView model mapItem =
                 |> Tuple.mapSecond (\n -> toFloat model.windowSize.height - n)
     in
     case mapItem of
-        Point _ _ ->
-            ( Svg.g [] [], Scene3d.nothing )
+        Point geoPoint elevation ->
+            let
+                ( pProjX, pProjY ) =
+                    to3dPoint geoPoint elevation |> project3dPoint
+            in
+            ( Svg.g []
+                [ Svg.circle
+                    [ SvgAttr.fill "#34495E"
+                    , SvgAttr.cx (String.fromFloat pProjX)
+                    , SvgAttr.cy (String.fromFloat pProjY)
+                    , SvgAttr.r "3"
+                    ]
+                    []
+                ]
+            , Scene3d.nothing
+            )
 
         Marker id p elev ->
             let

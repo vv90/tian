@@ -12,6 +12,7 @@ import Api.Types exposing (..)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPending)
 import Common.JsonCodecsExtra exposing (filesDecoder)
+import Components.Map3dUtils exposing (Map3dItem)
 import Components.Player as Player
 import Domain.FlightTaskUtils exposing (taskToMap3dItems)
 import Element exposing (Element, html, row, spacing, text)
@@ -24,7 +25,6 @@ import Html.Events exposing (on)
 import Http
 import Json.Decode as D
 import List.Extra as ListX
-import Map3dUtils exposing (Map3dItem)
 
 
 type alias Model =

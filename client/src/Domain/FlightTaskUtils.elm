@@ -9,9 +9,9 @@ module Domain.FlightTaskUtils exposing
     )
 
 import Api.Types exposing (..)
+import Components.Map3dUtils as M3d exposing (Map3dItem)
 import Domain.GeoUtils exposing (bearing, linePerpendicularToBearing)
 import List.Extra as ListX
-import Map3dUtils as M3d exposing (Map3dItem)
 
 
 startToMap3dItem : NavPoint -> ( NavPoint, TaskStart ) -> Map3dItem

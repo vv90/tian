@@ -10,6 +10,8 @@ import Browser
 import Common.Effect as Effect
 import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Common.Palette as Palette
+import Components.Map3d as Map3d
+import Components.Map3dUtils exposing (Map3dItem(..))
 import Demo.Demo as Demo
 import Demo.FlightTaskPage as FlightTaskPage
 import Demo.Test.TestProgress as TestProgress
@@ -20,8 +22,6 @@ import Flags exposing (Flags, WindowSize)
 import Html exposing (Html, div)
 import Html.Attributes exposing (style)
 import Json.Decode as D
-import Map3d
-import Map3dUtils exposing (Map3dItem(..))
 import Ports exposing (flightPositionReceiver, watchFlight)
 
 
@@ -134,7 +134,7 @@ update msg model =
                 applyEffect : FlightTaskPage.Effect -> ( Model -> Model, Cmd Msg )
                 applyEffect e =
                     case e of
-                        FlightTaskPage.FlightTaskSaved _ ->
+                        FlightTaskPage.FlightTaskSaved ->
                             ( \m -> m |> withAppState (m.appState |> AppState.withPendingFlightTasks)
                             , Cmd.map AppStateMsg AppState.getFlightTasksCmd
                             )

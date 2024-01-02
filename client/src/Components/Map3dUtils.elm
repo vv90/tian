@@ -1,4 +1,4 @@
-module Map3dUtils exposing
+module Components.Map3dUtils exposing
     ( Map3dItem(..)
     , MercatorCoords(..)
     , MercatorUnit(..)

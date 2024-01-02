@@ -17,8 +17,6 @@ import Http
 import Json.Decode as D
 import Json.Encode as E
 import List.Nonempty as NE exposing (Nonempty)
-import MapUtils exposing (LineStyle(..), MapItem(..))
-import Maybe.Extra as MaybeX
 
 
 type alias Model =
@@ -38,32 +36,6 @@ init =
     { progress = NotStarted
     , startLine = NotStarted
     }
-
-
-toMapItems : Model -> List MapItem
-toMapItems model =
-    let
-        progressPointItem : ProgressPoint -> Maybe MapItem
-        progressPointItem p =
-            Maybe.map
-                (Marker { lat = p.lat, lon = p.lon })
-                p.target
-
-        taskProgressItems : List MapItem
-        taskProgressItems =
-            deferredToMaybe model.progress
-                |> Maybe.andThen Result.toMaybe
-                |> Maybe.andThen (.points >> List.map progressPointItem >> MaybeX.combine)
-                |> Maybe.withDefault []
-
-        startLineItems : List MapItem
-        startLineItems =
-            deferredToMaybe model.startLine
-                |> Maybe.andThen Result.toMaybe
-                |> Maybe.map (\( p1, p2 ) -> [ Line TaskLine [ p1, p2 ] ])
-                |> Maybe.withDefault []
-    in
-    taskProgressItems ++ startLineItems
 
 
 updateProgressCmd : Int -> Nonempty GeoPoint -> Cmd Msg

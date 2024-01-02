@@ -15,7 +15,7 @@ import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Common.Palette as Palette
 import Common.Utils exposing (roundN)
 import Dict exposing (Dict)
-import Domain.FlightTaskUtils exposing (taskToMap3dItems, taskToMapItems)
+import Domain.FlightTaskUtils exposing (taskToMap3dItems)
 import Domain.GeoUtils exposing (metersElevation)
 import Element exposing (Element, alignRight, column, el, fill, onLeft, paddingXY, paragraph, row, shrink, spacing, spacingXY, table, text)
 import Element.Font as Font
@@ -26,7 +26,6 @@ import Http
 import Json.Decode as D
 import List.Extra as ListX
 import Map3dUtils exposing (Map3dItem)
-import MapUtils exposing (MapItem(..))
 import Maybe.Extra as MaybeX
 import Ports
 import Styling
@@ -43,30 +42,6 @@ init =
     { demoData = NotStarted
     , points = Dict.empty
     }
-
-
-mapItems : Model -> List MapItem
-mapItems model =
-    let
-        toMarker : ( String, { a | lat : Latitude, lon : Longitude, altitude : Elevation } ) -> MapItem
-        toMarker ( id, p ) =
-            Marker
-                { lat = p.lat, lon = p.lon }
-                (id ++ " " ++ (p.altitude |> metersElevation |> roundN 2 |> String.fromFloat) ++ "m")
-
-        pointItems : List MapItem
-        pointItems =
-            model.points
-                |> Dict.toList
-                |> List.map toMarker
-
-        taskItems : List MapItem
-        taskItems =
-            model.demoData
-                |> (deferredToMaybe >> Maybe.andThen Result.toMaybe)
-                |> MaybeX.unwrap [] (Tuple.first >> taskToMapItems)
-    in
-    taskItems ++ pointItems
 
 
 map3dItems : Model -> List Map3dItem

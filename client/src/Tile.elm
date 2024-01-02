@@ -3,32 +3,14 @@ module Tile exposing
     , TileKey
     , ZoomLevel(..)
     , fromTileKey
-    , maxZoom
-    , minZoom
     , tileKeyToUrl
     , tileLength
-    , tileSize
     , zoomInt
     , zoomLevel
     )
 
 import Api.Types exposing (..)
 import Constants exposing (earthCircumference)
-
-
-tileSize : Int
-tileSize =
-    256
-
-
-minZoom : Float
-minZoom =
-    0
-
-
-maxZoom : Float
-maxZoom =
-    19
 
 
 type ZoomLevel

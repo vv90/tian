@@ -29,7 +29,6 @@
             "ianmackenzie/elm-geometry": "3.9.1",
             "ianmackenzie/elm-triangular-mesh": "1.1.0",
             "ianmackenzie/elm-units": "2.9.0",
-            "joakin/elm-canvas": "5.0.0",
             "mdgriffith/elm-ui": "1.1.8",
             "mgold/elm-nonempty-list": "4.2.0",
             "rtfeldman/elm-iso8601-date-strings": "1.1.4"

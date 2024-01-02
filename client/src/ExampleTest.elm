@@ -1,11 +1,10 @@
 module ExampleTest exposing (testFromMercator)
 
 import Api.Types exposing (..)
-import Domain.GeoUtils exposing (degreesLatitude)
+import Domain.GeoUtils exposing (degreesLatitude, fromMercatorWeb)
 import Expect exposing (FloatingPointTolerance(..))
 import Fuzz exposing (Fuzzer, int, list, string)
 import List.Extra as ListX
-import MapUtils exposing (fromMercatorWeb)
 import Test exposing (Test, describe, test)
 
 

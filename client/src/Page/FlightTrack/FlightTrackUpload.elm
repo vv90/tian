@@ -13,7 +13,7 @@ import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), setPending)
 import Common.JsonCodecsExtra exposing (filesDecoder)
 import Components.Player as Player
-import Domain.FlightTaskUtils exposing (taskToMap3dItems, taskToMapItems)
+import Domain.FlightTaskUtils exposing (taskToMap3dItems)
 import Element exposing (Element, html, row, spacing, text)
 import Element.Input as Input
 import Env exposing (apiUrl)
@@ -25,7 +25,6 @@ import Http
 import Json.Decode as D
 import List.Extra as ListX
 import Map3dUtils exposing (Map3dItem)
-import MapUtils exposing (MapItem(..))
 
 
 type alias Model =
@@ -33,33 +32,6 @@ type alias Model =
     , taskProgress : Deferred (ApiResult (List TaskProgress))
     , playerModel : Maybe Player.Model
     }
-
-
-mapItems : List (Entity Int FlightTask) -> Model -> List MapItem
-mapItems tasks model =
-    let
-        task : Maybe { entity : FlightTask, key : Int }
-        task =
-            ListX.find (\{ key } -> key == model.taskId) tasks
-
-        taskItems : List MapItem
-        taskItems =
-            task
-                |> Maybe.map (.entity >> taskToMapItems)
-                |> Maybe.withDefault []
-
-        points : Maybe (List ( String, Float, GeoPoint ))
-        points =
-            model.playerModel |> Maybe.map Player.currPoints
-
-        pointItems : List MapItem
-        pointItems =
-            Maybe.map
-                (List.map (\( id, alt, pos ) -> Marker pos (id ++ " " ++ String.fromFloat alt ++ "m")))
-                points
-                |> Maybe.withDefault []
-    in
-    taskItems ++ pointItems
 
 
 map3dItems : List (Entity Int FlightTask) -> Model -> List Map3dItem

@@ -22,7 +22,6 @@ import Html.Attributes exposing (style)
 import Json.Decode as D
 import List.Extra as ListX
 import List.Nonempty as NE exposing (Nonempty(..))
-import Map
 import Map3d
 import Map3dUtils exposing (Map3dItem(..))
 import Maybe.Extra as MaybeX
@@ -57,8 +56,7 @@ withSidebarOffset windowSize =
 
 
 type alias Model =
-    { mapModel : Map.Model
-    , map3dModel : Map3d.Model
+    { map3dModel : Map3d.Model
     , flightTaskPage : FlightTaskPage.Model
 
     -- , flightTrackPage : Maybe FlightTrackUpload.Model
@@ -83,22 +81,13 @@ withFlightTaskPage ftpModel model =
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
-        mapModel : Map.Model
-        mapModel =
-            Map.init
-                (withSidebarOffset flags.windowSize)
-                9
-                -- ( LatitudeDegrees 52.030558, LongitudeDegrees 39.662962 )
-                { lat = LatitudeDegrees 45.208451, lon = LongitudeDegrees 5.726031 }
-
         ( map3dModel, m3dCmd ) =
             Map3d.init
                 (withSidebarOffset flags.windowSize)
                 -- ( LatitudeDegrees 52.030558, LongitudeDegrees 39.662962 )
                 { lat = LatitudeDegrees 45.208451, lon = LongitudeDegrees 5.726031 }
     in
-    ( { mapModel = mapModel
-      , map3dModel = map3dModel
+    ( { map3dModel = map3dModel
       , flightTaskPage = FlightTaskPage.DemoPage Demo.init
 
       --   , flightTrackPage = Nothing
@@ -121,8 +110,7 @@ init flags =
 
 
 type Msg
-    = MapMsg Map.Msg
-    | Map3dMsg Map3d.Msg
+    = Map3dMsg Map3d.Msg
     | FlightTaskPageMsg FlightTaskPage.Msg
       -- | FlightTrackPageMsg FlightTrackUpload.Msg
     | TestProgressMsg TestProgress.Msg
@@ -137,27 +125,6 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        MapMsg m ->
-            let
-                ( nextModel, cmd, _ ) =
-                    Map.update m model.mapModel
-            in
-            ( { model | mapModel = nextModel }
-            , Cmd.map MapMsg cmd
-              -- for debugging
-              -- , Maybe.map3
-              --     (\p ps tid ->
-              --         Cmd.map TestProgressMsg <|
-              --             TestProgress.updateProgressCmd
-              --                 tid
-              --                 (appendPoint ps p)
-              --     )
-              --     point
-              --     selectedPoints
-              --     selectedTaskId
-              --     |> Maybe.withDefault Cmd.none
-            )
-
         Map3dMsg m3dMsg ->
             let
                 ( nextModel, m3dCmd ) =
@@ -264,8 +231,7 @@ update msg model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Sub.map MapMsg (Map.subscriptions model.mapModel)
-        , Sub.map Map3dMsg (Map3d.subscriptions model.map3dModel)
+        [ Sub.map Map3dMsg (Map3d.subscriptions model.map3dModel)
         , Sub.map FlightTaskPageMsg (FlightTaskPage.subscriptions model.flightTaskPage)
         , flightPositionReceiver FlightPositionReceived
 
@@ -373,18 +339,6 @@ selectedFlightTask flightTasksD taskId =
 view : Model -> Html Msg
 view model =
     let
-        -- mapItems : List MapItem
-        -- mapItems =
-        --     case model.flightTaskPage of
-        --         FlightTaskPage.AddTask pm ->
-        --             FlightTaskForm.mapItems pm
-        --         FlightTaskPage.UploadTrack pm ->
-        --             -- taskItems ++ pointItems ++ TestProgress.toMapItems model.testProgressModel
-        --             FlightTrackUpload.mapItems (AppState.resolvedTasks model.appState) pm
-        --         FlightTaskPage.SelectTask ->
-        --             []
-        --         FlightTaskPage.DemoPage pm ->
-        --             Demo.mapItems pm
         map3dItems : List Map3dItem
         map3dItems =
             model.flightPositions |> Dict.toList |> List.map (\( key, ( pt, elev ) ) -> Marker key pt elev)

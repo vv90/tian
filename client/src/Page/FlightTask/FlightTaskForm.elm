@@ -21,13 +21,11 @@ import Common.FormField exposing (FormField, getRaw, getVal, initFormFieldRaw, u
 import Common.Validation as V
 import Components.SearchSelect as SearchSelect
 import Components.Select as Select
-import Domain.FlightTaskUtils exposing (taskToMapItems)
 import Element exposing (Element, column, fill, none, spacing, table, text)
 import Element.Input as Input
 import Env exposing (apiUrl)
 import Http
 import Json.Decode as D
-import MapUtils exposing (MapItem)
 import Parser
 import Result.Extra as ResultX
 
@@ -103,13 +101,6 @@ type alias Model =
     , navPoints : List NavPoint
     , taskSelection : FlightTaskSelection
     }
-
-
-mapItems : Model -> List MapItem
-mapItems model =
-    result model
-        |> Result.map taskToMapItems
-        |> Result.withDefault []
 
 
 result : Model -> Result String FlightTask

@@ -23,11 +23,10 @@ import Color exposing (Color)
 import Common.ApiCommands exposing (hydrateTile)
 import Dict exposing (Dict)
 import Direction3d
-import Domain.GeoUtils exposing (metersDistance)
+import Domain.GeoUtils exposing (fromMercatorWeb, metersDistance, toMercatorWeb)
 import Frame2d exposing (Frame2d)
 import Length exposing (Length, Meters)
 import List.Extra as ListX
-import MapUtils exposing (fromMercatorWeb, metersPerPixel, toMercatorWeb)
 import Maybe.Extra
 import Point2d exposing (Point2d)
 import Point3d exposing (Point3d)

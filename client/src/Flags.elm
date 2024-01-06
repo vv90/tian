@@ -14,4 +14,6 @@ type alias WindowSize =
 
 
 type alias Config =
-    { backendUrl : String }
+    { backendUrl : String
+    , showDebug : Bool
+    }

@@ -1,7 +1,5 @@
 module Seed.Utils where
 
--- import Utils (unflattenVector)
-
 import Control.Concurrent.Async (mapConcurrently_)
 import Control.Monad.Except (withExceptT)
 import Data.Aeson (encode)

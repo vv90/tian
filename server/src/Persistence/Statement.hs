@@ -126,7 +126,7 @@ data ElevationPointQuery = ElevationPointQuery
   }
   deriving stock (Show, Eq)
 
-generateElevationPointsStatement :: Statement ElevationPointQuery (Vector (GeoPoint, Int))
+generateElevationPointsStatement :: Statement ElevationPointQuery (Vector (GeoPoint, Maybe Int))
 generateElevationPointsStatement =
   let prepareInput :: ElevationPointQuery -> (Double, Double, Double, Double, Int32)
       prepareInput (ElevationPointQuery {from, lonStepSize, latStepSize, resolution}) =
@@ -137,13 +137,13 @@ generateElevationPointsStatement =
           fromIntegral $ resolution - 1
         )
 
-      makeGeoPoint :: (Double, Double, Double) -> (GeoPoint, Int)
+      makeGeoPoint :: (Double, Double, Maybe Double) -> (GeoPoint, Maybe Int)
       makeGeoPoint (lon, lat, elev) =
         ( GeoPoint (LatitudeDegrees lat) (LongitudeDegrees lon),
-          floor elev
+          fmap floor elev
         )
 
-      processOutput :: Vector (Double, Double, Double) -> Vector (GeoPoint, Int)
+      processOutput :: Vector (Double, Double, Maybe Double) -> Vector (GeoPoint, Maybe Int)
       processOutput =
         fmap makeGeoPoint
    in (fmap processOutput . lmap prepareInput)
@@ -160,9 +160,9 @@ generateElevationPointsStatement =
             FROM generate_series(0, $5 :: int4, 1) AS i_lat,
               generate_series(0, $5 :: int4, 1) AS i_lon
           )
-          SELECT ST_X(geom)::float8, ST_Y(geom)::float8, COALESCE(ST_Value(rast, geom), 0.0)::float8
+          SELECT ST_X(geom)::float8, ST_Y(geom)::float8, COALESCE(ST_Value(rast, geom), NULL)::float8?
           FROM points
-          LEFT JOIN astgtmv003_n43e005_dem
+          LEFT JOIN elevations
           ON ST_Intersects(rast, geom) 
         |]
 

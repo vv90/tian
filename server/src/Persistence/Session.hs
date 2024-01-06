@@ -71,6 +71,6 @@ saveElevationPointsSession fileName points =
           Just _ ->
             pure 0
 
-generateElevationPointsSession :: ElevationPointQuery -> Session (Vector (GeoPoint, Int))
+generateElevationPointsSession :: ElevationPointQuery -> Session (Vector (GeoPoint, Maybe Int))
 generateElevationPointsSession query =
   statement query generateElevationPointsStatement

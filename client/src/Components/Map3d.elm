@@ -59,7 +59,6 @@ import Scene3d
 import Scene3d.Material as Material
 import Scene3d.Mesh as Mesh
 import SketchPlane3d exposing (SketchPlane3d)
-import Sphere3d exposing (Sphere3d)
 import Svg exposing (Svg)
 import Svg.Attributes as SvgAttr
 import Task

@@ -52,6 +52,16 @@ tileCoords (MercatorTileKey x y zoom) =
           fromIntegral y / fromIntegral n
         )
 
+containingTile :: ZoomLevel -> GeoPoint -> MercatorTileKey
+containingTile zoom geoPoint =
+  let (x, y) = toMercatorWeb geoPoint
+      n :: Int
+      n = 2 ^ zoomInt zoom
+   in MercatorTileKey
+        (floor (x * fromIntegral n))
+        (floor (y * fromIntegral n))
+        (zoomInt zoom)
+
 tileBoundingGeoPoints :: MercatorTileKey -> (GeoPoint, GeoPoint)
 tileBoundingGeoPoints tileKey =
   let nextTileKey = MercatorTileKey (tileKey.x + 1) (tileKey.y + 1) tileKey.zoom

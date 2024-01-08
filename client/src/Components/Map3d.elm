@@ -1,11 +1,11 @@
 module Components.Map3d exposing
-    ( DragState(..)
-    , Model
+    ( Model
     , Msg(..)
     , TileData
-    , ViewArgs
     , WheelEvent
+    , camera
     , init
+    , screenRectangle
     , subscriptions
     , update
     , view
@@ -27,6 +27,7 @@ import Components.Map3dUtils
         , MercatorCoords
         , MercatorUnit
         , PlaneCoords
+        , ViewArgs
         , WorldCoords
         , fromMercatorPoint
         , makeMesh
@@ -52,7 +53,7 @@ import Plane3d
 import Point2d exposing (Point2d)
 import Point3d exposing (Point3d)
 import Point3d.Projection as Projection
-import Quantity exposing (Quantity, Rate, minus, plus)
+import Quantity exposing (Quantity, Rate)
 import Rectangle2d exposing (Rectangle2d)
 import Scene3d
 import Scene3d.Material as Material
@@ -66,21 +67,13 @@ import Viewpoint3d
 
 
 type DragState
-    = MovingFrom { azimuth : Angle, elevation : Angle, point : Point3d Meters WorldCoords, xy : ( Float, Float ) }
+    = MovingFrom { azimuth : Angle, elevation : Angle, xy : ( Float, Float ) }
     | Static
-
-
-type alias ViewArgs =
-    { focalPoint : Point3d Meters WorldCoords -- the center point we're looking at
-    , azimuth : Angle -- camera angle around the z axis
-    , elevation : Angle -- camera angle relative to xy plane
-    , distance : Quantity Float Meters -- camera distance from the focal point
-    }
 
 
 type alias TileData =
     { texture : Deferred (Material.Texture Color)
-    , mesh : Deferred (Mesh.Textured WorldCoords) -- todo: add Result to support refetching in case of error
+    , mesh : Deferred ( Mesh.Textured WorldCoords, Mesh.Shadow WorldCoords )
     }
 
 
@@ -93,6 +86,7 @@ type alias Model =
     , viewArgs : ViewArgs
     , loadedTiles : Dict TileKey TileData
     , displayedTiles : List ( TileKey, ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords ) )
+    , cursorPosition : Maybe ( Float, Float )
     }
 
 
@@ -348,6 +342,7 @@ init windowSize origin =
             , dragState = Static
             , loadedTiles = Dict.empty
             , displayedTiles = []
+            , cursorPosition = Nothing
             }
     in
     updateTiles model
@@ -360,6 +355,7 @@ type Msg
     | DragStart ( Float, Float )
     | DragMove Bool ( Float, Float )
     | DragStop ( Float, Float )
+    | CursorMoved ( Float, Float )
     | ZoomChanged WheelEvent
 
 
@@ -414,74 +410,64 @@ update msg model =
             ( model, Cmd.none )
 
         DragStart ( x, y ) ->
-            let
-                point : Maybe (Point3d Meters WorldCoords)
-                point =
-                    Camera3d.ray
-                        (camera model.viewArgs)
-                        (screenRectangle model.windowSize)
-                        (Point2d.pixels x y)
-                        |> Axis3d.intersectionWithPlane Plane3d.xy
-            in
-            case point of
-                Just p ->
-                    ( { model | dragState = MovingFrom { azimuth = model.viewArgs.azimuth, elevation = model.viewArgs.elevation, point = p, xy = ( x, y ) } }, Cmd.none )
-
-                Nothing ->
-                    ( model, Cmd.none )
+            ( { model
+                | dragState =
+                    MovingFrom
+                        { azimuth = model.viewArgs.azimuth
+                        , elevation = model.viewArgs.elevation
+                        , xy = ( x, y )
+                        }
+              }
+            , Cmd.none
+            )
 
         DragMove isDown ( x, y ) ->
-            let
-                projectedPoint : Maybe (Point3d Meters WorldCoords)
-                projectedPoint =
-                    Camera3d.ray
-                        (camera model.viewArgs)
-                        (screenRectangle model.windowSize)
-                        (Point2d.pixels x y)
-                        |> Axis3d.intersectionWithPlane Plane3d.xy
-
-                delta : Point3d Meters WorldCoords -> Point3d Meters WorldCoords -> ( Length.Length, Length.Length )
-                delta p1 p2 =
-                    ( Point3d.xCoordinate p1 |> minus (Point3d.xCoordinate p2)
-                    , Point3d.yCoordinate p1 |> minus (Point3d.yCoordinate p2)
-                    )
-
-                move : Point3d Meters WorldCoords -> ( Quantity Float Meters, Quantity Float Meters ) -> Point3d Meters WorldCoords
-                move p ( dx, dy ) =
-                    Point3d.xyz
-                        (Point3d.xCoordinate p |> minus dx)
-                        (Point3d.yCoordinate p |> plus dy)
-                        (Point3d.zCoordinate p)
-            in
-            case ( model.dragState, projectedPoint, model.dragControlsAzimuthAndElevation ) of
-                ( MovingFrom { azimuth, elevation, point }, Just currPoint, False ) ->
+            case ( model.dragState, model.dragControlsAzimuthAndElevation ) of
+                ( MovingFrom { azimuth, elevation, xy }, False ) ->
                     let
-                        d : ( Length, Length )
-                        d =
-                            delta currPoint point
+                        projectedPoint : Maybe (Point3d Meters WorldCoords)
+                        projectedPoint =
+                            Camera3d.ray
+                                (camera model.viewArgs)
+                                (screenRectangle model.windowSize)
+                                (Point2d.pixels x (toFloat model.windowSize.height - y))
+                                |> Axis3d.intersectionWithPlane Plane3d.xy
 
-                        newPoint : Point3d Meters WorldCoords
-                        newPoint =
-                            move
-                                model.viewArgs.focalPoint
-                                d
+                        projectedPrevPoint : Maybe (Point3d Meters WorldCoords)
+                        projectedPrevPoint =
+                            Camera3d.ray
+                                (camera model.viewArgs)
+                                (screenRectangle model.windowSize)
+                                (Point2d.pixels (Tuple.first xy) (toFloat model.windowSize.height - Tuple.second xy))
+                                |> Axis3d.intersectionWithPlane Plane3d.xy
+
+                        direction =
+                            MaybeX.andThen2 (\from to -> Direction3d.from from to) projectedPoint projectedPrevPoint
+
+                        distance =
+                            Maybe.map2 (\from to -> Point3d.distanceFrom from to) projectedPoint projectedPrevPoint
+
+                        target =
+                            Maybe.map2 (\dir dist -> Point3d.translateIn dir dist model.viewArgs.focalPoint) direction distance
 
                         newModel : Model
                         newModel =
                             { model
                                 | dragState =
                                     if isDown then
-                                        MovingFrom { azimuth = azimuth, elevation = elevation, point = move currPoint d, xy = ( x, y ) }
+                                        MovingFrom { azimuth = azimuth, elevation = elevation, xy = ( x, y ) }
 
                                     else
                                         Static
                                 , viewArgs =
-                                    withFocalPoint newPoint model.viewArgs
+                                    target
+                                        |> Maybe.map (\p -> withFocalPoint p model.viewArgs)
+                                        |> Maybe.withDefault model.viewArgs
                             }
                     in
                     updateTiles newModel
 
-                ( MovingFrom { azimuth, elevation, xy }, Just currPoint, True ) ->
+                ( MovingFrom { azimuth, elevation, xy }, True ) ->
                     let
                         ( lastX, lastY ) =
                             xy
@@ -494,12 +480,11 @@ update msg model =
                         newElevation =
                             Angle.degrees (Angle.inDegrees elevation + ((y - lastY) * 0.1))
                     in
-                    ( { model
-                        | dragState = MovingFrom { azimuth = newAzimuth, elevation = newElevation, point = currPoint, xy = ( x, y ) }
+                    { model
+                        | dragState = MovingFrom { azimuth = newAzimuth, elevation = newElevation, xy = ( x, y ) }
                         , viewArgs = withAzimuthElevation newAzimuth newElevation model.viewArgs
-                      }
-                    , Cmd.none
-                    )
+                    }
+                        |> updateTiles
 
                 _ ->
                     ( model, Cmd.none )
@@ -510,6 +495,9 @@ update msg model =
               }
             , Cmd.none
             )
+
+        CursorMoved ( x, y ) ->
+            ( { model | cursorPosition = Just ( x, y ) }, Cmd.none )
 
         ZoomChanged wheelEvent ->
             let
@@ -538,8 +526,8 @@ subscriptions model =
                 , BrowserEvents.onKeyUp (D.map (isShiftKey >> not >> SetDragControlAzimuthAndElevation) decodeKey)
                 ]
 
-        mouseSub : Sub Msg
-        mouseSub =
+        dragSub : Sub Msg
+        dragSub =
             case model.dragState of
                 Static ->
                     Sub.none
@@ -549,8 +537,12 @@ subscriptions model =
                         [ BrowserEvents.onMouseMove (D.map2 DragMove decodeMouseButtons decodePosition)
                         , BrowserEvents.onMouseUp (D.map DragStop decodePosition)
                         ]
+
+        cursorSub : Sub Msg
+        cursorSub =
+            BrowserEvents.onMouseMove (D.map CursorMoved decodePosition)
     in
-    Sub.batch [ keyModSub, mouseSub ]
+    Sub.batch [ keyModSub, dragSub, cursorSub ]
 
 
 mapItemView : Model -> Map3dItem -> ( Svg Msg, Scene3d.Entity WorldCoords )
@@ -669,14 +661,21 @@ mapItemView model mapItem =
 view : List Map3dItem -> Model -> Html Msg
 view mapItems model =
     let
-        unwrapTexture : Deferred (Material.Texture Color) -> Material.Material coordinates { a | uvs : () }
+        unwrapTexture : Deferred (Material.Texture Color) -> Material.Material WorldCoords { a | uvs : () }
         unwrapTexture =
             deferredToMaybe
                 >> MaybeX.unwrap
                     (Material.color Color.lightGray)
                     Material.texturedColor
 
-        toTile : ( TileKey, ( Point2d Meters coordinates, Point2d Meters a ) ) -> Scene3d.Entity WorldCoords
+        unwrapTexMat : Deferred (Material.Texture Color) -> Material.Material WorldCoords { a | normals : (), uvs : () }
+        unwrapTexMat =
+            deferredToMaybe
+                >> MaybeX.unwrap
+                    (Material.texturedNonmetal { baseColor = Material.constant Color.gray, roughness = Material.constant 0.5 })
+                    (\texture -> Material.texturedNonmetal { baseColor = texture, roughness = Material.constant 0.5 })
+
+        toTile : ( TileKey, ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords ) ) -> Scene3d.Entity WorldCoords
         toTile ( tk, ( p0, p1 ) ) =
             Dict.get tk model.loadedTiles
                 |> Maybe.withDefault
@@ -685,8 +684,9 @@ view mapItems model =
                     }
                 |> (\data ->
                         case deferredToMaybe data.mesh of
-                            Just mesh ->
-                                Scene3d.mesh (unwrapTexture data.texture) mesh
+                            Just ( mesh, shadow ) ->
+                                -- Scene3d.meshWithShadow (Material.nonmetal { baseColor = Color.gray, roughness = 0.5 }) mesh shadow
+                                Scene3d.meshWithShadow (unwrapTexMat data.texture) mesh shadow
 
                             Nothing ->
                                 Scene3d.quad
@@ -722,14 +722,25 @@ view mapItems model =
         , on "wheel" (D.map ZoomChanged decodeWheelEvent)
         , style "position" "relative"
         ]
-        [ Scene3d.cloudy
-            { entities = entities
-            , upDirection = Direction3d.positiveZ
+        [ Scene3d.sunny
+            { upDirection = Direction3d.positiveZ
+            , sunlightDirection = Direction3d.fromAzimuthInAndElevationFrom SketchPlane3d.xy (Angle.degrees 45) (Angle.degrees 45) |> Direction3d.reverse
+            , shadows = True
+            , dimensions = ( Pixels.pixels model.windowSize.width, Pixels.pixels model.windowSize.height )
             , camera = camera model.viewArgs
             , clipDepth = Length.meters 1
             , background = Scene3d.transparentBackground
-            , dimensions = ( Pixels.pixels model.windowSize.width, Pixels.pixels model.windowSize.height )
+            , entities = entities
             }
+
+        --   Scene3d.cloudy
+        --     { entities = entities
+        --     , upDirection = Direction3d.positiveZ
+        --     , camera = camera model.viewArgs
+        --     , clipDepth = Length.meters 1
+        --     , background = Scene3d.transparentBackground
+        --     , dimensions = ( Pixels.pixels model.windowSize.width, Pixels.pixels model.windowSize.height )
+        --     }
         , Svg.svg
             [ SvgAttr.width (String.fromInt model.windowSize.width)
             , SvgAttr.height (String.fromInt model.windowSize.height)

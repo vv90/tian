@@ -5,7 +5,6 @@ module Demo.FlightTaskPage exposing
     , Props
     , subscriptions
     , update
-    , view
     )
 
 import Api.Types exposing (..)

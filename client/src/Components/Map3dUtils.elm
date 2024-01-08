@@ -3,8 +3,11 @@ module Components.Map3dUtils exposing
     , MercatorCoords(..)
     , MercatorUnit(..)
     , PlaneCoords(..)
+    , ViewArgs
     , WorldCoords(..)
+    , containingTile
     , fromMercatorPoint
+    , getMercatorUnit
     , makeMesh
     , makeTiles
     , mercatorFrame
@@ -12,6 +15,7 @@ module Components.Map3dUtils exposing
     , toMercatorPoint
     )
 
+import Angle exposing (Angle)
 import Api.Types exposing (..)
 import Array exposing (Array)
 import Common.ApiCommands exposing (hydrateTile)
@@ -36,6 +40,14 @@ type Map3dItem
     | Marker String GeoPoint Elevation
     | Line (List ( GeoPoint, Elevation ))
     | Cylinder GeoPoint Distance Elevation
+
+
+type alias ViewArgs =
+    { focalPoint : Point3d Meters WorldCoords -- the center point we're looking at
+    , azimuth : Angle -- camera angle around the z axis
+    , elevation : Angle -- camera angle relative to xy plane
+    , distance : Quantity Float Meters -- camera distance from the focal point
+    }
 
 
 type MercatorUnit
@@ -81,6 +93,11 @@ mercatorRate lat =
     Quantity.rate (Length.meters (tileLength lat Z0)) (mercatorUnit 1)
 
 
+flatWorldFrame : Frame2d Meters PlaneCoords {}
+flatWorldFrame =
+    Frame2d.atOrigin
+
+
 mercatorFrame : GeoPoint -> Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
 mercatorFrame center =
     let
@@ -96,15 +113,24 @@ mercatorFrame center =
         transVector =
             Vector2d.xy (mercatorUnit cx) (mercatorUnit (negate cy))
                 |> Vector2d.reverse
-
-        flatWorldFrame : Frame2d Meters PlaneCoords {}
-        flatWorldFrame =
-            Frame2d.atOrigin
     in
     -- in mercator coordinates the Y axis is reversed
     Frame2d.at_ rate flatWorldFrame
         |> Frame2d.translateBy transVector
         |> Frame2d.reverseY
+
+
+containingTile : ZoomLevel -> Point2d MercatorUnit MercatorCoords -> TileKey
+containingTile zoom p =
+    let
+        numTiles : Int
+        numTiles =
+            2 ^ zoomInt zoom
+    in
+    ( floor (getMercatorUnit (Point2d.xCoordinate p) * toFloat numTiles)
+    , floor (getMercatorUnit (Point2d.yCoordinate p) * toFloat numTiles)
+    , zoomInt zoom
+    )
 
 
 makeTiles :
@@ -119,13 +145,6 @@ makeTiles isInView mFrame mRate focalPoint zoom =
         numTiles : Int
         numTiles =
             2 ^ zoomInt zoom
-
-        containingTile : Point2d MercatorUnit MercatorCoords -> TileKey
-        containingTile p =
-            ( floor (getMercatorUnit (Point2d.xCoordinate p) * toFloat numTiles)
-            , floor (getMercatorUnit (Point2d.yCoordinate p) * toFloat numTiles)
-            , zoomInt zoom
-            )
 
         tileCoords : TileKey -> ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords )
         tileCoords ( kx, ky, _ ) =
@@ -146,7 +165,7 @@ makeTiles isInView mFrame mRate focalPoint zoom =
             focalPoint
                 |> Point2d.at_ mRate
                 |> Point2d.relativeTo mFrame
-                |> containingTile
+                |> containingTile zoom
 
         isCoordsInView : ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords ) -> Bool
         isCoordsInView ( p0, p1 ) =
@@ -193,7 +212,7 @@ makeMesh :
     -> Quantity Float (Rate Meters MercatorUnit)
     -> SketchPlane3d Meters WorldCoords { defines : PlaneCoords }
     -> ElevationPointsTile
-    -> Mesh.Textured WorldCoords
+    -> ( Mesh.Textured WorldCoords, Mesh.Shadow WorldCoords )
 makeMesh mFrame mRate xyPlane tile =
     let
         points : Array ( GeoPoint, Int )
@@ -241,12 +260,18 @@ makeMesh mFrame mRate xyPlane tile =
             , uv = ( dx, -dy )
             }
 
-        pointAt : Int -> Int -> { position : Point3d Meters WorldCoords, uv : ( Float, Float ) }
+        pointAt :
+            Int
+            -> Int
+            -> { position : Point3d Meters WorldCoords, uv : ( Float, Float ) }
         pointAt i j =
             points
                 |> Array.get (j * tile.rowLength + i)
                 |> Maybe.Extra.unpack meshOriginPoint makePoint
                 |> withRelativeTextureCoords ( toFloat i / toFloat xCount, toFloat j / toFloat yCount )
+
+        mesh =
+            TriangularMesh.indexedGrid xCount yCount pointAt
+                |> Mesh.texturedFacets
     in
-    TriangularMesh.indexedGrid xCount yCount pointAt
-        |> Mesh.texturedFacets
+    ( mesh, Mesh.shadow mesh )

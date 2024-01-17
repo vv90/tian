@@ -1,7 +1,6 @@
 module Main where
 
 import Backend.Utils (runBackend)
-import Env (checkRequiredEnvironmentKeys)
 import Relude
 
 -- startCounter :: Int -> IO ()
@@ -13,7 +12,7 @@ import Relude
 main :: IO ()
 main = do
   putStrLn "starting server..."
-  checkRequiredEnvironmentKeys
+  -- checkRequiredEnvironmentKeys
   -- print "N52E039"
   -- convertTiffSafe "./demo/ASTGTMV003_N52E039_dem.tif"
 

@@ -4,6 +4,7 @@ module Common.Utils exposing (roundN, sinh)
 roundN : Int -> Float -> Float
 roundN places n =
     let
+        factor : Float
         factor =
             toFloat (10 ^ places)
     in

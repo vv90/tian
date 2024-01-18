@@ -41,9 +41,11 @@ isLeapYear y =
 toPosix : Date -> Posix
 toPosix (Date y m d) =
     let
+        days : Int
         days =
             (y * 365) + countLeapYears (y - 1) + daysBeforeMonth m y + (d - 1)
 
+        epoch : Int
         epoch =
             (days - 719050) * millisInDay
     in
@@ -64,14 +66,17 @@ countLeapYears : Int -> Int
 countLeapYears year =
     let
         -- 492 leap year before 1970.
+        max : Int
         max =
             year // 4 - 492
 
         -- centuries that is not a leap year
+        false : Int
         false =
             year // 400 - 4
 
         -- 19 centuries before 1970.
+        century : Int
         century =
             year // 100 - 19
     in
@@ -81,6 +86,7 @@ countLeapYears year =
 daysBeforeMonth : Month -> Int -> Int
 daysBeforeMonth m y =
     let
+        addLeap : Int
         addLeap =
             if isLeapYear y then
                 1

@@ -43,6 +43,7 @@ update msg model =
 view : (a -> String) -> String -> Model a -> Element (Msg a)
 view toLabel placeholder model =
     let
+        label : String
         label =
             case model.selected of
                 Just value ->
@@ -51,6 +52,7 @@ view toLabel placeholder model =
                 Nothing ->
                     placeholder
 
+        options : Element (Msg a)
         options =
             if model.isOpen then
                 column []

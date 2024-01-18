@@ -33,9 +33,11 @@ setSpeed speed state =
 initPlaybackState : TaskProgress -> Maybe PlaybackState
 initPlaybackState { points } =
     let
+        firstPoint : Maybe ProgressPoint
         firstPoint =
             List.head points
 
+        lastPoint : Maybe ProgressPoint
         lastPoint =
             ListX.last points
     in
@@ -56,6 +58,7 @@ initPlaybackState { points } =
 advancePlaybackState : PlaybackState -> ( Maybe ProgressPoint, PlaybackState )
 advancePlaybackState state =
     let
+        newTimeMillis : Int
         newTimeMillis =
             posixToMillis state.currentTime + 100 * state.speed
 

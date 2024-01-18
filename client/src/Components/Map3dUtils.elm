@@ -270,6 +270,7 @@ makeMesh mFrame mRate xyPlane tile =
                 |> Maybe.Extra.unpack meshOriginPoint makePoint
                 |> withRelativeTextureCoords ( toFloat i / toFloat xCount, toFloat j / toFloat yCount )
 
+        mesh : Mesh.Textured WorldCoords
         mesh =
             TriangularMesh.indexedGrid xCount yCount pointAt
                 |> Mesh.texturedFacets

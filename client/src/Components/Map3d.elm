@@ -441,12 +441,15 @@ update msg model =
                                 (Point2d.pixels (Tuple.first xy) (toFloat model.windowSize.height - Tuple.second xy))
                                 |> Axis3d.intersectionWithPlane Plane3d.xy
 
+                        direction : Maybe (Direction3d.Direction3d WorldCoords)
                         direction =
                             MaybeX.andThen2 (\from to -> Direction3d.from from to) projectedPoint projectedPrevPoint
 
+                        distance : Maybe (Quantity Float Meters)
                         distance =
                             Maybe.map2 (\from to -> Point3d.distanceFrom from to) projectedPoint projectedPrevPoint
 
+                        target : Maybe (Point3d Meters WorldCoords)
                         target =
                             Maybe.map2 (\dir dist -> Point3d.translateIn dir dist model.viewArgs.focalPoint) direction distance
 

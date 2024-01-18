@@ -67,7 +67,6 @@ config =
     , NoUnused.Variables.rule
         |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components", "src/Demo" ]
     , NoImportingEverything.rule [ "Element", "Api.Types" ]
-        |> Rule.ignoreErrorsForDirectories [ "src/Domain", "src/Components" ]
     , NoExposingEverything.rule
     , NoMissingTypeAnnotation.rule
     , NoMissingTypeAnnotationInLetIn.rule

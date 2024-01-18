@@ -71,7 +71,7 @@ config =
     , NoExposingEverything.rule
     , NoMissingTypeAnnotation.rule
     , NoMissingTypeAnnotationInLetIn.rule
-        |> Rule.ignoreErrorsForDirectories [ "src/Domain", "src/Components" ]
+        |> Rule.ignoreErrorsForDirectories [ "src/Components" ]
     , NoPrematureLetComputation.rule
         |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
     , NoSimpleLetBody.rule

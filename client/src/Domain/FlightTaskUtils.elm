@@ -10,7 +10,7 @@ module Domain.FlightTaskUtils exposing
 
 import Api.Types exposing (..)
 import Components.Map3dUtils as M3d exposing (Map3dItem)
-import Domain.GeoUtils exposing (bearing, linePerpendicularToBearing)
+import Domain.GeoUtils exposing (Bearing, bearing, linePerpendicularToBearing)
 import List.Extra as ListX
 
 
@@ -19,6 +19,7 @@ startToMap3dItem nextPoint ( np, start ) =
     case start of
         StartLine r ->
             let
+                startBearing : Bearing
                 startBearing =
                     bearing { lat = np.lat, lon = np.lon } { lat = nextPoint.lat, lon = nextPoint.lon }
 
@@ -94,12 +95,15 @@ taskToMap3dItems task =
 navPoints : FlightTask -> List NavPoint
 navPoints task =
     let
+        start : NavPoint
         start =
             Tuple.first task.start
 
+        finish : NavPoint
         finish =
             Tuple.first task.finish
 
+        turnpoints : List NavPoint
         turnpoints =
             List.map Tuple.first task.turnpoints
     in

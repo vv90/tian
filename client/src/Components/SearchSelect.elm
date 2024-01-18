@@ -71,9 +71,11 @@ view :
     -> Element (Msg a)
 view { suggestions, toLabel, matchFn } model =
     let
+        attrs : List (Element.Attribute (Msg a))
         attrs =
             [ below optionsList ]
 
+        optionsList : Element (Msg a)
         optionsList =
             if model.isOpen then
                 el
@@ -96,6 +98,7 @@ view { suggestions, toLabel, matchFn } model =
             else
                 Element.none
 
+        optionElement : a -> Element (Msg a)
         optionElement =
             \item ->
                 el
@@ -105,6 +108,7 @@ view { suggestions, toLabel, matchFn } model =
                     ]
                     (text <| toLabel item)
 
+        input : Element (Msg a)
         input =
             Input.text
                 [ onClick InputClicked

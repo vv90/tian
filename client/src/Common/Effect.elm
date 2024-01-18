@@ -33,6 +33,7 @@ applyAll :
     -> ( m, Cmd msg )
 applyAll applyEffect (EffectSet effs) ( model, cmd ) =
     let
+        applySingle : ( a -> b, Cmd msg ) -> ( a, Cmd msg ) -> ( b, Cmd msg )
         applySingle ( fm, c1 ) ( m, c ) =
             ( fm m, Cmd.batch [ c1, c ] )
     in
@@ -48,6 +49,7 @@ applyMapAll :
     -> ( m, Cmd msg, EffectSet eff1 )
 applyMapAll applyEffect (EffectSet effs) ( model, cmd, efct ) =
     let
+        applySingle : ( a -> b, Cmd msg, EffectSet eff1 ) -> ( a, Cmd msg, EffectSet eff1 ) -> ( b, Cmd msg, EffectSet eff1 )
         applySingle ( fm, c1, e1 ) ( m, c, e ) =
             ( fm m, Cmd.batch [ c, c1 ], batch [ e, e1 ] )
     in

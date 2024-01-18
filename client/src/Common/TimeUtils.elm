@@ -11,6 +11,7 @@ addTime x y =
 padInt : Int -> Int -> String
 padInt len x =
     let
+        unpadded : String
         unpadded =
             String.fromInt x
     in

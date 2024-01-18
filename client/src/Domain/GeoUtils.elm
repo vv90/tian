@@ -177,18 +177,22 @@ distance gp1 gp2 =
         ( deltaLon, deltaLat ) =
             ( lonRad2 - lonRad1, latRad2 - latRad2 )
 
+        r : Float
         r =
             metersDistance earthRadius
 
         -- a = sin²(Δφ/2) + cos φ1 ⋅ cos φ2 ⋅ sin²(Δλ/2)
+        a : Float
         a =
             sin (deltaLat / 2) ^ 2 + cos latRad1 * cos latRad2 * sin (deltaLon / 2) ^ 2
 
         -- c = 2 ⋅ atan2( √a, √(1−a) )
+        c : Float
         c =
             2 * atan2 (sqrt a) (sqrt (1 - a))
 
         -- d = R ⋅ c
+        d : Float
         d =
             r * c
 
@@ -222,13 +226,16 @@ bearing gp1 gp2 =
         ( deltaLon, deltaLat ) =
             ( lonRad2 - lonRad1, latRad2 - latRad2 )
 
+        x : Float
         x =
             sin deltaLon * cos latRad2
 
+        y : Float
         y =
             cos latRad1 * sin latRad2 - sin latRad1 * cos latRad2 * cos deltaLon
 
         -- bearing between -180 and 180 degrees
+        b : Float
         b =
             atan2 x y |> radToDeg
     in
@@ -240,6 +247,7 @@ bearing gp1 gp2 =
 bearingDifference : Bearing -> Bearing -> Float
 bearingDifference (Bearing b1) (Bearing b2) =
     let
+        angle : Float
         angle =
             max b1 b2 - min b1 b2
     in
@@ -260,15 +268,19 @@ destination (Bearing b) (DistanceMeters d) { lat, lon } =
             , lat |> degreesLatitude |> degrees
             )
 
+        bRad : Float
         bRad =
             degrees b
 
+        r : Float
         r =
             metersDistance earthRadius
 
+        latRad2 : Float
         latRad2 =
             asin (sin latRad1 * cos (d / r) + cos latRad1 * sin (d / r) * cos bRad)
 
+        lonRad2 : Float
         lonRad2 =
             lonRad1 + atan2 (sin bRad * sin (d / r) * cos latRad1) (cos (d / r) - sin latRad1 * sin latRad2)
     in
@@ -282,15 +294,19 @@ destination (Bearing b) (DistanceMeters d) { lat, lon } =
 linePerpendicularToBearing : Distance -> GeoPoint -> Bearing -> ( GeoPoint, GeoPoint )
 linePerpendicularToBearing radius origin (Bearing b) =
     let
+        bLeft : Bearing
         bLeft =
             normalizedBearing (b - 90)
 
+        bRight : Bearing
         bRight =
             normalizedBearing (b + 90)
 
+        lp1 : GeoPoint
         lp1 =
             destination bLeft radius origin
 
+        lp2 : GeoPoint
         lp2 =
             destination bRight radius origin
     in

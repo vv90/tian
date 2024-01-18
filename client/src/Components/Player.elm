@@ -48,6 +48,7 @@ type alias Model =
 init : List TaskProgress -> Maybe Model
 init progressList =
     let
+        initTime : Maybe Int
         initTime =
             progressList
                 |> List.filterMap (.points >> List.head >> Maybe.map .time)
@@ -104,6 +105,7 @@ withSpeed speed model =
 advancePlayback : Int -> Model -> Model
 advancePlayback millis model =
     let
+        newTimeMillis : Int
         newTimeMillis =
             model.currentTime + millis
     in
@@ -148,6 +150,7 @@ subscriptions model =
 view : Model -> Element Msg
 view model =
     let
+        playbackButton : Element Msg
         playbackButton =
             if model.playing then
                 Input.button
@@ -163,12 +166,15 @@ view model =
                     , label = text "Play"
                     }
 
+        lowerSpeedMsg : Maybe Msg
         lowerSpeedMsg =
             Maybe.map SpeedChanged <| lowerSpeed model.speed
 
+        increaseSpeedMsg : Maybe Msg
         increaseSpeedMsg =
             Maybe.map SpeedChanged <| increaseSpeed model.speed
 
+        lowerSpeedButton : Element Msg
         lowerSpeedButton =
             Input.button
                 []
@@ -176,6 +182,7 @@ view model =
                 , label = text "<"
                 }
 
+        increaseSpeedButton : Element Msg
         increaseSpeedButton =
             Input.button
                 []
@@ -200,6 +207,7 @@ view model =
                             p.target
                     )
 
+        leaderboard : List PlaybackState -> Element msg
         leaderboard states =
             states
                 |> List.filterMap toStats

@@ -63,6 +63,7 @@ positive =
 fromParser : String -> Parser a -> (a -> String) -> Codec String a
 fromParser name parser toString =
     let
+        decode : String -> Result CodecError a
         decode =
             Parser.run parser >> Result.mapError (deadEndsToString >> CodecError)
     in

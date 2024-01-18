@@ -184,7 +184,8 @@ leaderboard model =
         findName : String -> Maybe String
         findName id =
             model.demoData
-                |> (deferredToMaybe >> Maybe.andThen Result.toMaybe)
+                |> deferredToMaybe
+                |> Maybe.andThen Result.toMaybe
                 |> Maybe.andThen (Tuple.second >> ListX.find (\n -> n.compId == id))
                 |> Maybe.map .name
 

@@ -1,11 +1,11 @@
 module Common.TimeUtils exposing (addTime, formatTime, padInt)
 
-import Time exposing (..)
+import Time exposing (Posix)
 
 
 addTime : Posix -> Posix -> Posix
 addTime x y =
-    posixToMillis x + posixToMillis y |> millisToPosix
+    Time.posixToMillis x + Time.posixToMillis y |> Time.millisToPosix
 
 
 padInt : Int -> Int -> String
@@ -20,8 +20,8 @@ padInt len x =
 
 formatTime : Posix -> String
 formatTime x =
-    (toHour utc >> String.fromInt >> String.padLeft 2 '0') x
+    (Time.toHour Time.utc >> String.fromInt >> String.padLeft 2 '0') x
         ++ ":"
-        ++ (toMinute utc >> String.fromInt >> String.padLeft 2 '0') x
+        ++ (Time.toMinute Time.utc >> String.fromInt >> String.padLeft 2 '0') x
         ++ ":"
-        ++ (toSecond utc >> String.fromInt >> String.padLeft 2 '0') x
+        ++ (Time.toSecond Time.utc >> String.fromInt >> String.padLeft 2 '0') x

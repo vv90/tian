@@ -1,7 +1,7 @@
 module Demo.FlightTask.FlightTaskPreview exposing (view)
 
 import Api.Types exposing (..)
-import Element exposing (Element, text)
+import Element exposing (..)
 
 
 view : FlightTask -> Element msg

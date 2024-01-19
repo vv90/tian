@@ -1,4 +1,14 @@
-module Common.ParserUtils exposing (digits, digitsHelp, digitsToInt, inQuotations, maybeParser, plainFloatParser, plainIntParser, timeOfDayParser, wordVal)
+module Common.ParserUtils exposing
+    ( digits
+    , digitsHelp
+    , digitsToInt
+    , inQuotations
+    , maybeParser
+    , plainFloatParser
+    , plainIntParser
+    , timeOfDayParser
+    , wordVal
+    )
 
 import Parser exposing ((|.), (|=), Parser, Step(..))
 import Set

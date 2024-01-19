@@ -5,11 +5,9 @@ import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (Deferred(..))
 import Common.Palette as Palette
 import Demo.FlightTask.FlightTaskPreview as FlightTaskPreview
-import Element exposing (Element, column, el, fill, mouseOver, none, shrink, spacing, table, text)
+import Element exposing (..)
 import Element.Background as Background
 import Element.Input as Input
-import List.Extra
-import List.Nonempty exposing (Nonempty, toList)
 
 
 

@@ -8,7 +8,6 @@ import Html.Attributes exposing (type_)
 import Html.Events exposing (on)
 import Http
 import Json.Decode as D
-import Task exposing (perform)
 
 
 type alias Model =
@@ -48,12 +47,12 @@ update msg model =
         Uploaded (Ok _) ->
             ( "Success", Cmd.none )
 
-        Uploaded (Err e) ->
+        Uploaded (Err _) ->
             ( "HttpError", Cmd.none )
 
 
 view : Model -> Html Msg
-view model =
+view _ =
     div []
         [ h2 [] [ text "File Upload demo" ]
         , input

@@ -15,7 +15,7 @@ import Demo.Demo as Demo
 import Demo.FlightTask.FlightTaskForm as FlightTaskForm
 import Demo.FlightTask.FlightTaskList as FlightTaskList
 import Demo.FlightTrack.FlightTrackUpload as FlightTrackUpload
-import Element exposing (Element)
+import Element exposing (..)
 
 
 type Model

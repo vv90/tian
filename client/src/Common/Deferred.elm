@@ -1,4 +1,10 @@
-module Common.Deferred exposing (AsyncOperationStatus(..), Deferred(..), deferredIsPending, deferredToMaybe, setPending)
+module Common.Deferred exposing
+    ( AsyncOperationStatus(..)
+    , Deferred(..)
+    , deferredIsPending
+    , deferredToMaybe
+    , setPending
+    )
 
 
 type Deferred a

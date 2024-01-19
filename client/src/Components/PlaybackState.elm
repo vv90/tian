@@ -1,4 +1,11 @@
-module Components.PlaybackState exposing (PlaybackState, advancePlaybackState, initPlaybackState, setSpeed, start, stop)
+module Components.PlaybackState exposing
+    ( PlaybackState
+    , advancePlaybackState
+    , initPlaybackState
+    , setSpeed
+    , start
+    , stop
+    )
 
 import Api.Types exposing (..)
 import List.Extra as ListX

@@ -52,22 +52,23 @@ config =
     , NoUnsafeDivision.rule
         |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
     , NoUnused.CustomTypeConstructors.rule []
-        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components", "src/Demo" ]
+        |> Rule.ignoreErrorsForDirectories [ "src/Components", "src/Demo" ]
     , NoUnused.CustomTypeConstructorArgs.rule
-        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
+        |> Rule.ignoreErrorsForDirectories [ "src/Components" ]
     , NoUnused.Dependencies.rule
     , NoUnused.Exports.rule
         |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
     , NoUnused.Modules.rule
-        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
+        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Components" ]
     , NoUnused.Parameters.rule
-        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
+        |> Rule.ignoreErrorsForDirectories [ "src/Domain" ]
     , NoUnused.Patterns.rule
-        |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components" ]
+        |> Rule.ignoreErrorsForDirectories [ "src/Domain" ]
     , NoUnused.Variables.rule
         |> Rule.ignoreErrorsForDirectories [ "src/Common", "src/Domain", "src/Components", "src/Demo" ]
     , NoImportingEverything.rule [ "Element", "Api.Types" ]
     , NoExposingEverything.rule
+        |> Rule.ignoreErrorsForFiles [ "src/Common/Palette.elm" ]
     , NoMissingTypeAnnotation.rule
     , NoMissingTypeAnnotationInLetIn.rule
     , NoPrematureLetComputation.rule

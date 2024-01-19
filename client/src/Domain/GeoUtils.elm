@@ -175,7 +175,7 @@ distance gp1 gp2 =
             )
 
         ( deltaLon, deltaLat ) =
-            ( lonRad2 - lonRad1, latRad2 - latRad2 )
+            ( lonRad2 - lonRad1, latRad2 - latRad1 )
 
         r : Float
         r =
@@ -224,7 +224,7 @@ bearing gp1 gp2 =
             )
 
         ( deltaLon, deltaLat ) =
-            ( lonRad2 - lonRad1, latRad2 - latRad2 )
+            ( lonRad2 - lonRad1, latRad2 - latRad1 )
 
         x : Float
         x =

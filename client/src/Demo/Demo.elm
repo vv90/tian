@@ -14,7 +14,7 @@ import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Common.Palette as Palette
 import Common.Utils exposing (roundN)
 import Dict exposing (Dict)
-import Element exposing (Element, column, el, fill, paddingXY, paragraph, shrink, spacing, spacingXY, table, text)
+import Element exposing (..)
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region

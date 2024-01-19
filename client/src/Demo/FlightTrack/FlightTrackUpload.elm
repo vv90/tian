@@ -15,7 +15,7 @@ import Common.JsonCodecsExtra exposing (filesDecoder)
 import Components.Map3dUtils exposing (Map3dItem)
 import Components.Player as Player
 import Domain.FlightTaskUtils exposing (taskToMap3dItems)
-import Element exposing (Element, html, row, spacing, text)
+import Element exposing (..)
 import Element.Input as Input
 import Env exposing (apiUrl)
 import File exposing (File)

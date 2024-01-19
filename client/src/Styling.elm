@@ -1,7 +1,7 @@
 module Styling exposing (buttonDefault, buttonDisabled)
 
 import Common.Palette as Palette
-import Element exposing (Attribute, padding)
+import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font

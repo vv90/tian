@@ -1,7 +1,7 @@
 module Components.SearchSelect exposing (Model, Msg(..), filterMatchingSuggestions, init, update, view)
 
 import Common.Palette
-import Element exposing (Element, below, clipY, column, el, fill, height, maximum, mouseOver, scrollbarY, spacing, text, width)
+import Element exposing (..)
 import Element.Background as Background
 import Element.Events exposing (onClick)
 import Element.Input as Input
@@ -78,6 +78,17 @@ view { suggestions, toLabel, matchFn } model =
         optionsList : Element (Msg a)
         optionsList =
             if model.isOpen then
+                let
+                    optionElement : a -> Element (Msg a)
+                    optionElement =
+                        \item ->
+                            el
+                                [ onClick (ItemSelected item)
+                                , mouseOver [ Background.color Common.Palette.gray ]
+                                , width fill
+                                ]
+                                (text <| toLabel item)
+                in
                 el
                     [ width fill
                     , height <| maximum 300 fill
@@ -97,16 +108,6 @@ view { suggestions, toLabel, matchFn } model =
 
             else
                 Element.none
-
-        optionElement : a -> Element (Msg a)
-        optionElement =
-            \item ->
-                el
-                    [ onClick (ItemSelected item)
-                    , mouseOver [ Background.color Common.Palette.gray ]
-                    , width fill
-                    ]
-                    (text <| toLabel item)
 
         input : Element (Msg a)
         input =

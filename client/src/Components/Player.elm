@@ -1,16 +1,28 @@
-module Components.Player exposing (Model, Msg(..), PlaybackState, advancePlayback, currPoints, init, paused, started, subscriptions, update, updatePlaybackState, view, withSpeed)
+module Components.Player exposing
+    ( Model
+    , Msg(..)
+    , PlaybackState
+    , advancePlayback
+    , currPoints
+    , init
+    , paused
+    , started
+    , subscriptions
+    , update
+    , updatePlaybackState
+    , view
+    , withSpeed
+    )
 
 import Api.Types exposing (..)
 import Common.TimeUtils exposing (formatTime)
 import Common.Utils exposing (roundN)
 import Components.PlaybackSpeed exposing (PlaybackSpeed(..), increaseSpeed, lowerSpeed, playbackCoefficient)
-import Domain.GeoUtils exposing (degreesLatitude, degreesLongitude, metersDistance, metersElevation)
-import Element exposing (Element, column, none, padding, row, spacing, text)
+import Domain.GeoUtils exposing (metersElevation)
+import Element exposing (..)
 import Element.Input as Input
 import Element.Lazy exposing (lazy)
-import List.Extra as ListX
-import Maybe.Extra as MaybeX
-import Time exposing (Posix, millisToPosix, posixToMillis)
+import Time exposing (millisToPosix)
 
 
 type alias PlaybackState =

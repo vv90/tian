@@ -1,6 +1,6 @@
 module Components.Select exposing (Model, Msg(..), init, update, view)
 
-import Element exposing (Element, below, column, el, htmlAttribute, text)
+import Element exposing (..)
 import Element.Events exposing (onClick)
 import Element.Input as Input
 import Html.Events exposing (onBlur)

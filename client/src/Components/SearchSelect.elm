@@ -78,6 +78,17 @@ view { suggestions, toLabel, matchFn } model =
         optionsList : Element (Msg a)
         optionsList =
             if model.isOpen then
+                let
+                    optionElement : a -> Element (Msg a)
+                    optionElement =
+                        \item ->
+                            el
+                                [ onClick (ItemSelected item)
+                                , mouseOver [ Background.color Common.Palette.gray ]
+                                , width fill
+                                ]
+                                (text <| toLabel item)
+                in
                 el
                     [ width fill
                     , height <| maximum 300 fill
@@ -97,16 +108,6 @@ view { suggestions, toLabel, matchFn } model =
 
             else
                 Element.none
-
-        optionElement : a -> Element (Msg a)
-        optionElement =
-            \item ->
-                el
-                    [ onClick (ItemSelected item)
-                    , mouseOver [ Background.color Common.Palette.gray ]
-                    , width fill
-                    ]
-                    (text <| toLabel item)
 
         input : Element (Msg a)
         input =

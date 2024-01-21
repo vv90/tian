@@ -2,7 +2,6 @@ module AppState exposing
     ( Model
     , Msg(..)
     , getFlightTasksCmd
-    , getNavPointsCmd
     , init
     , update
     , withPendingFlightTasks

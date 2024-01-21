@@ -240,7 +240,6 @@ type API =
     :<|> "demo" :> WebSocketSource (Text, ProgressPointDto)
     :<|> "demoTask" :> Get '[JSON] (FlightTask, [NameMatch])
     :<|> "watchFlights" :> WebSocketConduit () (FlightId, FlightPosition)
-    :<|> "elevationTile" :> Capture "zoom" Int :> Capture "x" Int :> Capture "y" Int :> Get '[OctetStream] ByteString
 
 server :: TVar FlightsTable -> Server API
 server flightsTvar =
@@ -254,7 +253,6 @@ server flightsTvar =
     :<|> progressDemo
     :<|> demoTask
     :<|> watchFlights flightsTvar
-    :<|> elevationTile
 
 startApp :: TVar FlightsTable -> Port -> IO ()
 startApp flightsTvar port = do
@@ -323,24 +321,3 @@ demoTask = do
   case (,) <$> flightTask <*> nameMatch of
     Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
     Right (Entity _ ft, nm) -> pure (ft, nm)
-
-elevationTile :: Int -> Int -> Int -> Handler ByteString
-elevationTile zoom x y = do
-  readFileBS $ "./tiles/" <> show zoom <> "/" <> show x <> "_" <> show y <> ".json"
-
--- case pts of
---     Left e -> throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
---     Right x -> pure x
-
--- startDemo :: TMVar FlightTask -> Handler ()
--- startDemo var = do
---     print "attempting to start demo"
---     flightTask <-
---         fmap (\a -> a >>= maybeToRight (FormatError "Task not found"))
---         $ liftIO $ runExceptT $ getFlightTask 6
-
---     case flightTask of
---         Left e ->
---             throwError $ err400 { errBody = "Error: " <> (encodeUtf8 . pack . show) e  }
---         Right (Entity _ ft) ->
---             liftIO $ atomically $ putTMVar var ft

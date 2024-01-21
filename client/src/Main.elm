@@ -62,7 +62,8 @@ type alias Model =
     , testProgressModel : TestProgress.Model
     , appState : AppState.Model
     , messages : List String
-    , demoTask : Maybe FlightTask
+
+    -- , demoTask : Maybe FlightTask
     , flightPositions : Dict String ( GeoPoint, Elevation )
     }
 
@@ -96,13 +97,12 @@ init flags =
                 |> AppState.withPendingNavPoints
                 |> AppState.withPendingFlightTasks
       , messages = []
-      , demoTask = Nothing
+
+      --   , demoTask = Nothing
       , flightPositions = Dict.empty
       }
     , Cmd.batch
-        [ Cmd.map AppStateMsg AppState.getNavPointsCmd
-        , Cmd.map AppStateMsg AppState.getFlightTasksCmd
-        , Cmd.map Map3dMsg m3dCmd
+        [ Cmd.map Map3dMsg m3dCmd
         , watchFlight ()
         ]
     )

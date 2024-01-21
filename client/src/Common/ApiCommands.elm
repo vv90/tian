@@ -13,13 +13,13 @@ loadElevationTileCmd : (ApiResult ElevationPointsTile -> msg) -> TileKey -> Cmd 
 loadElevationTileCmd onLoaded ( x, y, zoom ) =
     Http.get
         { url =
-            apiUrl <|
-                "elevationTile/"
-                    ++ String.fromInt zoom
-                    ++ "/"
-                    ++ String.fromInt x
-                    ++ "/"
-                    ++ String.fromInt y
+            "/tiles/v1/"
+                ++ String.fromInt zoom
+                ++ "/"
+                ++ String.fromInt x
+                ++ "_"
+                ++ String.fromInt y
+                ++ ".json"
         , expect = Http.expectJson onLoaded elevationPointsTileDecoder
         }
 

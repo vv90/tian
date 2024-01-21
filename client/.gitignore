@@ -4,5 +4,8 @@ elm-stuff
 # Node.js
 node_modules
 
+# static tiles 
+public/tiles
+
 # Build
 dist

@@ -1,7 +1,6 @@
 // @ts-ignore
 import { Elm } from "./src/Main.elm";
 import { displayErrorMessage } from "./errors";
-
 // // @ts-ignore
 // if (process.env.NODE_ENV === "development") {
 //   const ElmDebugTransform = await import("elm-debug-transformer");
@@ -36,7 +35,7 @@ const getConfig = async () => {
   });
 
   app.ports.watchFlight.subscribe(() => {
-    const socket = new WebSocket(`ws://localhost:8081/watchFlights`);
+    const socket = new WebSocket(`ws://${location.hostname}:8081/watchFlights`);
 
     socket.addEventListener("message", (event) => {
       if (event.data instanceof Blob) {

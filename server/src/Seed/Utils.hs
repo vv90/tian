@@ -1,6 +1,5 @@
 module Seed.Utils where
 
-import Control.Concurrent.Async (mapConcurrently_)
 import Control.Monad.Except (withExceptT)
 import Data.Aeson (encode)
 import Data.Aeson.Types ()
@@ -9,7 +8,7 @@ import ElevationPointsTileData (ElevationPointsTile (..))
 import Geo (Latitude (..), Longitude (..))
 import GeoPoint (GeoPoint (..))
 import Hasql.Session qualified as Session
-import Mercator (MercatorTileKey (..), ZoomLevel (..), containingTile, tileBoundingGeoPoints, zoomInt)
+import Mercator (MercatorTileKey (..), tileBoundingGeoPoints)
 import Persistence.Connection (getConnection)
 import Persistence.Session (generateElevationPointsSession)
 import Persistence.Statement (ElevationPointQuery (..))
@@ -72,25 +71,23 @@ generateTileElevationPoints tileKey =
 
 seed :: IO ()
 seed =
-  let zoom :: ZoomLevel
-      zoom = Z12
+  -- let startingTileKey :: Int -> MercatorTileKey
+  --     startingTileKey zoom = containingTile zoom $ GeoPoint (LatitudeDegrees 43.0) (LongitudeDegrees 5.0)
 
-      startingTileKey :: MercatorTileKey
-      startingTileKey = containingTile zoom $ GeoPoint (LatitudeDegrees 43.0) (LongitudeDegrees 5.0)
+  --     endingTileKey :: Int -> MercatorTileKey
+  --     endingTileKey zoom = containingTile zoom $ GeoPoint (LatitudeDegrees 46.0) (LongitudeDegrees 8.0)
 
-      endingTileKey :: MercatorTileKey
-      endingTileKey = containingTile zoom $ GeoPoint (LatitudeDegrees 46.0) (LongitudeDegrees 8.0)
+  --     -- tileKeys = [MercatorTileKey x y z | z <- [13 .. 15], x <- [startingTileKey z.x .. endingTileKey z.x], y <- [endingTileKey z.y .. startingTileKey z.y]]
 
-      tileKeys = [MercatorTileKey x y (zoomInt zoom) | x <- [startingTileKey.x .. endingTileKey.x], y <- [endingTileKey.y .. startingTileKey.y]]
+  --     -- Define the function to split a list into chunks
+  --     chunk :: Int -> [a] -> [[a]]
+  --     chunk _ [] = []
+  --     chunk n xs = take n xs : chunk n (drop n xs)
 
-      -- Define the function to split a list into chunks
-      chunk :: Int -> [a] -> [[a]]
-      chunk _ [] = []
-      chunk n xs = take n xs : chunk n (drop n xs)
+  --     chunks = chunk (length tileKeys `div` 10) tileKeys
 
-      chunks = chunk (length tileKeys `div` 10) tileKeys
-
-      processChunk :: [MercatorTileKey] -> IO ()
-      processChunk = traverse_ generateTileElevationPoints
-   in do
-        mapConcurrently_ processChunk chunks
+  --     processChunk :: [MercatorTileKey] -> IO ()
+  --     processChunk = traverse_ generateTileElevationPoints
+  --  in do
+  --       mapConcurrently_ processChunk chunks
+  pass

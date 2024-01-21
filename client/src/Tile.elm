@@ -43,7 +43,7 @@ type alias TileKey =
 tileKeyToUrl : TileKey -> String
 tileKeyToUrl ( x, y, zoom ) =
     String.concat
-        [ "http://a.tile.openstreetmap.org/"
+        [ "https://a.tile.openstreetmap.org/"
         , String.fromInt zoom
         , "/"
         , x |> String.fromInt

@@ -9,8 +9,7 @@ import Data.Vector (Vector, (!), (!?))
 import Data.Vector qualified as Vector
 import GHC.ByteOrder (ByteOrder (..))
 import GHC.IO.Handle (hSeek)
-import Geo (Latitude (..), Longitude (..))
-import GeoTiff.ElevationPoint (ElevationPoint (ElevationPoint))
+import Geo (GeoPosition (..), Latitude (..), Longitude (..))
 import GeoTiff.LZW (decodeLZW)
 import Relude
 import System.IO (SeekMode (AbsoluteSeek), hPutStrLn, hTell, openBinaryFile, withBinaryFile)
@@ -175,6 +174,10 @@ data TiffConfig = TiffConfig
     modelTiePoint :: ModelTiePoint
   }
   deriving stock (Show)
+
+type TiffTilesData = Vector (Vector Word16)
+
+type TiffContents = (TiffConfig, TiffTilesData)
 
 -- readElevationPoints :: [MapTile] -> ExceptT String IO [[Int]]
 -- readElevationPoints tiles = do
@@ -375,7 +378,7 @@ readTileElevations byteOrder h (offset, len) = do
   liftIO $ hSeek h AbsoluteSeek offset
   readWord8Many (fromIntegral len) h >>= decodeLZW byteOrder
 
-readTiffElevationData :: FilePath -> ExceptT String IO [Vector ElevationPoint]
+readTiffElevationData :: FilePath -> ExceptT String IO TiffContents
 readTiffElevationData filePath =
   do
     h <- liftIO $ openBinaryFile filePath ReadMode
@@ -387,63 +390,13 @@ readTiffElevationData filePath =
 
     let TileOffsets offsets = config.tileOffsets
         TileByteCounts byteCounts = config.tileByteCounts
-        ImageWidth imageWidth = config.imageWidth
-        ImageHeight imageHeight = config.imageHeight
-        TileWidth tileWidth = config.tileWidth
-        TileHeight tileHeight = config.tileHeight
-        ModelTiePoint _tiePoint@(_px, _py, _pz, mLon, mLat, _mz) = config.modelTiePoint
-        ModelPixelScale _pixelScale@(xScale, yScale, _zScale) = config.modelPixelScale
 
-        -- width of the image in tiles (rounded up to cover the whole image)
-        tilesCountRow :: Int
-        tilesCountRow = (ceiling @Double @Int) $ fromIntegral imageWidth / fromIntegral tileWidth
-        -- height of the image in tiles (rounded up to cover the whole image)
-        -- tilesCountCol :: Int
-        -- tilesCountCol = (ceiling @Double @Int) $ fromIntegral imageHeight / fromIntegral tileHeight
-
-        -- row of the tile in the image
-        tileImageRow :: Int -> Int
-        tileImageRow tileIndex = tileIndex `div` tilesCountRow
-
-        -- column of the tile in the image
-        tileImageCol :: Int -> Int
-        tileImageCol tileIndex = tileIndex `mod` tilesCountRow
-
-        -- row of the pixel in the tile
-        pixelTileRow :: Int -> Int
-        pixelTileRow pixelIndex = pixelIndex `div` tileWidth
-
-        -- column of the pixel in the tile
-        pixelTileCol :: Int -> Int
-        pixelTileCol pixelIndex = pixelIndex `mod` tileWidth
-
-        -- the coordinates of the tile pixel in the image
-        pixelImageCoord :: Int -> Int -> (Int, Int)
-        pixelImageCoord tile pixel =
-          ( tileImageCol tile * tileWidth + pixelTileCol pixel,
-            tileImageRow tile * tileHeight + pixelTileRow pixel
-          )
-
-        pixelToElevationPoint :: Int -> Int -> Word16 -> Maybe ElevationPoint
-        pixelToElevationPoint tile pixel elevation =
-          let (pixelCol, pixelRow) = pixelImageCoord tile pixel
-           in if pixelCol >= imageWidth || pixelRow >= imageHeight
-                then Nothing
-                else
-                  Just
-                    $ ElevationPoint
-                      (fromIntegral elevation)
-                      (LongitudeDegrees $ fromIntegral pixelCol * xScale + mLon)
-                      (LatitudeDegrees $ fromIntegral pixelRow * yScale + mLat)
-
-        readTile :: Int -> (Integer, Integer) -> ExceptT String IO (Vector ElevationPoint)
-        readTile tileIndex (offset, tileLength) =
+        readTile :: (Integer, Integer) -> ExceptT String IO (Vector Word16)
+        readTile (offset, tileLength) =
           do
             liftIO $ hSeek h AbsoluteSeek offset
 
-            r <- readWord8Many (fromIntegral tileLength) h >>= decodeLZW byteOrder
-
-            pure $ Vector.imapMaybe (pixelToElevationPoint tileIndex) r
+            readWord8Many (fromIntegral tileLength) h >>= decodeLZW byteOrder
 
     -- pixelCoords :: Int -> Int -> Maybe (Double, Double)
     -- pixelCoords tile pixel =
@@ -454,14 +407,57 @@ readTiffElevationData filePath =
     -- print (imageWidth, imageHeight)
     -- print (tileWidth, tileHeight)
     -- print $ pixelImageCoord 14 256
-    r <- sequence $ Vector.imap readTile $ Vector.zip offsets byteCounts
+    r <- traverse readTile $ Vector.zip offsets byteCounts
 
     -- r <- readTile 0 ((Vector.unsafeHead offsets), (Vector.unsafeHead byteCounts))
     -- print $ Vector.unsafeIndex r 10
     -- print $ Vector.length $ Vector.concat $ Vector.toList r
 
     -- pass
-    pure $ Vector.toList r
+    pure (config, r)
+
+lookupElevationValue :: (GeoPosition pos) => TiffContents -> pos -> Maybe Word16
+lookupElevationValue (config, tiles) pos =
+  let ImageWidth imageWidth = config.imageWidth
+      TileWidth tileWidth = config.tileWidth
+      TileHeight tileHeight = config.tileHeight
+      ModelTiePoint _tiePoint@(_px, _py, _pz, mLon, mLat, _mz) = config.modelTiePoint
+      ModelPixelScale _pixelScale@(xScale, yScale, _zScale) = config.modelPixelScale
+
+      (LongitudeDegrees lon, LatitudeDegrees lat) = (longitude pos, latitude pos)
+
+      tilesAcross :: Int
+      tilesAcross = (imageWidth + tileWidth - 1) `div` tileWidth
+
+      -- the coordinates of the pixel in the image closest to the given coordinates
+      x :: Int
+      x = round ((lon - mLon) / xScale)
+
+      y :: Int
+      y = round ((mLat - lat) / yScale)
+
+      -- the tile containing the pixel
+      xTile :: Int
+      xTile = x `div` tileWidth
+
+      yTile :: Int
+      yTile = y `div` tileHeight
+
+      -- the index of the tile in the tiles vector
+      tileIndex :: Int
+      tileIndex = xTile + yTile * tilesAcross
+
+      -- the coordinates of the pixel in the tile
+      xTilePixel :: Int
+      xTilePixel = x `mod` tileWidth
+
+      yTilePixel :: Int
+      yTilePixel = y `mod` tileHeight
+
+      -- the index of the pixel in the tile data vector
+      pixelTileIndex :: Int
+      pixelTileIndex = xTilePixel + yTilePixel * tileWidth
+   in tiles !? tileIndex >>= (!? pixelTileIndex)
 
 tiffChunksC :: Handle -> ConduitT () (Vector Word16) (ExceptT String IO) ()
 tiffChunksC h = do

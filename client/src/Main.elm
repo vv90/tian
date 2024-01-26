@@ -6,14 +6,12 @@ module Main exposing
 
 import Api.Types exposing (..)
 import AppState
-import Axis3d
 import Browser
-import Camera3d
 import Common.Effect as Effect
 import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Common.Palette as Palette
-import Components.Map3d as Map3d exposing (camera, screenRectangle)
-import Components.Map3dUtils exposing (Map3dItem(..), MercatorCoords, MercatorUnit, containingTile)
+import Components.Map3d as Map3d
+import Components.Map3dUtils exposing (Map3dItem(..))
 import Demo.Demo as Demo
 import Demo.FlightTaskPage as FlightTaskPage
 import Demo.Test.TestProgress as TestProgress
@@ -24,12 +22,7 @@ import Flags exposing (Flags, WindowSize)
 import Html exposing (Html, div)
 import Html.Attributes exposing (style)
 import Json.Decode as D
-import Plane3d
-import Point2d exposing (Point2d)
-import Point3d
 import Ports exposing (flightPositionReceiver, watchFlight)
-import SketchPlane3d
-import Tile exposing (TileKey, ZoomLevel(..))
 
 
 main : Program Flags Model Msg
@@ -224,40 +217,20 @@ view model =
         map3dItems =
             model.flightPositions |> Dict.toList |> List.map (\( key, ( pt, elev ) ) -> Marker key pt elev)
 
-        -- case model.flightTaskPage of
-        --     FlightTaskPage.UploadTrack pm ->
-        --         FlightTrackUpload.map3dItems (AppState.resolvedTasks model.appState) pm
-        --     FlightTaskPage.DemoPage pm ->
-        --         Demo.map3dItems pm
-        --     _ ->
-        --         []
-        projectCursor : ( Float, Float ) -> Maybe (Point2d MercatorUnit MercatorCoords)
-        projectCursor ( x, y ) =
-            Camera3d.ray
-                (camera model.map3dModel.viewArgs)
-                (screenRectangle model.map3dModel.windowSize)
-                (Point2d.pixels x (toFloat model.map3dModel.windowSize.height - y))
-                |> Axis3d.intersectionWithPlane Plane3d.xy
-                |> Maybe.map (Point3d.at_ model.map3dModel.mercatorRate >> Point3d.projectInto SketchPlane3d.xy >> Point2d.relativeTo model.map3dModel.mapFrame)
-
-        cursorPosition : Maybe TileKey
-        cursorPosition =
-            model.map3dModel.cursorPosition
-                |> Maybe.andThen projectCursor
-                |> Maybe.map (containingTile Z12)
-
-        showTileKey : TileKey -> String
-        showTileKey ( x, y, zoom ) =
-            String.fromInt x ++ ", " ++ String.fromInt y ++ ", " ++ String.fromInt zoom
+        tutorial : Element Msg
+        tutorial =
+            column [ padding 10, spacing 10 ]
+                [ paragraph [ Font.bold ] [ text "Controls" ]
+                , paragraph [] [ text "Drag – move the map" ]
+                , paragraph [] [ text "Right click + drag – rotate the camera" ]
+                , paragraph [] [ text "Scroll – zoom" ]
+                ]
     in
     div
         [ style "display" "flex"
         , style "flex-direction" "row"
         ]
-        -- [ Map.view mapItems model.mapModel |> Html.map MapMsg
-        [ cursorPosition
-            |> Maybe.map (showTileKey >> text)
-            |> Maybe.withDefault (text "No cursor")
+        [ tutorial
             |> sidebar
 
         -- Element.map FlightTaskPageMsg <|

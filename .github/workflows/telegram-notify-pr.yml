@@ -1,5 +1,9 @@
 name: Telegram notification
 
+# Setup instructions:
+# https://dev.to/nikhilvemula/get-notified-via-telegram-when-pull-request-is-raised-4ha4
+# https://github.com/appleboy/telegram-action
+
 on:
   pull_request:
     types:

@@ -357,10 +357,6 @@ type MouseButtonState
     | DownRight
 
 
-
--- | Up
-
-
 type Msg
     = SetDragControlAzimuthAndElevation Bool
     | TileLoaded TileKey (Maybe (Material.Texture Color))

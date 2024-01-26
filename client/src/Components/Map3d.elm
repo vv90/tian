@@ -1,5 +1,6 @@
 module Components.Map3d exposing
-    ( Model
+    ( DemoState(..)
+    , Model
     , Msg(..)
     , TileData
     , WheelEvent
@@ -47,6 +48,7 @@ import Html.Attributes exposing (style)
 import Html.Events exposing (on)
 import Json.Decode as D
 import Length exposing (Length, Meters)
+import List.Extra
 import Maybe.Extra as MaybeX
 import Pixels exposing (Pixels)
 import Plane3d
@@ -63,12 +65,97 @@ import Svg exposing (Svg)
 import Svg.Attributes as SvgAttr
 import Task
 import Tile exposing (TileKey, ZoomLevel, tileKeyToUrl, zoomLevel)
+import Time
 import Viewpoint3d
+
+
+
+-- -1. Make a demo module
+-- 0. Make demo a list of steps,
+--   - each with its own duration
+--   - and implement current rotation in terms of demo steps
+-- 1. Zoom in with elevation change
+-- 2. Move the map + elevation + rotate camera
+
+
+type alias DemoStep =
+    { finalView : ViewArgs, durationMillis : Int }
+
+
+demoSteps : Model -> List DemoStep
+demoSteps model =
+    let
+        makePoint : Quantity Float Meters -> GeoPoint -> Point3d Meters WorldCoords
+        makePoint elev =
+            toMercatorPoint
+                >> Point2d.placeIn model.mapFrame
+                >> Point2d.at model.mercatorRate
+                >> Point3d.on xyPlane
+                >> Point3d.translateIn Direction3d.positiveZ elev
+    in
+    [ { finalView =
+            { focalPoint =
+                makePoint
+                    (Length.meters 500)
+                    { lat = LatitudeDegrees 45.208451, lon = LongitudeDegrees 5.726031 }
+            , azimuth = Angle.degrees 300
+            , elevation = Angle.degrees 35
+            , distance = Length.meters 25000
+            }
+      , durationMillis = 3000
+      }
+    ]
+
+
+makeFrames : Int -> ViewArgs -> ViewArgs -> List ViewArgs
+makeFrames numTicks initialView finalView =
+    let
+        azimuthTick : Angle
+        azimuthTick =
+            (finalView.azimuth |> Quantity.minus initialView.azimuth) |> Quantity.divideBy (toFloat numTicks)
+
+        elevationTick : Angle
+        elevationTick =
+            (finalView.elevation |> Quantity.minus initialView.elevation) |> Quantity.divideBy (toFloat numTicks)
+
+        updTick : Int -> ViewArgs
+        updTick tick =
+            { initialView
+                | azimuth = initialView.azimuth |> Quantity.plus (azimuthTick |> Quantity.multiplyBy (toFloat tick))
+                , elevation = initialView.elevation |> Quantity.plus (elevationTick |> Quantity.multiplyBy (toFloat tick))
+            }
+    in
+    List.range 1 numTicks
+        |> List.map updTick
+
+
+demoFrames : ViewArgs -> List DemoStep -> List ViewArgs -> List ViewArgs
+demoFrames currentView stepsToGo readyFrames =
+    case stepsToGo of
+        [] ->
+            readyFrames
+
+        nextStep :: remainingSteps ->
+            demoFrames nextStep.finalView remainingSteps (readyFrames ++ makeFrames (nextStep.durationMillis // 10) currentView nextStep.finalView)
+
+
+demoFrames_ : Model -> List DemoStep -> List ViewArgs
+demoFrames_ model steps =
+    demoFrames model.viewArgs steps []
 
 
 type DragState
     = MovingFrom { azimuth : Angle, elevation : Angle, xy : ( Float, Float ) }
     | Static
+
+
+type DemoState
+    = DemoNotStarted
+    | DemoInProgress (List ViewArgs)
+
+
+
+-- | DemoInProgress { demoScript : DemoScript}
 
 
 type alias TileData =
@@ -87,6 +174,7 @@ type alias Model =
     , loadedTiles : Dict TileKey TileData
     , displayedTiles : List ( TileKey, ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords ) )
     , cursorPosition : Maybe ( Float, Float )
+    , demoState : DemoState
     }
 
 
@@ -326,7 +414,7 @@ init windowSize origin =
 
         viewElevation : Float
         viewElevation =
-            35
+            50
 
         viewArgs : ViewArgs
         viewArgs =
@@ -347,6 +435,7 @@ init windowSize origin =
             , loadedTiles = Dict.empty
             , displayedTiles = []
             , cursorPosition = Nothing
+            , demoState = DemoNotStarted
             }
     in
     updateTiles model
@@ -366,6 +455,9 @@ type Msg
     | DragStop ( Float, Float )
     | CursorMoved ( Float, Float )
     | ZoomChanged WheelEvent
+    | DemoStarted
+    | DemoTick Time.Posix
+    | DemoFinished
     | NoOp
 
 
@@ -528,6 +620,30 @@ update msg model =
             in
             updateTiles newModel
 
+        DemoStarted ->
+            ( { model
+                | demoState =
+                    demoSteps model
+                        |> demoFrames_ model
+                        |> DemoInProgress
+              }
+            , Cmd.none
+            )
+
+        DemoTick _ ->
+            case model.demoState of
+                DemoInProgress (h :: t) ->
+                    { model | viewArgs = h, demoState = DemoInProgress t } |> updateTiles
+
+                DemoInProgress [] ->
+                    ( { model | demoState = DemoNotStarted }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        DemoFinished ->
+            ( { model | demoState = DemoNotStarted }, Cmd.none )
+
         NoOp ->
             ( model, Cmd.none )
 
@@ -561,8 +677,17 @@ subscriptions model =
         cursorSub : Sub Msg
         cursorSub =
             BrowserEvents.onMouseMove (D.map CursorMoved decodePosition)
+
+        demoSub : Sub Msg
+        demoSub =
+            case model.demoState of
+                DemoNotStarted ->
+                    Sub.none
+
+                DemoInProgress _ ->
+                    Time.every 10 DemoTick
     in
-    Sub.batch [ keyModSub, dragSub, cursorSub ]
+    Sub.batch [ keyModSub, dragSub, cursorSub, demoSub ]
 
 
 mapItemView : Model -> Map3dItem -> ( Svg Msg, Scene3d.Entity WorldCoords )

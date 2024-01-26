@@ -17,7 +17,10 @@ import Demo.FlightTaskPage as FlightTaskPage
 import Demo.Test.TestProgress as TestProgress
 import Dict exposing (Dict)
 import Element exposing (..)
+import Element.Background as Background
+import Element.Border as Border
 import Element.Font as Font
+import Element.Input as Input
 import Flags exposing (Flags, WindowSize)
 import Html exposing (Html, div)
 import Html.Attributes exposing (style)
@@ -224,6 +227,22 @@ view model =
                 , paragraph [] [ text "Drag – move the map" ]
                 , paragraph [] [ text "Right click + drag – rotate the camera" ]
                 , paragraph [] [ text "Scroll – zoom" ]
+                , Input.button [ Font.color Palette.white, Background.color Palette.primary, padding 10, Border.rounded 5 ]
+                    { onPress =
+                        case model.map3dModel.demoState of
+                            Map3d.DemoNotStarted ->
+                                Just <| Map3dMsg Map3d.DemoStarted
+
+                            Map3d.DemoInProgress _ ->
+                                Just <| Map3dMsg Map3d.DemoFinished
+                    , label =
+                        case model.map3dModel.demoState of
+                            Map3d.DemoNotStarted ->
+                                text "Start Demo"
+
+                            Map3d.DemoInProgress _ ->
+                                text "Stop Demo"
+                    }
                 ]
     in
     div

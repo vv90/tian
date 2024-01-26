@@ -249,15 +249,22 @@ view model =
         showTileKey : TileKey -> String
         showTileKey ( x, y, zoom ) =
             String.fromInt x ++ ", " ++ String.fromInt y ++ ", " ++ String.fromInt zoom
+
+        tutorial : Element Msg
+        tutorial =
+            column [ padding 10, spacing 10 ]
+                [ paragraph [ Font.bold ] [ text "Controls" ]
+                , paragraph [] [ text "Drag – move the map" ]
+                , paragraph [] [ text "Right click + drag – rotate the camera" ]
+                , paragraph [] [ text "Scroll – zoom" ]
+                ]
     in
     div
         [ style "display" "flex"
         , style "flex-direction" "row"
         ]
         -- [ Map.view mapItems model.mapModel |> Html.map MapMsg
-        [ cursorPosition
-            |> Maybe.map (showTileKey >> text)
-            |> Maybe.withDefault (text "No cursor")
+        [ tutorial
             |> sidebar
 
         -- Element.map FlightTaskPageMsg <|

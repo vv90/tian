@@ -149,9 +149,13 @@ adjustViewDistance delta viewArgs =
 
         minDistance : Length
         minDistance =
-            Length.meters 100
+            Length.meters 3000
+
+        maxDistance : Length
+        maxDistance =
+            Length.meters 40000
     in
-    { viewArgs | distance = Quantity.max newDistance minDistance }
+    { viewArgs | distance = Quantity.clamp minDistance maxDistance newDistance }
 
 
 xyPlane : SketchPlane3d Meters WorldCoords { defines : PlaneCoords }
@@ -348,15 +352,25 @@ init windowSize origin =
     updateTiles model
 
 
+type MouseButtonState
+    = DownLeft
+    | DownRight
+
+
+
+-- | Up
+
+
 type Msg
     = SetDragControlAzimuthAndElevation Bool
     | TileLoaded TileKey (Maybe (Material.Texture Color))
     | ElevationsTileLoaded TileKey (ApiResult ElevationPointsTile)
     | DragStart ( Float, Float )
-    | DragMove Bool ( Float, Float )
+    | DragMove MouseButtonState ( Float, Float )
     | DragStop ( Float, Float )
     | CursorMoved ( Float, Float )
     | ZoomChanged WheelEvent
+    | NoOp
 
 
 screenRectangle : WindowSize -> Rectangle2d Pixels screenCoords
@@ -421,9 +435,9 @@ update msg model =
             , Cmd.none
             )
 
-        DragMove isDown ( x, y ) ->
-            case ( model.dragState, model.dragControlsAzimuthAndElevation ) of
-                ( MovingFrom { azimuth, elevation, xy }, False ) ->
+        DragMove btnState ( x, y ) ->
+            case ( model.dragState, btnState ) of
+                ( MovingFrom { azimuth, elevation, xy }, DownLeft ) ->
                     let
                         projectedPoint : Maybe (Point3d Meters WorldCoords)
                         projectedPoint =
@@ -457,11 +471,7 @@ update msg model =
                         newModel =
                             { model
                                 | dragState =
-                                    if isDown then
-                                        MovingFrom { azimuth = azimuth, elevation = elevation, xy = ( x, y ) }
-
-                                    else
-                                        Static
+                                    MovingFrom { azimuth = azimuth, elevation = elevation, xy = ( x, y ) }
                                 , viewArgs =
                                     target
                                         |> Maybe.map (\p -> withFocalPoint p model.viewArgs)
@@ -470,7 +480,7 @@ update msg model =
                     in
                     updateTiles newModel
 
-                ( MovingFrom { azimuth, elevation, xy }, True ) ->
+                ( MovingFrom { azimuth, elevation, xy }, DownRight ) ->
                     let
                         ( lastX, lastY ) =
                             xy
@@ -482,9 +492,17 @@ update msg model =
                         newElevation : Angle
                         newElevation =
                             Angle.degrees (Angle.inDegrees elevation + ((y - lastY) * 0.1))
+
+                        minAngle : Angle
+                        minAngle =
+                            Angle.degrees 20
+
+                        maxAngle : Angle
+                        maxAngle =
+                            Angle.degrees 90
                     in
                     { model
-                        | dragState = MovingFrom { azimuth = newAzimuth, elevation = newElevation, xy = ( x, y ) }
+                        | dragState = MovingFrom { azimuth = newAzimuth, elevation = Quantity.clamp minAngle maxAngle newElevation, xy = ( x, y ) }
                         , viewArgs = withAzimuthElevation newAzimuth newElevation model.viewArgs
                     }
                         |> updateTiles
@@ -513,6 +531,9 @@ update msg model =
                     }
             in
             updateTiles newModel
+
+        NoOp ->
+            ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -724,6 +745,7 @@ view mapItems model =
         [ on "mousedown" (D.map DragStart decodePosition)
         , on "wheel" (D.map ZoomChanged decodeWheelEvent)
         , style "position" "relative"
+        , Html.Events.preventDefaultOn "contextmenu" (D.succeed ( NoOp, True ))
         ]
         [ Scene3d.sunny
             { upDirection = Direction3d.positiveZ
@@ -756,9 +778,23 @@ view mapItems model =
         ]
 
 
-decodeMouseButtons : D.Decoder Bool
+mouseButtonFromInt : Int -> D.Decoder MouseButtonState
+mouseButtonFromInt n =
+    case n of
+        1 ->
+            D.succeed DownLeft
+
+        2 ->
+            D.succeed DownRight
+
+        _ ->
+            D.fail "Invalid mouse button"
+
+
+decodeMouseButtons : D.Decoder MouseButtonState
 decodeMouseButtons =
-    D.field "buttons" (D.map (\buttons -> buttons == 1) D.int)
+    D.field "buttons" D.int
+        |> D.andThen mouseButtonFromInt
 
 
 decodePosition : D.Decoder ( Float, Float )

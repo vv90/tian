@@ -69,15 +69,6 @@ import Time
 import Viewpoint3d
 
 
-
--- -1. Make a demo module
--- 0. Make demo a list of steps,
---   - each with its own duration
---   - and implement current rotation in terms of demo steps
--- 1. Zoom in with elevation change
--- 2. Move the map + elevation + rotate camera
-
-
 type alias DemoStep =
     { finalView : ViewArgs, durationMillis : Int }
 
@@ -152,10 +143,6 @@ type DragState
 type DemoState
     = DemoNotStarted
     | DemoInProgress (List ViewArgs)
-
-
-
--- | DemoInProgress { demoScript : DemoScript}
 
 
 type alias TileData =

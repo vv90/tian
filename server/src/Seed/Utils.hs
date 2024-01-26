@@ -38,34 +38,12 @@ generateTileElevationPoints tiffContents tileKey =
           | y <- [0 .. resolution - 1],
             x <- [0 .. resolution - 1]
         ]
-      -- query = ElevationPointQuery from lonStep latStep resolution
 
       makeTile :: Vector Int -> ElevationPointsTile
       makeTile = ElevationPointsTile from latStep lonStep resolution
 
       fileName :: FilePath
       fileName = "../client/public/tiles/v1/" <> show tileKey.zoom <> "/" <> show tileKey.x <> "_" <> show tileKey.y <> ".json"
-
-      -- traverseElevations :: Vector (GeoPoint, Maybe Int) -> Maybe (Vector (GeoPoint, Int))
-      -- traverseElevations = traverse (\(gp, elev) -> fmap (gp,) elev)
-
-      -- lookupElevation :: TiffContents -> GeoPoint -> ExceptT String IO (GeoPoint, Maybe Int)
-      -- lookupElevations =
-      --   lookupElevationValue contents gp
-
-      -- generateTile :: ExceptT String IO ()
-      -- generateTile = do
-      --   conn <- withExceptT show getConnection
-      --   result <-
-      --     withExceptT show
-      --       $ ExceptT
-      --       $ Session.run (generateElevationPointsSession query) conn
-
-      --   -- when looking up points, elevation may not be available for all points (if the point is outside the loaded dataset for example)
-      --   -- so we need to check if all points are available before writing the tile
-      --   whenJust
-      --     (traverseElevations result)
-      --     (writeFileLBS fileName . encode . makeTile . fmap snd)
 
       runGenerateTile :: IO ()
       runGenerateTile = do

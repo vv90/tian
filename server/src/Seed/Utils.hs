@@ -1,17 +1,14 @@
 module Seed.Utils where
 
-import Control.Monad.Except (withExceptT)
 import Data.Aeson (encode)
 import Data.Aeson.Types ()
 import Data.Vector (Vector)
+import Data.Vector qualified as Vector
 import ElevationPointsTileData (ElevationPointsTile (..))
 import Geo (Latitude (..), Longitude (..))
 import GeoPoint (GeoPoint (..))
-import Hasql.Session qualified as Session
-import Mercator (MercatorTileKey (..), tileBoundingGeoPoints)
-import Persistence.Connection (getConnection)
-import Persistence.Session (generateElevationPointsSession)
-import Persistence.Statement (ElevationPointQuery (..))
+import GeoTiff.Tiff (TiffContents, lookupElevationValue, readTiffElevationData)
+import Mercator (MercatorTileKey (..), containingTile, tileBoundingGeoPoints)
 import Relude
 import System.Directory (doesFileExist)
 import Utils (writeFileCompressed)
@@ -21,8 +18,8 @@ compressFile = do
   content <- readFileLBS "./tiles/12/2109_1466.json"
   writeFileCompressed "./tiles/12/2109_1466_compressed.json.gz" content
 
-generateTileElevationPoints :: MercatorTileKey -> IO ()
-generateTileElevationPoints tileKey =
+generateTileElevationPoints :: TiffContents -> MercatorTileKey -> IO ()
+generateTileElevationPoints tiffContents tileKey =
   let resolution :: Int
       resolution = 32
       (from, to) = tileBoundingGeoPoints tileKey
@@ -33,37 +30,26 @@ generateTileElevationPoints tileKey =
       lonStep :: Longitude
       lonStep = (to.lon - from.lon) / fromIntegral (resolution - 1)
 
-      query = ElevationPointQuery from lonStep latStep resolution
+      geoPoints :: [GeoPoint]
+      geoPoints =
+        [ GeoPoint
+            (from.lat + (latStep * fromIntegral y))
+            (from.lon + (lonStep * fromIntegral x))
+          | y <- [0 .. resolution - 1],
+            x <- [0 .. resolution - 1]
+        ]
 
       makeTile :: Vector Int -> ElevationPointsTile
       makeTile = ElevationPointsTile from latStep lonStep resolution
 
       fileName :: FilePath
-      fileName = "./tiles/" <> show tileKey.zoom <> "/" <> show tileKey.x <> "_" <> show tileKey.y <> ".json"
-
-      traverseElevations :: Vector (GeoPoint, Maybe Int) -> Maybe (Vector (GeoPoint, Int))
-      traverseElevations = traverse (\(gp, elev) -> fmap (gp,) elev)
-
-      generateTile :: ExceptT String IO ()
-      generateTile = do
-        conn <- withExceptT show getConnection
-        result <-
-          withExceptT show
-            $ ExceptT
-            $ Session.run (generateElevationPointsSession query) conn
-
-        -- when looking up points, elevation may not be available for all points (if the point is outside the loaded dataset for example)
-        -- so we need to check if all points are available before writing the tile
-        whenJust
-          (traverseElevations result)
-          (writeFileLBS fileName . encode . makeTile . fmap snd)
+      fileName = "../client/public/tiles/v1/" <> show tileKey.zoom <> "/" <> show tileKey.x <> "_" <> show tileKey.y <> ".json"
 
       runGenerateTile :: IO ()
       runGenerateTile = do
-        result <- runExceptT generateTile
-        case result of
-          Left err -> putStrLn err
-          Right _ -> putTextLn $ show tileKey
+        whenJust
+          (traverse (lookupElevationValue tiffContents) geoPoints)
+          (writeFileLBS fileName . encode . makeTile . Vector.fromList . fmap fromIntegral)
    in do
         -- check if tile already exists
         fileExists <- liftIO $ doesFileExist fileName
@@ -71,23 +57,22 @@ generateTileElevationPoints tileKey =
 
 seed :: IO ()
 seed =
-  -- let startingTileKey :: Int -> MercatorTileKey
-  --     startingTileKey zoom = containingTile zoom $ GeoPoint (LatitudeDegrees 43.0) (LongitudeDegrees 5.0)
+  let startingTileKey :: MercatorTileKey
+      startingTileKey = containingTile 12 $ GeoPoint (LatitudeDegrees 45.0) (LongitudeDegrees 5.0)
 
-  --     endingTileKey :: Int -> MercatorTileKey
-  --     endingTileKey zoom = containingTile zoom $ GeoPoint (LatitudeDegrees 46.0) (LongitudeDegrees 8.0)
+      endingTileKey :: MercatorTileKey
+      endingTileKey = containingTile 12 $ GeoPoint (LatitudeDegrees 46.0) (LongitudeDegrees 6.0)
 
-  --     -- tileKeys = [MercatorTileKey x y z | z <- [13 .. 15], x <- [startingTileKey z.x .. endingTileKey z.x], y <- [endingTileKey z.y .. startingTileKey z.y]]
+      tileKeys =
+        [ MercatorTileKey x y 12
+          | x <- [startingTileKey.x .. endingTileKey.x],
+            y <- [endingTileKey.y .. startingTileKey.y]
+        ]
+  in do
+    elevationsResult <- runExceptT $ readTiffElevationData "./demo/ASTGTMV003_N45E005_dem.tif"
 
-  --     -- Define the function to split a list into chunks
-  --     chunk :: Int -> [a] -> [[a]]
-  --     chunk _ [] = []
-  --     chunk n xs = take n xs : chunk n (drop n xs)
-
-  --     chunks = chunk (length tileKeys `div` 10) tileKeys
-
-  --     processChunk :: [MercatorTileKey] -> IO ()
-  --     processChunk = traverse_ generateTileElevationPoints
-  --  in do
-  --       mapConcurrently_ processChunk chunks
-  pass
+    case elevationsResult of
+      Left err -> putStrLn err
+      Right elevations -> do
+        print $ fst elevations
+        traverse_ (generateTileElevationPoints elevations) tileKeys

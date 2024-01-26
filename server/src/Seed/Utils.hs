@@ -68,22 +68,11 @@ seed =
           | x <- [startingTileKey.x .. endingTileKey.x],
             y <- [endingTileKey.y .. startingTileKey.y]
         ]
-   in --     -- Define the function to split a list into chunks
-      --     chunk :: Int -> [a] -> [[a]]
-      --     chunk _ [] = []
-      --     chunk n xs = take n xs : chunk n (drop n xs)
+  in do
+    elevationsResult <- runExceptT $ readTiffElevationData "./demo/ASTGTMV003_N45E005_dem.tif"
 
-      --     chunks = chunk (length tileKeys `div` 10) tileKeys
-
-      --     processChunk :: [MercatorTileKey] -> IO ()
-      --     processChunk = traverse_ generateTileElevationPoints
-      --  in do
-      --       mapConcurrently_ processChunk chunks
-      do
-        elevationsResult <- runExceptT $ readTiffElevationData "./demo/ASTGTMV003_N45E005_dem.tif"
-
-        case elevationsResult of
-          Left err -> putStrLn err
-          Right elevations -> do
-            print $ fst elevations
-            traverse_ (generateTileElevationPoints elevations) tileKeys
+    case elevationsResult of
+      Left err -> putStrLn err
+      Right elevations -> do
+        print $ fst elevations
+        traverse_ (generateTileElevationPoints elevations) tileKeys

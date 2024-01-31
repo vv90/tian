@@ -148,7 +148,7 @@ makeFrames numTicks initialView finalView =
                 , focalPoint = interpolateFocalPointTick tick
             }
     in
-    List.range 1 numTicks
+    List.range 1 (max 1 numTicks)
         |> List.map updTick
 
 

@@ -89,9 +89,31 @@ demoSteps model =
                 makePoint
                     (Length.meters 500)
                     { lat = LatitudeDegrees 45.208451, lon = LongitudeDegrees 5.726031 }
-            , azimuth = Angle.degrees 300
+            , azimuth = Angle.degrees 220
             , elevation = Angle.degrees 35
             , distance = Length.meters 25000
+            }
+      , durationMillis = 3000
+      }
+    , { finalView =
+            { focalPoint =
+                makePoint
+                    (Length.meters 500)
+                    { lat = LatitudeDegrees 45.208451, lon = LongitudeDegrees 5.726031 }
+            , azimuth = Angle.degrees 220
+            , elevation = Angle.degrees 35
+            , distance = Length.meters 15000
+            }
+      , durationMillis = 3000
+      }
+    , { finalView =
+            { focalPoint =
+                makePoint
+                    (Length.meters 500)
+                    { lat = LatitudeDegrees 45.269101, lon = LongitudeDegrees 5.849835 }
+            , azimuth = Angle.degrees 220
+            , elevation = Angle.degrees 35
+            , distance = Length.meters 10000
             }
       , durationMillis = 3000
       }
@@ -109,11 +131,21 @@ makeFrames numTicks initialView finalView =
         elevationTick =
             (finalView.elevation |> Quantity.minus initialView.elevation) |> Quantity.divideBy (toFloat numTicks)
 
+        distanceTick : Length
+        distanceTick =
+            (finalView.distance |> Quantity.minus initialView.distance) |> Quantity.divideBy (toFloat numTicks)
+
+        interpolateFocalPointTick : Int -> Point3d Meters WorldCoords
+        interpolateFocalPointTick tick =
+            Point3d.interpolateFrom initialView.focalPoint finalView.focalPoint (toFloat tick / toFloat numTicks)
+
         updTick : Int -> ViewArgs
         updTick tick =
             { initialView
                 | azimuth = initialView.azimuth |> Quantity.plus (azimuthTick |> Quantity.multiplyBy (toFloat tick))
                 , elevation = initialView.elevation |> Quantity.plus (elevationTick |> Quantity.multiplyBy (toFloat tick))
+                , distance = initialView.distance |> Quantity.plus (distanceTick |> Quantity.multiplyBy (toFloat tick))
+                , focalPoint = interpolateFocalPointTick tick
             }
     in
     List.range 1 numTicks

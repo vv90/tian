@@ -419,6 +419,7 @@ readTiffElevationData filePath =
 lookupElevationValue :: (GeoPosition pos) => TiffContents -> pos -> Maybe Word16
 lookupElevationValue (config, tiles) pos =
   let ImageWidth imageWidth = config.imageWidth
+      ImageHeight imageHeight = config.imageHeight
       TileWidth tileWidth = config.tileWidth
       TileHeight tileHeight = config.tileHeight
       ModelTiePoint _tiePoint@(_px, _py, _pz, mLon, mLat, _mz) = config.modelTiePoint
@@ -457,7 +458,9 @@ lookupElevationValue (config, tiles) pos =
       -- the index of the pixel in the tile data vector
       pixelTileIndex :: Int
       pixelTileIndex = xTilePixel + yTilePixel * tileWidth
-   in tiles !? tileIndex >>= (!? pixelTileIndex)
+   in if x < 0 || y < 0 || x >= imageWidth || y >= imageHeight
+        then Nothing
+        else tiles !? tileIndex >>= (!? pixelTileIndex)
 
 tiffChunksC :: Handle -> ConduitT () (Vector Word16) (ExceptT String IO) ()
 tiffChunksC h = do

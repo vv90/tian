@@ -1,5 +1,6 @@
 module Seed.Utils where
 
+import Control.Concurrent.Async (mapConcurrently)
 import Data.Aeson (encode)
 import Data.Aeson.Types ()
 import Data.Vector (Vector)
@@ -18,10 +19,11 @@ compressFile = do
   content <- readFileLBS "./tiles/12/2109_1466.json"
   writeFileCompressed "./tiles/12/2109_1466_compressed.json.gz" content
 
-generateTileElevationPoints :: TiffContents -> MercatorTileKey -> IO ()
+generateTileElevationPoints :: [TiffContents] -> MercatorTileKey -> IO ()
 generateTileElevationPoints tiffContents tileKey =
   let resolution :: Int
       resolution = 32
+
       (from, to) = tileBoundingGeoPoints tileKey
 
       latStep :: Latitude
@@ -45,10 +47,14 @@ generateTileElevationPoints tiffContents tileKey =
       fileName :: FilePath
       fileName = "../client/public/tiles/v1/" <> show tileKey.zoom <> "/" <> show tileKey.x <> "_" <> show tileKey.y <> ".json"
 
+      lookupElevationInFiles :: GeoPoint -> Maybe Word16
+      lookupElevationInFiles geoPoint =
+        asum $ fmap (`lookupElevationValue` geoPoint) tiffContents
+
       runGenerateTile :: IO ()
       runGenerateTile = do
         whenJust
-          (traverse (lookupElevationValue tiffContents) geoPoints)
+          (traverse lookupElevationInFiles geoPoints)
           (writeFileLBS fileName . encode . makeTile . Vector.fromList . fmap fromIntegral)
    in do
         -- check if tile already exists
@@ -57,22 +63,42 @@ generateTileElevationPoints tiffContents tileKey =
 
 seed :: IO ()
 seed =
-  let startingTileKey :: MercatorTileKey
-      startingTileKey = containingTile 12 $ GeoPoint (LatitudeDegrees 45.0) (LongitudeDegrees 5.0)
+  let startingTileKey :: Int -> MercatorTileKey
+      startingTileKey zoom = containingTile zoom $ GeoPoint (LatitudeDegrees 43.0) (LongitudeDegrees 5.0)
 
-      endingTileKey :: MercatorTileKey
-      endingTileKey = containingTile 12 $ GeoPoint (LatitudeDegrees 46.0) (LongitudeDegrees 6.0)
+      endingTileKey :: Int -> MercatorTileKey
+      endingTileKey zoom = containingTile zoom $ GeoPoint (LatitudeDegrees 46.0) (LongitudeDegrees 8.0)
+
+      getX :: MercatorTileKey -> Int
+      getX = x
+
+      getY :: MercatorTileKey -> Int
+      getY = y
+
+      demFiles :: [FilePath]
+      demFiles =
+        [ "./demo/ASTGTMV003_N43E005_dem.tif",
+          "./demo/ASTGTMV003_N43E006_dem.tif",
+          "./demo/ASTGTMV003_N43E007_dem.tif",
+          "./demo/ASTGTMV003_N44E005_dem.tif",
+          "./demo/ASTGTMV003_N44E006_dem.tif",
+          "./demo/ASTGTMV003_N44E007_dem.tif",
+          "./demo/ASTGTMV003_N45E005_dem.tif",
+          "./demo/ASTGTMV003_N45E006_dem.tif",
+          "./demo/ASTGTMV003_N45E007_dem.tif"
+        ]
 
       tileKeys =
-        [ MercatorTileKey x y 12
-          | x <- [startingTileKey.x .. endingTileKey.x],
-            y <- [endingTileKey.y .. startingTileKey.y]
+        [ MercatorTileKey x y z
+          | z <- [12, 13, 14, 15],
+            x <- [getX (startingTileKey z) .. getX (endingTileKey z)],
+            y <- [getY (endingTileKey z) .. getY (startingTileKey z)]
         ]
-  in do
-    elevationsResult <- runExceptT $ readTiffElevationData "./demo/ASTGTMV003_N45E005_dem.tif"
+   in do
+        elevationsResult <- sequence <$> mapConcurrently (runExceptT . readTiffElevationData) demFiles
 
-    case elevationsResult of
-      Left err -> putStrLn err
-      Right elevations -> do
-        print $ fst elevations
-        traverse_ (generateTileElevationPoints elevations) tileKeys
+        case elevationsResult of
+          Left err -> putStrLn err
+          Right elevations -> do
+            putStrLn "Data loaded! Generating tiles..."
+            traverse_ (generateTileElevationPoints elevations) tileKeys

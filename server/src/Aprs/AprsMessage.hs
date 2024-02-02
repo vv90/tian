@@ -34,13 +34,6 @@ instance GeoPosition3d AprsMessage where
 instance RecordedGeoPosition AprsMessage where
   time x = x.time
 
--- should match one of the following:
--- /
--- \\ -- two backslashes (without escaping)
-separatorParser :: Parsec ByteString () ()
-separatorParser =
-  void $ choice [char '/', char '\\']
-
 aprsLatParser :: Parsec ByteString () Latitude
 aprsLatParser = do
   degrees <- readEither <$> count 2 digit

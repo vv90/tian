@@ -216,18 +216,32 @@ sidebar content =
 view : Model -> Html Msg
 view model =
     let
+        primaryButton : { label : Element msg, onPress : Maybe msg } -> Element msg
+        primaryButton { label, onPress } =
+            Input.button
+                [ Font.color Palette.white
+                , Background.color Palette.primary
+                , padding 10
+                , Border.rounded 5
+                ]
+                { onPress = onPress, label = label }
+
         map3dItems : List Map3dItem
         map3dItems =
             model.flightPositions |> Dict.toList |> List.map (\( key, ( pt, elev ) ) -> Marker key pt elev)
 
+        numActiveFlights : Int
+        numActiveFlights =
+            model.flightPositions |> Dict.size
+
         tutorial : Element Msg
         tutorial =
-            column [ padding 10, spacing 10 ]
+            column [ padding 10, spacing 10, height fill, width fill ]
                 [ paragraph [ Font.bold ] [ text "Controls" ]
                 , paragraph [] [ text "Drag – move the map" ]
                 , paragraph [] [ text "Right click + drag – rotate the camera" ]
                 , paragraph [] [ text "Scroll – zoom" ]
-                , Input.button [ Font.color Palette.white, Background.color Palette.primary, padding 10, Border.rounded 5 ]
+                , primaryButton
                     { onPress =
                         case model.map3dModel.demoState of
                             Map3d.DemoNotStarted ->
@@ -243,6 +257,28 @@ view model =
                             Map3d.DemoInProgress _ ->
                                 text "Stop Demo"
                     }
+                , paragraph [ Font.bold ] [ text <| "Active flights:" ++ String.fromInt numActiveFlights ]
+                , column
+                    [ spacing 20
+                    , padding 10
+                    , scrollbarY
+                    , height <| minimum 100 <| maximum 500 <| fill
+                    , width <| minimum 100 <| fill
+                    , Border.width 1
+                    , Border.color Palette.lightGray
+                    , Border.rounded 5
+                    ]
+                    (model.flightPositions
+                        |> Dict.toList
+                        |> List.map
+                            (\( key, ( point, _ ) ) ->
+                                Input.button
+                                    []
+                                    { label = text key
+                                    , onPress = Just <| Map3dMsg <| Map3d.PointFocused point
+                                    }
+                            )
+                    )
                 ]
     in
     div

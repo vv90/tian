@@ -326,9 +326,6 @@ updateTiles model =
         zoom =
             Maybe.map ((\l -> logBase 2 (earthCircumference * cos letRad / l)) >> round >> zoomLevel) tLen
 
-        -- focusedGeoPoint =
-        --     Point3d.toMeters model.viewArgs.focalPoint
-        --         |> (\{ x, y } -> localToGeoPoint model.origin ( x, y ))
         tiles : List ( TileKey, ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords ) )
         tiles =
             zoom
@@ -341,12 +338,18 @@ updateTiles model =
                         (Point3d.projectInto xyPlane model.viewArgs.focalPoint)
                     )
 
+        newLoadedTiles : Dict TileKey TileData
+        newLoadedTiles =
+            tiles
+                |> List.filterMap (Tuple.first >> (\tk -> Dict.get tk model.loadedTiles |> Maybe.map (Tuple.pair tk)))
+                |> Dict.fromList
+
         -- gets tile keys that are missing the given property
         missingKeys : (TileData -> Deferred a) -> List ( TileKey, b ) -> List TileKey
         missingKeys prop =
             List.filterMap
                 (\( tk, _ ) ->
-                    case Maybe.map prop (Dict.get tk model.loadedTiles) of
+                    case Maybe.map prop (Dict.get tk newLoadedTiles) of
                         Just NotStarted ->
                             Just tk
 
@@ -367,7 +370,7 @@ updateTiles model =
 
         newModel : Model
         newModel =
-            { model | displayedTiles = tiles }
+            { model | displayedTiles = tiles, loadedTiles = newLoadedTiles }
                 |> withPendingTextures missingTextures
                 |> withPendingMeshes missingMeshes
 

@@ -95,10 +95,6 @@ seed =
             y <- [getY (endingTileKey z) .. getY (startingTileKey z)]
         ]
    in do
-        -- elevationsResult <- runExceptT $ readTiffElevationData "./demo/ASTGTMV003_N45E005_dem.tif"
-
-        -- elevationsResult' <- runExceptT $ traverse readTiffElevationData demFiles
-
         elevationsResult <- sequence <$> mapConcurrently (runExceptT . readTiffElevationData) demFiles
 
         case elevationsResult of

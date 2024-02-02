@@ -73,20 +73,21 @@ type alias DemoStep =
     { finalView : ViewArgs, durationMillis : Int }
 
 
+makePoint : Model -> Quantity Float Meters -> GeoPoint -> Point3d Meters WorldCoords
+makePoint model elev =
+    toMercatorPoint
+        >> Point2d.placeIn model.mapFrame
+        >> Point2d.at model.mercatorRate
+        >> Point3d.on xyPlane
+        >> Point3d.translateIn Direction3d.positiveZ elev
+
+
 demoSteps : Model -> List DemoStep
 demoSteps model =
-    let
-        makePoint : Quantity Float Meters -> GeoPoint -> Point3d Meters WorldCoords
-        makePoint elev =
-            toMercatorPoint
-                >> Point2d.placeIn model.mapFrame
-                >> Point2d.at model.mercatorRate
-                >> Point3d.on xyPlane
-                >> Point3d.translateIn Direction3d.positiveZ elev
-    in
     [ { finalView =
             { focalPoint =
                 makePoint
+                    model
                     (Length.meters 500)
                     { lat = LatitudeDegrees 45.208451, lon = LongitudeDegrees 5.726031 }
             , azimuth = Angle.degrees 220
@@ -98,6 +99,7 @@ demoSteps model =
     , { finalView =
             { focalPoint =
                 makePoint
+                    model
                     (Length.meters 500)
                     { lat = LatitudeDegrees 45.208451, lon = LongitudeDegrees 5.726031 }
             , azimuth = Angle.degrees 220
@@ -109,6 +111,7 @@ demoSteps model =
     , { finalView =
             { focalPoint =
                 makePoint
+                    model
                     (Length.meters 500)
                     { lat = LatitudeDegrees 45.269101, lon = LongitudeDegrees 5.849835 }
             , azimuth = Angle.degrees 220
@@ -480,6 +483,7 @@ type Msg
     | DemoStarted
     | DemoTick Time.Posix
     | DemoFinished
+    | PointFocused GeoPoint
     | NoOp
 
 
@@ -665,6 +669,19 @@ update msg model =
 
         DemoFinished ->
             ( { model | demoState = DemoNotStarted }, Cmd.none )
+
+        PointFocused point ->
+            let
+                viewArgs : ViewArgs
+                viewArgs =
+                    model.viewArgs
+
+                focalPoint : Point3d Meters WorldCoords
+                focalPoint =
+                    makePoint model (Length.meters 500) point
+            in
+            { model | viewArgs = { viewArgs | focalPoint = focalPoint } }
+                |> updateTiles
 
         NoOp ->
             ( model, Cmd.none )

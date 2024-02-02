@@ -78,6 +78,9 @@ newtype Elevation = ElevationMeters Double
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
     via ElmType "Api.Types.Elevation" Elevation
 
+elevationFeet :: Double -> Elevation
+elevationFeet x = ElevationMeters (x * 0.3048)
+
 metersElevation :: Elevation -> Double
 metersElevation (ElevationMeters x) = x
 

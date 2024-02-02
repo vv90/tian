@@ -1,6 +1,6 @@
 module AprsMessageSpec where
 
-import Aprs.AprsMessage
+import Aprs.AprsMessage (AprsMessage (..), aprsMessageParser)
 import Relude
 import Test.Hspec
 import Text.Parsec (parse)
@@ -8,7 +8,33 @@ import Text.Parsec (parse)
 spec :: Spec
 spec = do
   context "AprsMessage parser" $ do
-    it "parses correctly" $ do
+    it "parses all" $ do
+      let inputs =
+            [ "ICA4B28B7>OGFLR,qAS,MUEN:/143013h4658.89N\\\\00710.87E^339/156/A=005870 !W04! id214B28B7 -157fpm -0.1rot 14.0dB -6.3kHz gps4x4",
+              "ICA3E5C54>OGFLR,qAS,EDNE:/143008h4820.69N/00955.10E'206/011/A=001608 !W43! id093E5C54 +020fpm +1.2rot 28.5dB -2.6kHz gps10x6",
+              "FLRD0230A>OGFLR,qAS,AVXEE42DB:/143013h4820.01N\\\\00828.89En000/000/A=002517 !W74! id3ED0230A +020fpm +0.0rot 5.2dB -9.6kHz gps7x8 +2.9dBm",
+              "FLRDDDBD3>OGFLR,qAS,LFMF:/143015h4336.74N/00642.04E'000/000/A=000705 !W96! id06DDDBD3 -039fpm +0.0rot 14.2dB +9.0kHz gps5x14",
+              "FLRD02313>OGFLR,qAS,lmr05:/143011h5333.10N\\\\00838.36En000/000/A=000374 !W65! id3ED02313 +020fpm +0.0rot 10.8dB -8.8kHz gps1x2",
+              "FLRD023A8>OGFLR,qAS,lmr91:/143013h5047.56N\\\\00816.95En000/000/A=002185 !W83! id3ED023A8 -019fpm +0.0rot 3.8dB 5e -11.5kHz gps2x2",
+              "ICA3939FC>OGNSKY,qAS,SafeSky:/143012h4305.91N/00007.98W'121/075/A=005685 !W35! id203939FC +003fpm gps4x1",
+              "FLRD02326>OGFLR,qAS,EDPD:/143013h4840.42N\\\\01215.42En000/000/A=002021 !W14! id3ED02326 -039fpm +0.0rot 18.2dB -11.5kHz gps3x5",
+              "ICAA197C0>OGFLR,qAS,Meiersbrg:/143013h5110.37N\\\\00655.22E^339/141/A=001979 !W19! id21A197C0 +158fpm -0.3rot 2.8dB 4e -13.4kHz gps1x2",
+              "ICA3D1E2A>OGFLR,qAS,EDTX:/143012h4916.23N/01010.92E'338/093/A=003396 !W84! id053D1E2A +119fpm +0.0rot 12.5dB +7.9kHz gps1x1",
+              "ICA3E6B87>OGFLR,qAS,EDTX:/143012h4907.05N/00947.53E'280/052/A=001401 !W10! id053E6B87 -633fpm +0.0rot 47.5dB -4.3kHz gps2x3",
+              "ICA3E7AE1>OGFLR,qAS,EDTX:/143012h4852.28N/01012.48E'051/102/A=004371 !W71! id093E7AE1 +040fpm +0.1rot 12.0dB +8.0kHz gps4x5",
+              "ICA3D3ED1>OGNSKY,qAS,SafeSky:/143014h5222.00N/00730.07E'277/085/A=000528 !W34! id203D3ED1 -045fpm gps5x8",
+              "ICA4B1B11>OGFLR,qAS,Morrens:/143013h4631.68N\\\\00636.57E^201/074/A=002655 !W07! id214B1B11 +713fpm -0.2rot 13.8dB -10.6kHz gps2x3",
+              "ICA4B28B7>OGFLR,qAS,Morrens:/143013h4658.89N\\\\00710.87E^339/156/A=005860 !W04! id214B28B7 -157fpm -0.1rot 6.5dB 1e -8.1kHz gps4x4",
+              "ICA4B40A1>OGFLR,qAS,Morrens:/143013h4632.35N\\\\00636.93E^188/083/A=002307 !W49! id214B40A1 +634fpm -0.2rot 9.8dB -4.2kHz gps1x2",
+              "FLRDDD591>OGFLR,qAS,LECI1:/143013h4236.83N/00041.60W'252/057/A=005496 !W67! id06DDD591 +634fpm +1.6rot 16.5dB -0.7kHz gps2x3",
+              "ICA3D1139>OGFLR,qAS,MyTownOG:/143013h5300.31N/01032.90E'316/062/A=001959 !W56! id093D1139 -118fpm +0.1rot 4.8dB +2.3kHz gps2x4"
+            ] ::
+              [ByteString]
+          results = traverse (parse aprsMessageParser "") inputs
+
+      (source <<$>> results) `shouldBe` Right (["ICA4B28B7", "ICA3E5C54", "FLRD0230A", "FLRDDDBD3", "FLRD02313", "FLRD023A8", "ICA3939FC", "FLRD02326", "ICAA197C0", "ICA3D1E2A", "ICA3E6B87", "ICA3E7AE1", "ICA3D3ED1", "ICA4B1B11", "ICA4B28B7", "ICA4B40A1", "FLRDDD591", "ICA3D1139"] :: [Text])
+
+    it "parses msg 1" $ do
       let input = "FLRD0095F>OGFLR,qAS,LFNE:/160721h4337.14N/00507.75E'161/061/A=001204 !W82! id06D0095F -157fpm +0.1rot 10.2dB -0.5kHz gps1x2" :: ByteString
           result = parse aprsMessageParser "" input
 

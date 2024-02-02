@@ -672,9 +672,11 @@ update msg model =
 
         PointFocused point ->
             let
+                viewArgs : ViewArgs
                 viewArgs =
                     model.viewArgs
 
+                focalPoint : Point3d Meters WorldCoords
                 focalPoint =
                     makePoint model (Length.meters 500) point
             in

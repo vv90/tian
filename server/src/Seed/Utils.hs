@@ -1,5 +1,6 @@
 module Seed.Utils where
 
+import Control.Concurrent.Async (mapConcurrently)
 import Data.Aeson (encode)
 import Data.Aeson.Types ()
 import Data.Vector (Vector)
@@ -12,7 +13,6 @@ import Mercator (MercatorTileKey (..), containingTile, tileBoundingGeoPoints)
 import Relude
 import System.Directory (doesFileExist)
 import Utils (writeFileCompressed)
-import Control.Concurrent.Async (mapConcurrently)
 
 compressFile :: IO ()
 compressFile = do
@@ -74,7 +74,6 @@ seed =
 
       getY :: MercatorTileKey -> Int
       getY = y
-
 
       demFiles :: [FilePath]
       demFiles =

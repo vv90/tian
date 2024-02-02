@@ -458,10 +458,9 @@ lookupElevationValue (config, tiles) pos =
       -- the index of the pixel in the tile data vector
       pixelTileIndex :: Int
       pixelTileIndex = xTilePixel + yTilePixel * tileWidth
-   in 
-    if x < 0 || y < 0 || x >= imageWidth || y >= imageHeight 
-    then Nothing
-    else tiles !? tileIndex >>= (!? pixelTileIndex)
+   in if x < 0 || y < 0 || x >= imageWidth || y >= imageHeight
+        then Nothing
+        else tiles !? tileIndex >>= (!? pixelTileIndex)
 
 tiffChunksC :: Handle -> ConduitT () (Vector Word16) (ExceptT String IO) ()
 tiffChunksC h = do

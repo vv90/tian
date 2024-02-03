@@ -2,15 +2,19 @@
 
 module Lib (startApp, app) where
 
-import Aprs.Utils (FlightId, FlightPosition, FlightsTable)
-import Conduit (ConduitT, ResourceT, yield)
+import Aprs.AprsMessage (AprsMessage (..))
+import Aprs.Utils (AprsMessageBroker, FlightId, FlightPosition)
+import Conduit (ConduitT, ResourceT, bracketP, yield)
 import Control.Arrow (ArrowChoice (left))
-import Control.Concurrent.STM.TBChan (readTBChan)
+import Control.Concurrent.STM (modifyTVar)
+import Control.Concurrent.STM.TBChan (TBChan, newTBChanIO, readTBChan)
 import Control.Monad.Except (withExceptT)
 import Data.HashMap.Strict qualified as HM
 import Data.List.NonEmpty qualified as NE (cons, reverse)
 import Data.Time (UTCTime (UTCTime))
 import Data.Time.Calendar (fromGregorian)
+import Data.UUID (UUID)
+import Data.UUID.V4 (nextRandom)
 import Data.Vector (Vector)
 import Demo.DemoConduit (demoC)
 import Demo.DemoTask (loadDemoTask)
@@ -19,7 +23,8 @@ import Entity (Entity (..))
 import FlightTask (FlightTask)
 import FlightTrack (FlightTrack (..))
 import FlightTrack.Parser (buildFlightTrack, flightInfoParserAll)
-import Geo (Elevation (..), Latitude, Longitude)
+import Geo (Elevation (..), GeoPosition (..), GeoPosition3d (..), Latitude, Longitude)
+import GeoPoint (GeoPoint (..))
 import Hasql.Session qualified as Session
 import NavPoint (NavPoint, name, navPointLinesParser)
 import Network.Wai.Handler.Warp (Port, run)
@@ -241,7 +246,7 @@ type API =
     :<|> "demoTask" :> Get '[JSON] (FlightTask, [NameMatch])
     :<|> "watchFlights" :> WebSocketConduit () (FlightId, FlightPosition)
 
-server :: TVar FlightsTable -> Server API
+server :: TVar AprsMessageBroker -> Server API
 server flightsTvar =
   uploadNavPoints
     :<|> navPoints
@@ -254,28 +259,45 @@ server flightsTvar =
     :<|> demoTask
     :<|> watchFlights flightsTvar
 
-startApp :: TVar FlightsTable -> Port -> IO ()
-startApp flightsTvar port = do
+startApp :: TVar AprsMessageBroker -> Port -> IO ()
+startApp broker port = do
   putStrLn ("Server started on port " <> show port)
-  run port (app flightsTvar)
+  run port (app broker)
 
-app :: TVar FlightsTable -> Application
-app flightsTvar =
-  server flightsTvar
+app :: TVar AprsMessageBroker -> Application
+app broker =
+  server broker
     & serve api
     & gzip def
 
 api :: Proxy API
 api = Proxy
 
-watchFlights :: TVar FlightsTable -> ConduitT () (FlightId, FlightPosition) (ResourceT IO) ()
-watchFlights flightsTvar =
-  let readAllChans :: ConduitT () (FlightId, FlightPosition) (ResourceT IO) ()
-      readAllChans = do
-        chans <- HM.toList <$> readTVarIO flightsTvar
-        traverse_ (\(flightId, chan) -> atomically (readTBChan chan) >>= (yield . (flightId,))) chans
-        readAllChans
-   in readAllChans
+watchFlights :: TVar AprsMessageBroker -> ConduitT () (FlightId, FlightPosition) (ResourceT IO) ()
+watchFlights broker =
+  let makeChan :: IO (UUID, TBChan AprsMessage)
+      makeChan = do
+        chanId <- nextRandom
+        chan <- newTBChanIO 1000
+        atomically $ modifyTVar broker (HM.insert chanId chan)
+        pure (chanId, chan)
+
+      disposeChan :: (UUID, TBChan AprsMessage) -> IO ()
+      disposeChan (chanId, _) =
+        atomically $ modifyTVar broker (HM.delete chanId)
+
+      readChan :: TBChan AprsMessage -> ConduitT () (FlightId, FlightPosition) (ResourceT IO) ()
+      readChan chan = do
+        msg <- atomically $ readTBChan chan
+        yield $ fromAprsMessage msg
+        readChan chan
+
+      fromAprsMessage :: AprsMessage -> (FlightId, FlightPosition)
+      fromAprsMessage msg = (msg.source, (GeoPoint (latitude msg) (longitude msg), altitude msg))
+   in bracketP
+        makeChan
+        disposeChan
+        (readChan . snd)
 
 progressDemo :: ConduitT () (Text, ProgressPointDto) (ResourceT IO) ()
 progressDemo = do

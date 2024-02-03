@@ -8,7 +8,7 @@ import Relude
 
 runBackend :: IO ()
 runBackend = do
-  flightsTvar <- newTVarIO HM.empty
+  broker <- newTVarIO HM.empty
 
-  concurrently_ (startApp flightsTvar 8081) (runAprs flightsTvar)
+  concurrently_ (startApp broker 8081) (runAprs broker)
   pass

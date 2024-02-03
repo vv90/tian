@@ -92,6 +92,7 @@ dependencies:
 - base >= 4.7 && < 5
  # an alternative to Prelude
 - relude
+- uuid
 # for json encoding/decoding
 - aeson
 # for serving api

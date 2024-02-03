@@ -64,7 +64,7 @@ demoAprsSource info path = do
                 time = tp.time,
                 lat = tp.lat,
                 lon = tp.lon,
-                alt = tp.altitudeGps
+                elev = tp.altitudeGps
               }
         _ -> Nothing
 

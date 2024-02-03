@@ -20,7 +20,7 @@ data AprsMessage = AprsMessage
     time :: DiffTime,
     lat :: Latitude,
     lon :: Longitude,
-    alt :: Elevation
+    elev :: Elevation
   }
   deriving stock (Show, Eq)
 
@@ -29,7 +29,7 @@ instance GeoPosition AprsMessage where
   longitude x = x.lon
 
 instance GeoPosition3d AprsMessage where
-  altitude x = x.alt
+  altitude x = x.elev
 
 instance RecordedGeoPosition AprsMessage where
   time x = x.time
@@ -99,14 +99,19 @@ aprsMessageParser =
     <*> aprsTimeParser
     <* char 'h'
     <*> aprsLatParser
-    <* choice [string "/", string "\\\\"]
+    <* choice [char '/', char '\\']
     <*> aprsLonParser
-    <* choice [char '\'', char '^', char 'n', char 'g', char 'O', char 'z', char 'X']
+    <* choice [char '\'', char '^', char 'n', char 'g', char 'O', char 'z', char 'X', char '_']
     <* count 3 digit
     <* char '/'
     <* count 3 digit
     <* char '/'
     <*> aprsAltParser
+    <* many (noneOf "\n")
+    <* char '\n'
+
+aprsStreamParser :: Parsec ByteString () [AprsMessage]
+aprsStreamParser = many aprsMessageParser
 
 -- FLRDDE626>APRS,qAS,EGHL:/074548h5111.32N/00102.04W'086/007/A=000607 id0ADDE626 -019fpm +0.0rot 5.5dB 3e -4.3kHz
 -- The APRS symbols are the ones used to separate the altitude of the longitude (for example / on the above lines) and the symbol used to separate the longitude from the course/speed (for example ' on the above lies)

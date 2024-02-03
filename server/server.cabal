@@ -110,6 +110,7 @@ library
     , text
     , time
     , unordered-containers
+    , uuid
     , vector
     , wai
     , wai-cors
@@ -171,6 +172,7 @@ executable codegen-exe
     , text
     , time
     , unordered-containers
+    , uuid
     , vector
     , wai
     , wai-cors
@@ -232,6 +234,7 @@ executable seed-exe
     , text
     , time
     , unordered-containers
+    , uuid
     , vector
     , wai
     , wai-cors
@@ -293,6 +296,7 @@ executable server-exe
     , text
     , time
     , unordered-containers
+    , uuid
     , vector
     , wai
     , wai-cors
@@ -363,6 +367,7 @@ test-suite server-test
     , text
     , time
     , unordered-containers
+    , uuid
     , vector
     , wai
     , wai-cors

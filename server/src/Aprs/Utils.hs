@@ -9,7 +9,6 @@ import Data.UUID (UUID)
 import Geo (Elevation)
 import GeoPoint (GeoPoint (..))
 import Relude
-import System.Directory (doesFileExist)
 import Text.Parsec (parse)
 
 type FlightId = Text
@@ -18,8 +17,8 @@ type FlightPosition = (GeoPoint, Elevation)
 
 type AprsMessageBroker = HashMap UUID (TBChan AprsMessage)
 
-errorLogFile :: FilePath
-errorLogFile = "aprs-error.log"
+-- errorLogFile :: FilePath
+-- errorLogFile = "aprs-error.log"
 
 authC :: ConduitT a ByteString IO ()
 authC =
@@ -55,7 +54,7 @@ handleAprsMessage broker =
           atomically $ traverse_ distributeMessage msgs
           handleAprsMessage broker
         Left _ -> do
-          liftIO $ appendFileBS errorLogFile message
+          -- liftIO $ appendFileBS errorLogFile message
           handleAprsMessage broker
   where
     distributeMessage :: AprsMessage -> STM ()
@@ -74,6 +73,6 @@ handleAprsMessage broker =
 runAprs :: TVar AprsMessageBroker -> IO ()
 runAprs broker =
   runTCPClient (clientSettings 14580 "aprs.glidernet.org") $ \server -> do
-    errorLogFileExists <- doesFileExist errorLogFile
-    unless errorLogFileExists $ writeFile errorLogFile ""
+    -- errorLogFileExists <- doesFileExist errorLogFile
+    -- unless errorLogFileExists $ writeFile errorLogFile ""
     runConduit $ appSource server .| withAuth (handleAprsMessage broker) (appSink server)

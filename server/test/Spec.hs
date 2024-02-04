@@ -3,6 +3,7 @@ module Main (main) where
 -- import Lib (app)
 
 import AprsMessageSpec qualified
+import DeviceDatabaseSpec qualified
 import FlightTrackSpec qualified
 import NavPointSpec qualified
 import Relude
@@ -16,6 +17,7 @@ main = hspec $ do
   describe "FlightTrack" FlightTrackSpec.spec
   describe "TaskProgress" TaskProgressSpec.spec
   describe "AprsMessage" AprsMessageSpec.spec
+  describe "DeviceDatabase" DeviceDatabaseSpec.spec
 
 -- spec :: Spec
 -- spec = do

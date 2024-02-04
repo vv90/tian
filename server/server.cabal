@@ -45,6 +45,7 @@ library
       GeoTiff.LZW
       GeoTiff.Tiff
       GeoTiff.Utils
+      Glidernet.DeviceDatabase
       Lib
       Magic.ElmDeriving
       Mercator
@@ -92,6 +93,7 @@ library
     , hasql
     , hasql-th
     , hasql-transaction
+    , http-conduit
     , http-types
     , jord
     , monad-logger
@@ -153,6 +155,7 @@ executable codegen-exe
     , hasql
     , hasql-th
     , hasql-transaction
+    , http-conduit
     , http-types
     , jord
     , monad-logger
@@ -215,6 +218,7 @@ executable seed-exe
     , hasql
     , hasql-th
     , hasql-transaction
+    , http-conduit
     , http-types
     , jord
     , monad-logger
@@ -277,6 +281,7 @@ executable server-exe
     , hasql
     , hasql-th
     , hasql-transaction
+    , http-conduit
     , http-types
     , jord
     , monad-logger
@@ -310,6 +315,7 @@ test-suite server-test
   main-is: Spec.hs
   other-modules:
       AprsMessageSpec
+      DeviceDatabaseSpec
       FlightTrackSpec
       NavPointSpec
       TaskProgressSpec
@@ -348,6 +354,7 @@ test-suite server-test
     , hspec
     , hspec-wai
     , hspec-wai-json
+    , http-conduit
     , http-types
     , jord
     , monad-logger

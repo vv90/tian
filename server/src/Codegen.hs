@@ -8,6 +8,7 @@ import Entity (Entity)
 import FlightTask (FlightTask, TaskFinish, TaskStart, Turnpoint)
 import Geo (Direction, Distance, Elevation, Latitude, Longitude)
 import GeoPoint (GeoPoint)
+import Glidernet.DeviceDatabase (DeviceInfo)
 import Language.Elm.Definition (Definition)
 import Language.Elm.Name (Module)
 import Language.Elm.Pretty qualified as Pretty
@@ -43,7 +44,8 @@ typeDefinitions =
       jsonDefinitions @TaskProgressDto,
       jsonDefinitions @NameMatch,
       jsonDefinitions @GeoPoint,
-      jsonDefinitions @ElevationPointsTile
+      jsonDefinitions @ElevationPointsTile,
+      jsonDefinitions @DeviceInfo
     ]
 
 elmSrcPath :: FilePath

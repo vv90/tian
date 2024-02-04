@@ -1,5 +1,6 @@
 module Api.Types exposing
-    ( Direction(..)
+    ( DeviceInfo
+    , Direction(..)
     , Distance(..)
     , Elevation(..)
     , ElevationPointsTile
@@ -16,6 +17,8 @@ module Api.Types exposing
     , TaskStart(..)
     , Turnpoint(..)
     , WaypointStyle(..)
+    , deviceInfoDecoder
+    , deviceInfoEncoder
     , directionDecoder
     , directionEncoder
     , distanceDecoder
@@ -610,3 +613,39 @@ elevationPointsTileDecoder =
         |> Json.Decode.Pipeline.required "lonStep" longitudeDecoder
         |> Json.Decode.Pipeline.required "rowLength" Json.Decode.int
         |> Json.Decode.Pipeline.required "elevations" (Json.Decode.array Json.Decode.int)
+
+
+type alias DeviceInfo =
+    { deviceType : String
+    , deviceId : String
+    , aircraftModel : Maybe String
+    , registration : Maybe String
+    , competitionNumber : Maybe String
+    , tracked : Bool
+    , identified : Bool
+    }
+
+
+deviceInfoEncoder : DeviceInfo -> Json.Encode.Value
+deviceInfoEncoder a =
+    Json.Encode.object
+        [ ( "deviceType", Json.Encode.string a.deviceType )
+        , ( "deviceId", Json.Encode.string a.deviceId )
+        , ( "aircraftModel", Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.aircraftModel )
+        , ( "registration", Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.registration )
+        , ( "competitionNumber", Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.competitionNumber )
+        , ( "tracked", Json.Encode.bool a.tracked )
+        , ( "identified", Json.Encode.bool a.identified )
+        ]
+
+
+deviceInfoDecoder : Json.Decode.Decoder DeviceInfo
+deviceInfoDecoder =
+    Json.Decode.succeed DeviceInfo
+        |> Json.Decode.Pipeline.required "deviceType" Json.Decode.string
+        |> Json.Decode.Pipeline.required "deviceId" Json.Decode.string
+        |> Json.Decode.Pipeline.required "aircraftModel" (Json.Decode.nullable Json.Decode.string)
+        |> Json.Decode.Pipeline.required "registration" (Json.Decode.nullable Json.Decode.string)
+        |> Json.Decode.Pipeline.required "competitionNumber" (Json.Decode.nullable Json.Decode.string)
+        |> Json.Decode.Pipeline.required "tracked" Json.Decode.bool
+        |> Json.Decode.Pipeline.required "identified" Json.Decode.bool

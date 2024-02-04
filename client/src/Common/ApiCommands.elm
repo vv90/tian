@@ -1,11 +1,11 @@
-module Common.ApiCommands exposing (hydrateTile, loadElevationTileCmd)
+module Common.ApiCommands exposing (getDeviceInfo, hydrateTile, loadElevationTileCmd)
 
 import Api.Types exposing (..)
 import Array exposing (Array)
 import Common.ApiResult exposing (ApiResult)
 import Domain.GeoUtils exposing (scaleLatitude, scaleLongitude, sumLatitude, sumLongitude)
-import Env exposing (apiUrl)
 import Http
+import Json.Decode as Decode
 import Tile exposing (TileKey)
 
 
@@ -34,3 +34,11 @@ hydrateTile tile =
             }
     in
     Array.indexedMap (\i elev -> ( makeGeoPoint (i // tile.rowLength) (modBy tile.rowLength i), elev )) tile.elevations
+
+
+getDeviceInfo : String -> (ApiResult (Maybe DeviceInfo) -> msg) -> Cmd msg
+getDeviceInfo deviceId onLoaded =
+    Http.get
+        { url = "/api/deviceInfo/" ++ deviceId
+        , expect = Http.expectJson onLoaded (Decode.maybe deviceInfoDecoder)
+        }

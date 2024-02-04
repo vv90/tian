@@ -25,6 +25,7 @@ import FlightTrack (FlightTrack (..))
 import FlightTrack.Parser (buildFlightTrack, flightInfoParserAll)
 import Geo (Elevation (..), GeoPosition (..), GeoPosition3d (..), Latitude, Longitude)
 import GeoPoint (GeoPoint (..))
+import Glidernet.DeviceDatabase (DeviceInfo)
 import Hasql.Session qualified as Session
 import NavPoint (NavPoint, name, navPointLinesParser)
 import Network.Wai.Handler.Warp (Port, run)
@@ -245,9 +246,10 @@ type API =
     :<|> "demo" :> WebSocketSource (Text, ProgressPointDto)
     :<|> "demoTask" :> Get '[JSON] (FlightTask, [NameMatch])
     :<|> "watchFlights" :> WebSocketConduit () (FlightId, FlightPosition)
+    :<|> "deviceInfo" :> Capture "deviceId" Text :> Get '[JSON] (Maybe DeviceInfo)
 
-server :: TVar AprsMessageBroker -> Server API
-server flightsTvar =
+server :: HashMap Text DeviceInfo -> TVar AprsMessageBroker -> Server API
+server deviceDict flightsTvar =
   uploadNavPoints
     :<|> navPoints
     :<|> flightTasks
@@ -258,15 +260,16 @@ server flightsTvar =
     :<|> progressDemo
     :<|> demoTask
     :<|> watchFlights flightsTvar
+    :<|> lookupDeviceInfo deviceDict
 
-startApp :: TVar AprsMessageBroker -> Port -> IO ()
-startApp broker port = do
+startApp :: HashMap Text DeviceInfo -> TVar AprsMessageBroker -> Port -> IO ()
+startApp deviceDict broker port = do
   putStrLn ("Server started on port " <> show port)
-  run port (app broker)
+  run port (app deviceDict broker)
 
-app :: TVar AprsMessageBroker -> Application
-app broker =
-  server broker
+app :: HashMap Text DeviceInfo -> TVar AprsMessageBroker -> Application
+app deviceDict broker =
+  server deviceDict broker
     & serve api
     & gzip def
 
@@ -343,3 +346,7 @@ demoTask = do
   case (,) <$> flightTask <*> nameMatch of
     Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
     Right (Entity _ ft, nm) -> pure (ft, nm)
+
+lookupDeviceInfo :: HashMap Text DeviceInfo -> Text -> Handler (Maybe DeviceInfo)
+lookupDeviceInfo deviceDict deviceId =
+  pure $ HM.lookup deviceId deviceDict

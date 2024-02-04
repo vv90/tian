@@ -90,8 +90,9 @@ ghc-options:
 
 dependencies:
 - base >= 4.7 && < 5
- # an alternative to Prelude
+# an alternative to Prelude
 - relude
+# for working with UUIDs
 - uuid
 # for json encoding/decoding
 - aeson
@@ -106,6 +107,8 @@ dependencies:
 - wai-cors
 - warp
 - http-types
+# general http
+- http-conduit
 # for multithreading
 - stm
 - async

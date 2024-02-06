@@ -1,7 +1,7 @@
 module Aprs.Utils where
 
-import Aprs.AprsMessage (AprsMessage (..), aprsStreamParser)
-import Conduit (ConduitT, await, mapC, runConduit, takeC, (.|))
+import Aprs.AprsMessage (AprsMessage (..), aprsMessageParser)
+import Conduit (ConduitT, mapC, runConduit, takeC, (.|), awaitForever)
 import Control.Concurrent.STM.TBChan (TBChan, isFullTBChan, readTBChan, writeTBChan)
 import Data.Conduit.Network (appSink, appSource, clientSettings, runTCPClient)
 import Data.HashMap.Strict as HM
@@ -10,6 +10,7 @@ import Geo (Elevation)
 import GeoPoint (GeoPoint (..))
 import Relude
 import Text.Parsec (parse)
+import Data.Conduit.Combinators (linesUnboundedAscii)
 
 type FlightId = Text
 
@@ -46,17 +47,19 @@ updateFlightsTable broker msg = do
 
 handleAprsMessage :: TVar AprsMessageBroker -> ConduitT ByteString Void IO ()
 handleAprsMessage broker =
-  await >>= \case
-    Nothing -> pass
-    Just message ->
-      case parse aprsStreamParser "" message of
-        Right msgs -> do
-          atomically $ traverse_ distributeMessage msgs
-          handleAprsMessage broker
-        Left _ -> do
-          -- liftIO $ appendFileBS errorLogFile message
-          handleAprsMessage broker
+  linesUnboundedAscii .| awaitForever processLine
   where
+    processLine :: ByteString -> ConduitT ByteString Void IO ()
+    processLine line = 
+      case parse aprsMessageParser "" line of
+        Right msg -> do
+          liftIO $ putText "."
+          atomically $ distributeMessage msg
+        Left _ -> do
+          liftIO $ putText "x"
+          pass
+          -- liftIO $ appendFileBS errorLogFile line
+
     distributeMessage :: AprsMessage -> STM ()
     distributeMessage msg = do
       chans <- HM.elems <$> readTVar broker

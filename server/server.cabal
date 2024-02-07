@@ -26,6 +26,8 @@ source-repository head
 library
   exposed-modules:
       Aprs.AprsMessage
+      Aprs.AprsSymbol
+      Aprs.GlidernetId
       Aprs.Utils
       Backend.Utils
       Codegen

@@ -16,7 +16,6 @@ import Data.Time.Calendar (fromGregorian)
 import Data.UUID (UUID)
 import Data.UUID.V4 (nextRandom)
 import Data.Vector (Vector)
-import Demo.DemoConduit (demoC)
 import Demo.DemoTask (loadDemoTask)
 import Demo.NameMatch (NameMatch, loadNames)
 import Entity (Entity (..))
@@ -32,10 +31,9 @@ import Network.Wai.Handler.Warp (Port, run)
 import Network.Wai.Middleware.Gzip
 import Persistence.Connection (getConnection)
 import Persistence.Session (deleteDuplicateNavPointsSession, getAllFlightTasksSession, getFlightTaskSession, getNavPointsSession, saveFlightTaskSession, saveNavPointsSession)
-import ProgressPoint (ProgressPointDto)
 import Relude
 import Servant
-import Servant.API.WebSocketConduit (WebSocketConduit, WebSocketSource)
+import Servant.API.WebSocketConduit (WebSocketConduit)
 import Servant.Multipart (FileData (fdFileName, fdPayload), FromMultipart (fromMultipart), Mem, MultipartData (files), MultipartForm)
 import TaskProgress (TaskProgressDto, toDto)
 import TaskProgressUtils (progress, taskStartLine)
@@ -243,7 +241,6 @@ type API =
     :<|> "track" :> Capture "taskId" Int32 :> MultipartForm Mem [FlightTrack] :> Post '[JSON] [TaskProgressDto]
     :<|> "test" :> "taskProgress" :> Capture "taskId" Int32 :> ReqBody '[JSON] (NonEmpty (Latitude, Longitude)) :> Post '[JSON] TaskProgressDto
     :<|> "test" :> "startLine" :> Capture "taskId" Int32 :> Get '[JSON] ((Latitude, Longitude), (Latitude, Longitude))
-    :<|> "demo" :> WebSocketSource (Text, ProgressPointDto)
     :<|> "demoTask" :> Get '[JSON] (FlightTask, [NameMatch])
     :<|> "watchFlights" :> WebSocketConduit () (FlightId, FlightPosition)
     :<|> "deviceInfo" :> Capture "deviceId" Text :> Get '[JSON] (Maybe DeviceInfo)
@@ -257,7 +254,6 @@ server deviceDict flightsTvar =
     :<|> uploadFlightTrack
     :<|> testTaskProgress
     :<|> testStartLine
-    :<|> progressDemo
     :<|> demoTask
     :<|> watchFlights flightsTvar
     :<|> lookupDeviceInfo deviceDict
@@ -301,42 +297,6 @@ watchFlights broker =
         makeChan
         disposeChan
         (readChan . snd)
-
-progressDemo :: ConduitT () (Text, ProgressPointDto) (ResourceT IO) ()
-progressDemo = do
-  ft <- liftIO $ runExceptT loadDemoTask
-
-  case ft of
-    Right (Entity _ x) -> do
-      -- chan <- liftIO getChan
-      putStrLn "Init demo..."
-      demoC x
-    -- resultC chan
-
-    -- sourceTMChan chan
-    -- liftIO $ withAsync (runDemo q x) $ \r -> do
-    -- liftIO (runDemo x) >> demo x
-    -- print "Connecting socket..."
-
-    -- sourceTQueue q
-    -- sourceTChan
-    -- sourceQueue queue
-
-    Left e ->
-      liftIO $ print e
-
--- where
---     resultC :: TMChan (String, ProgressPointDto) -> ConduitT () (String, ProgressPointDto) (ResourceT IO) ()
---     resultC chan = do
---         r <- liftIO $ atomically (readTMChan chan)
---         case r of
---             Just x -> do
---                 liftIO $ print "sending..."
---                 -- yield x
---                 resultC chan
---             Nothing -> do
---                 liftIO $ print "waiting..."
---                 resultC chan
 
 demoTask :: Handler (FlightTask, [NameMatch])
 demoTask = do

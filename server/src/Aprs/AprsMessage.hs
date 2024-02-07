@@ -1,15 +1,35 @@
 module Aprs.AprsMessage where
 
+import Aprs.AprsSymbol (AprsSymbol, matchSymbol)
+import Aprs.GlidernetId (GlidernetIdInfo, glidernetIdParser)
 import Data.Time (DiffTime, secondsToDiffTime)
-import Geo (Elevation (..), GeoPosition (..), GeoPosition3d (..), Latitude (LatitudeDegrees), Longitude (LongitudeDegrees), RecordedGeoPosition (..), ddmTodd, elevationFeet)
+import Geo
+  ( AngularSpeed (DegreesPerSecond),
+    Direction (..),
+    Elevation (..),
+    GeoPosition (..),
+    GeoPosition3d (..),
+    Latitude (LatitudeDegrees),
+    Longitude (LongitudeDegrees),
+    RecordedGeoPosition (..),
+    Speed (..),
+    ddmTodd,
+    elevationFeet,
+  )
 import Relude
 import Text.Parsec
   ( Parsec,
     alphaNum,
+    between,
     char,
     choice,
+    letter,
     many1,
     noneOf,
+    oneOf,
+    option,
+    sepBy,
+    spaces,
     string,
   )
 import Text.Parsec.Char (digit)
@@ -17,10 +37,16 @@ import Text.Parsec.Combinator (count)
 
 data AprsMessage = AprsMessage
   { source :: Text,
+    symbol :: AprsSymbol,
     time :: DiffTime,
     lat :: Latitude,
     lon :: Longitude,
-    elev :: Elevation
+    heading :: Direction,
+    speed :: Speed,
+    elev :: Elevation,
+    glidernetId :: Maybe GlidernetIdInfo,
+    verticalSpeed :: Maybe Speed,
+    rotation :: Maybe AngularSpeed
   }
   deriving stock (Show, Eq)
 
@@ -37,32 +63,34 @@ instance RecordedGeoPosition AprsMessage where
 aprsLatParser :: Parsec ByteString () Latitude
 aprsLatParser = do
   degrees <- readEither <$> count 2 digit
-  minutes <- readEither <$> count 2 digit
+  minutes <- count 2 digit
   void $ char '.'
-  decMin <- readEither <$> count 2 digit
+  decMin <- count 2 digit
+
   adjustForHemisphereFn <-
     choice
       [ id <$ char 'N',
         negate <$ char 'S' -- need to negate the value for southern hemisphere
       ]
 
-  case ddmTodd <$> degrees <*> minutes <*> decMin of
+  case ddmTodd <$> degrees <*> readEither (minutes ++ "." ++ decMin) of
     Right x -> pure $ LatitudeDegrees $ adjustForHemisphereFn x
     Left e -> fail $ "Failed to parse latitude: " ++ toString e
 
 aprsLonParser :: Parsec ByteString () Longitude
 aprsLonParser = do
   deg <- readEither <$> count 3 digit
-  minutes <- readEither <$> count 2 digit
+  minutes <- count 2 digit
   void $ char '.'
-  decMin <- readEither <$> count 2 digit
+  decMin <- count 2 digit
+
   adjustForHemisphereFn <-
     choice
       [ id <$ char 'E',
         negate <$ char 'W' -- need to negate the value for western hemisphere
       ]
 
-  case ddmTodd <$> deg <*> minutes <*> decMin of
+  case ddmTodd <$> deg <*> readEither (minutes ++ "." ++ decMin) of
     Right x -> pure $ LongitudeDegrees $ adjustForHemisphereFn x
     Left e -> fail $ "Failed to parse longitude: " ++ toString e
 
@@ -84,51 +112,146 @@ aprsAltParser = do
     Right x -> pure $ elevationFeet x
     Left e -> fail $ "Failed to parse altitude: " ++ toString e
 
+aprsDirectionParser :: Parsec ByteString () Direction
+aprsDirectionParser = do
+  dir <- readEither <$> count 3 digit
+  case dir of
+    Right x -> pure $ DirectionDegrees x
+    Left e -> fail $ "Failed to parse direction: " ++ toString e
+
+aprsSpeedParser :: Parsec ByteString () Speed
+aprsSpeedParser = do
+  spd <- readEither @Int <$> count 3 digit
+  case spd of
+    Right x -> pure $ SpeedMetersPerSecond $ (fromIntegral x * 1852) / 3600 -- convert knots to m/s
+    Left e -> fail $ "Failed to parse speed: " ++ toString e
+
 aprsSourceParser :: Parsec ByteString () Text
 aprsSourceParser =
   toText <$> many1 alphaNum
 
-aprsMessageParser :: Parsec ByteString () AprsMessage
-aprsMessageParser =
-  AprsMessage
-    <$> aprsSourceParser
-    <* char '>'
-    <* many1 (noneOf [':'])
-    <* char ':'
+primarySymbolParser :: Parsec ByteString () Char
+primarySymbolParser = oneOf ['/', '\\']
+
+secondarySymbolParser :: Parsec ByteString () Char
+secondarySymbolParser =
+  oneOf ['!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~']
+
+aprsInfoParser :: Parsec ByteString () (Direction, Speed, Elevation)
+aprsInfoParser =
+  (,,)
+    <$> aprsDirectionParser
     <* char '/'
-    <*> aprsTimeParser
-    <* char 'h'
-    <*> aprsLatParser
-    <* choice [char '/', char '\\']
-    <*> aprsLonParser
-    <* choice [char '\'', char '^', char 'n', char 'g', char 'O', char 'z', char 'X', char '_']
-    <* count 3 digit
-    <* char '/'
-    <* count 3 digit
+    <*> aprsSpeedParser
     <* char '/'
     <*> aprsAltParser
-    <* many (noneOf "\n")
-    <* char '\n'
 
-aprsStreamParser :: Parsec ByteString () [AprsMessage]
-aprsStreamParser = many aprsMessageParser
+aprsPrecisionEnhancementParser :: Parsec ByteString () (Int, Int)
+aprsPrecisionEnhancementParser =
+  let digitParser :: Parsec ByteString () Int
+      digitParser = do
+        d <- readEither @Int . one <$> digit
 
--- FLRDDE626>APRS,qAS,EGHL:/074548h5111.32N/00102.04W'086/007/A=000607 id0ADDE626 -019fpm +0.0rot 5.5dB 3e -4.3kHz
--- The APRS symbols are the ones used to separate the altitude of the longitude (for example / on the above lines) and the symbol used to separate the longitude from the course/speed (for example ' on the above lies)
+        either (\e -> fail $ "Failed to parse digit: " ++ toString e) pure d
+   in do
+        between (char '!') (char '!') ((,) <$ char 'W' <*> digitParser <*> digitParser)
 
--- "/z",  //  0 = ?
--- "/'",  //  1 = (moto-)glider    (most frequent)
--- "/'",  //  2 = tow plane        (often)
--- "/X",  //  3 = helicopter       (often)
--- "/g" , //  4 = parachute        (rare but seen - often mixed with drop plane)
--- "\\^", //  5 = drop plane       (seen)
--- "/g" , //  6 = hang-glider      (rare but seen)
--- "/g" , //  7 = para-glider      (rare but seen)
--- "\\^", //  8 = powered aircraft (often)
--- "/^",  //  9 = jet aircraft     (rare but seen)
--- "/z",  //  A = UFO              (people set for fun)
--- "/O",  //  B = balloon          (seen once)
--- "/O",  //  C = airship          (seen once)
--- "/'",  //  D = UAV              (drones, can become very common)
--- "/z",  //  E = ground support   (ground vehicles at airfields)
--- "\\n"  //  F = static object    (ground relay ?)
+data AprsAdditionalInfo
+  = GlidernetId GlidernetIdInfo
+  | VerticalSpeed Speed -- fpm
+  | Rotation AngularSpeed -- rot
+  | SignalToNoise Double -- dB
+  | ErrorRate Double -- e
+  | FrequencyOffset Double -- kHz
+  | PowerRatio Double -- dBm
+  | PrecisionDigits (Int, Int)
+  | OtherInfo Text
+
+aprsAdditionalInfoParser :: Parsec ByteString () AprsAdditionalInfo
+aprsAdditionalInfoParser =
+  let numericValueParser :: Parsec ByteString () AprsAdditionalInfo
+      numericValueParser = do
+        adjustForSign <-
+          option id
+            $ choice
+              [ id <$ char '+',
+                negate <$ char '-'
+              ]
+
+        value <- readEither @Double <$> many1 (digit <|> char '.')
+        unit <- many1 letter
+
+        case (adjustForSign <$> value, unit) of
+          (Right x, "fpm") -> pure $ VerticalSpeed $ SpeedMetersPerSecond x
+          (Right x, "rot") -> pure $ Rotation $ DegreesPerSecond x
+          (Right x, "dB") -> pure $ SignalToNoise x
+          (Right x, "e") -> pure $ ErrorRate x
+          (Right x, "kHz") -> pure $ FrequencyOffset x
+          (Right x, "dBm") -> pure $ PowerRatio x
+          (Right _, _) -> fail $ "Unknown unit: " ++ unit
+          (Left e, _) -> fail $ "Failed to parse numeric value: " ++ toString e
+   in do
+        PrecisionDigits <$> aprsPrecisionEnhancementParser
+        <|> (GlidernetId <$> glidernetIdParser)
+        <|> numericValueParser
+        <|> (OtherInfo . toText <$> many1 (noneOf [' ', '\n']))
+
+applyAdditionalInfo :: AprsMessage -> AprsAdditionalInfo -> AprsMessage
+applyAdditionalInfo msg (GlidernetId gnId) = msg {glidernetId = Just gnId}
+applyAdditionalInfo msg (VerticalSpeed vs) = msg {verticalSpeed = Just vs}
+applyAdditionalInfo msg (Rotation rot) = msg {rotation = Just rot}
+applyAdditionalInfo msg (PrecisionDigits (latDigit, lonDigit)) =
+  -- precision digits provide the third digit after the decimal point (in decimal minutes)
+  -- we need to convert it to decimal degrees and add it to the existing value
+  -- divide by 60 (minutes in a degree) * 1000 (third decimal place) = 60000
+  let (LatitudeDegrees lat, LongitudeDegrees lon) = (msg.lat, msg.lon)
+      adjustedLat :: Double
+      adjustedLat =
+        if lat > 0
+          then lat + (fromIntegral latDigit / 60000)
+          else lat - (fromIntegral latDigit / 60000)
+
+      adjustedLon :: Double
+      adjustedLon =
+        if lon > 0
+          then lon + (fromIntegral lonDigit / 60000)
+          else lon - (fromIntegral lonDigit / 60000)
+   in msg
+        { lat = LatitudeDegrees adjustedLat,
+          lon = LongitudeDegrees adjustedLon
+        }
+applyAdditionalInfo msg _ = msg
+
+aprsMessageParser :: Parsec ByteString () AprsMessage
+aprsMessageParser = do
+  deviceId <- aprsSourceParser
+  void $ char '>' <* many1 (noneOf [':']) <* char ':' <* char '/'
+  messageTime <- aprsTimeParser
+  void $ char 'h'
+  messageLat <- aprsLatParser
+  primarySymbol <- primarySymbolParser
+  messageLon <- aprsLonParser
+  secondarySymbol <- secondarySymbolParser
+  (heading, speed, alt) <- aprsInfoParser
+  void spaces
+
+  additionalValues <- aprsAdditionalInfoParser `sepBy` spaces
+
+  pure
+    $ foldl'
+      applyAdditionalInfo
+      ( AprsMessage
+          { source = deviceId,
+            symbol = matchSymbol (primarySymbol, secondarySymbol),
+            time = messageTime,
+            lat = messageLat,
+            lon = messageLon,
+            heading = heading,
+            speed = speed,
+            elev = alt,
+            glidernetId = Nothing,
+            verticalSpeed = Nothing,
+            rotation = Nothing
+          }
+      )
+      additionalValues

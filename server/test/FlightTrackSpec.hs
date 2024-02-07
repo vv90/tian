@@ -8,6 +8,12 @@ import Test.Hspec
 import Text.Parsec (parse)
 import TrackPoint (FixValidity (..), TrackPoint (..))
 
+truncateLat :: Latitude -> Latitude
+truncateLat (LatitudeDegrees d) = LatitudeDegrees $ roundN (6 :: Int) d
+
+truncateLon :: Longitude -> Longitude
+truncateLon (LongitudeDegrees d) = LongitudeDegrees $ roundN (6 :: Int) d
+
 spec :: Spec
 spec = do
   context "trackDateParser" $ do
@@ -40,14 +46,17 @@ spec = do
   context "trackPointParser" $ do
     it "parses track point" $ do
       let input = "B1602405407121N00249342WA002800042120509950" :: Text
-      let result = parse (trackPointIdentifier *> trackPointParser) "" input
+      let result =
+            (\res -> res {lat = truncateLat res.lat, lon = truncateLon res.lon})
+              <$> parse (trackPointIdentifier *> trackPointParser) "" input
       let expected =
             TrackPoint
-              57760
-              (LatitudeDegrees 54.118683)
-              (LongitudeDegrees (-2.822367))
-              Gps3D
-              (ElevationMeters 280)
-              (ElevationMeters 421)
+              { time = 57760,
+                lat = LatitudeDegrees 54.118683,
+                lon = LongitudeDegrees (-2.822367),
+                fixValidity = Gps3D,
+                altitudeBaro = ElevationMeters 280,
+                altitudeGps = ElevationMeters 421
+              }
 
       result `shouldBe` Right expected

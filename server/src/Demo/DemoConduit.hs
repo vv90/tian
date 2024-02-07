@@ -1,20 +1,13 @@
 module Demo.DemoConduit where
 
-import Aprs.AprsMessage (AprsMessage (..))
-import Conduit (ConduitT, ResourceT, await, bracketP, decodeUtf8LenientC, leftover, linesUnboundedC, mapC, mapOutputMaybe, printC, runConduitRes, yield, (.|))
+import Conduit (ConduitT, ResourceT, await, bracketP, leftover, runConduitRes, yield, (.|))
 import Control.Concurrent (forkIO, killThread, threadDelay)
 import Control.Concurrent.STM.TBMQueue (closeTBMQueue, newTBMQueue, readTBMQueue)
-import Data.Conduit.Combinators (sourceFile)
 import Data.Conduit.TQueue (sinkTBMQueue)
-import FlightTask (FlightTask)
-import FlightTrack.Parser (FlightInfo (..), flightInfoParser)
-import ProgressPoint (ProgressPoint, ProgressPointDto (time), toDto)
 import Relude
 import System.Directory (getDirectoryContents)
 import System.FilePath (takeFileName)
-import TaskProgressUtils (TaskState (progressPoints), progressAdvance, progressInit)
 import Text.Parsec (Parsec, alphaNum, char, many1, parse, string)
-import TrackPoint (TrackPoint (..))
 
 data TrackFileInfo = TrackFileInfo
   { dateStr :: Text,
@@ -42,31 +35,31 @@ findTrackFiles filePath =
 
         pure $ catMaybes files
 
-demoAprsSource :: TrackFileInfo -> FilePath -> ConduitT () AprsMessage (ResourceT IO) ()
-demoAprsSource info path = do
-  sourceFile path
-    .| decodeUtf8LenientC
-    .| mapOutputMaybe
-      (toFlightInfo (show path) >=> toAprsMessage info.callsign)
-      linesUnboundedC
-  where
-    toFlightInfo :: Text -> Text -> Maybe FlightInfo
-    toFlightInfo compId =
-      rightToMaybe . parse flightInfoParser (show compId)
+-- demoAprsSource :: TrackFileInfo -> FilePath -> ConduitT () AprsMessage (ResourceT IO) ()
+-- demoAprsSource info path = do
+--   sourceFile path
+--     .| decodeUtf8LenientC
+--     .| mapOutputMaybe
+--       (toFlightInfo (show path) >=> toAprsMessage info.callsign)
+--       linesUnboundedC
+--   where
+--     toFlightInfo :: Text -> Text -> Maybe FlightInfo
+--     toFlightInfo compId =
+--       rightToMaybe . parse flightInfoParser (show compId)
 
-    toAprsMessage :: Text -> FlightInfo -> Maybe AprsMessage
-    toAprsMessage msgId fi =
-      case fi of
-        Fix tp ->
-          Just
-            $ AprsMessage
-              { source = msgId,
-                time = tp.time,
-                lat = tp.lat,
-                lon = tp.lon,
-                elev = tp.altitudeGps
-              }
-        _ -> Nothing
+--     toAprsMessage :: Text -> FlightInfo -> Maybe AprsMessage
+--     toAprsMessage msgId fi =
+--       case fi of
+--         Fix tp ->
+--           Just
+--             $ AprsMessage
+--               { source = msgId,
+--                 time = tp.time,
+--                 lat = tp.lat,
+--                 lon = tp.lon,
+--                 elev = tp.altitudeGps
+--               }
+--         _ -> Nothing
 
 playbackC :: (MonadIO m) => (a -> Int) -> Int -> ConduitT a a m ()
 playbackC getTime speed =
@@ -139,84 +132,3 @@ mergeSourcesOn f sources =
               qs' <- catMaybes <$> traverse (readQ . fst) qs -- read the first value from each queue
               consumeQueues qs'
           )
-
-progressAdvanceC :: (Monad m) => FlightTask -> TaskState -> ConduitT AprsMessage ProgressPoint m ()
-progressAdvanceC ft st = do
-  item <- await
-
-  case item of
-    Just msg -> do
-      let newSt = progressAdvance ft st msg
-
-      yield $ head newSt.progressPoints
-
-      progressAdvanceC ft newSt
-    Nothing -> pass
-
-progressC :: (Monad m) => FlightTask -> ConduitT AprsMessage ProgressPoint m ()
-progressC ft = do
-  item <- await
-
-  case item of
-    Just msg -> do
-      let st = progressInit ft msg
-      yield $ head st.progressPoints
-
-      progressAdvanceC ft st
-    Nothing -> pass
-
-demoC :: FlightTask -> ConduitT () (Text, ProgressPointDto) (ResourceT IO) ()
-demoC ft =
-  let toProgressSource (info, p) =
-        demoAprsSource info ("./demo/" <> p)
-          .| progressC ft
-          .| mapC (\p' -> (info.callsign, toDto p'))
-   in do
-        sources <- liftIO $ toProgressSource <<$>> findTrackFiles "./demo/"
-
-        mergeSourcesOn (\(_, p) -> p.time) sources
-          .| playbackC (\(_, p) -> p.time) 10
-
-testDemoConduit :: IO ()
-testDemoConduit =
-  let toAprsSource (info, p) =
-        demoAprsSource info ("./demo/" <> p)
-   in -- r =  toAprsSource <<$>> findTrackFiles "./demo/"
-      do
-        sources <- toAprsSource <<$>> findTrackFiles "./demo/"
-        runConduitRes
-          $
-          --     -- demoC "./demo/"
-          --     -- demoC "./demo/"
-          --     -- demoC "./demo/"
-          --     -- demoC "./demo/"
-          --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
-          --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
-          --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
-          --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
-          --     -- .| printC
-          --     -- .| printC
-          --     -- .| printC
-          --     -- .| printC
-          -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
-          -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
-          -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
-          -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
-
-          --     -- demoC "./demo/"
-          --     -- demoC "./demo/"
-          --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
-          --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
-          --     -- .| printC
-          --     -- .| printC
-          -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
-          -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
-
-          --     -- demoC "./demo/"
-          --     -- .| mapC (\xs -> (\x -> (x.source, x.time)) <<$>> xs)
-          --     -- .| printC
-          -- takeAprsMsg (demoAprsSource (TrackFileInfo "" "SO") "./demo/155_SO.igc")
-          mergeSourcesOn (.time) sources
-          -- .| playbackC 10
-          .| mapC (\x -> (x.source, x.time))
-          .| printC

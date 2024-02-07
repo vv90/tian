@@ -109,30 +109,30 @@ trackPointTimeParser = do
 trackPointLatitudeParser :: Parsec Text () Latitude
 trackPointLatitudeParser = do
   deg <- readEither <$> count 2 digit
-  minutes <- readEither <$> count 2 digit
-  decMin <- readEither <$> count 3 digit
+  minutes <- count 2 digit
+  decMin <- count 3 digit
   adjustForHemisphereFn <-
     choice
       [ id <$ char 'N',
         negate <$ char 'S' -- need to negate the value for southern hemisphere
       ]
 
-  case ddmTodd <$> deg <*> minutes <*> decMin of
+  case ddmTodd <$> deg <*> readEither (minutes ++ "." ++ decMin) of
     Right x -> pure $ LatitudeDegrees $ adjustForHemisphereFn x
     Left e -> fail $ "Failed to parse latitude: " ++ toString e
 
 trackPointLongitudeParser :: Parsec Text () Longitude
 trackPointLongitudeParser = do
   deg <- readEither <$> count 3 digit
-  minutes <- readEither <$> count 2 digit
-  decMin <- readEither <$> count 3 digit
+  minutes <- count 2 digit
+  decMin <- count 3 digit
   adjustForHemisphereFn <-
     choice
       [ id <$ char 'E',
         negate <$ char 'W' -- need to negate the value for western hemisphere
       ]
 
-  case ddmTodd <$> deg <*> minutes <*> decMin of
+  case ddmTodd <$> deg <*> readEither (minutes ++ "." ++ decMin) of
     Right x -> pure $ LongitudeDegrees $ adjustForHemisphereFn x
     Left e -> fail $ "Failed to parse longitude: " ++ toString e
 

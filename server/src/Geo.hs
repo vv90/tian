@@ -104,6 +104,20 @@ newtype Distance = DistanceMeters Double
 metersDistance :: Distance -> Double
 metersDistance (DistanceMeters x) = x
 
+newtype Speed = SpeedMetersPerSecond Double
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving
+    (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
+    via ElmType "Api.Types.Speed" Speed
+
+newtype AngularSpeed = DegreesPerSecond Double
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving
+    (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
+    via ElmType "Api.Types.AngularSpeed" AngularSpeed
+
 class GeoPosition a where
   latitude :: a -> Latitude
   longitude :: a -> Longitude
@@ -125,7 +139,9 @@ roundN n x = ((fromIntegral @Integer) . round $ x * f) / f
     f = 10 ^ n
 
 -- Degrees Decimal Minutes (DDM) to Decimal Degrees (DD)
-ddmTodd :: (RealFrac b) => Int -> Int -> Int -> b
-ddmTodd deg minutes decMin =
-  -- since the maximum precision of the input is 0.001' ~ 0.000017° we round to 6 decimal places
-  (roundN @_ @Integer) 6 $ fromIntegral deg + fromIntegral minutes / 60 + fromIntegral decMin / 60000
+ddmTodd :: (RealFrac b) => Int -> b -> b
+ddmTodd deg minutes =
+  -- assuming decMin will have at most 3 digits
+  -- the maximum precision of the input is 0.001' ~ 0.000017°, so we round to 6 decimal places
+  -- (roundN @_ @Integer) 6 $ fromIntegral deg + fromIntegral minutes / 60 + fromIntegral decMin / 60000
+  fromIntegral deg + minutes / 60

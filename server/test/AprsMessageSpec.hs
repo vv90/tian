@@ -2,16 +2,16 @@ module AprsMessageSpec where
 
 import Aprs.AprsMessage (AprsMessage (..), aprsMessageParser)
 import Aprs.GlidernetId (AddressType (..), AircraftType (..), GlidernetIdInfo (..), glidernetIdParser)
+import Geo (Latitude (..), Longitude (..), ddmTodd)
 import Relude
 import Test.Hspec
 import Text.Parsec (parse)
-import Geo (ddmTodd, Latitude (..), Longitude (..))
 
 spec :: Spec
 spec = do
   context "glidernet parser" $ do
     it "FLARM / Glider" $ do
-      let input = "id06DF0A52"
+      let input = "id06DF0A52" :: ByteString
           result = parse glidernetIdParser "" input
 
       result
@@ -26,7 +26,7 @@ spec = do
           )
 
     it "ICAO / Piston" $ do
-      let input = "id214B28B7"
+      let input = "id214B28B7" :: ByteString
           result = parse glidernetIdParser "" input
 
       result
@@ -41,7 +41,7 @@ spec = do
           )
 
     it "ICAO / Jet" $ do
-      let input = "id254BC883"
+      let input = "id254BC883" :: ByteString
           result = parse glidernetIdParser "" input
 
       result
@@ -56,7 +56,7 @@ spec = do
           )
 
     it "ICAO / Helicopter" $ do
-      let input = "id0D484A94"
+      let input = "id0D484A94" :: ByteString
           result = parse glidernetIdParser "" input
 
       result
@@ -133,5 +133,5 @@ spec = do
           result = parse aprsMessageParser "" input
 
       source <$> result `shouldBe` Right "FLRD0095F"
-      lat <$> result `shouldBe` Right (LatitudeDegrees $ ddmTodd 43 37.148) 
+      lat <$> result `shouldBe` Right (LatitudeDegrees $ ddmTodd 43 37.148)
       lon <$> result `shouldBe` Right (LongitudeDegrees $ ddmTodd 5 7.752)

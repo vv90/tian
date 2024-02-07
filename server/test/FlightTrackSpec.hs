@@ -9,10 +9,10 @@ import Text.Parsec (parse)
 import TrackPoint (FixValidity (..), TrackPoint (..))
 
 truncateLat :: Latitude -> Latitude
-truncateLat (LatitudeDegrees d) = LatitudeDegrees $ roundN (6::Int) d
+truncateLat (LatitudeDegrees d) = LatitudeDegrees $ roundN (6 :: Int) d
 
 truncateLon :: Longitude -> Longitude
-truncateLon (LongitudeDegrees d) = LongitudeDegrees $ roundN (6::Int) d
+truncateLon (LongitudeDegrees d) = LongitudeDegrees $ roundN (6 :: Int) d
 
 spec :: Spec
 spec = do
@@ -46,12 +46,12 @@ spec = do
   context "trackPointParser" $ do
     it "parses track point" $ do
       let input = "B1602405407121N00249342WA002800042120509950" :: Text
-      let result = 
-            (\res -> res { lat = truncateLat res.lat , lon = truncateLon res.lon }) <$>
-            parse (trackPointIdentifier *> trackPointParser) "" input
+      let result =
+            (\res -> res {lat = truncateLat res.lat, lon = truncateLon res.lon})
+              <$> parse (trackPointIdentifier *> trackPointParser) "" input
       let expected =
             TrackPoint
-              { time = 57760 ,
+              { time = 57760,
                 lat = LatitudeDegrees 54.118683,
                 lon = LongitudeDegrees (-2.822367),
                 fixValidity = Gps3D,

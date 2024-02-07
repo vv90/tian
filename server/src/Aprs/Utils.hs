@@ -1,8 +1,9 @@
 module Aprs.Utils where
 
 import Aprs.AprsMessage (AprsMessage (..), aprsMessageParser)
-import Conduit (ConduitT, mapC, runConduit, takeC, (.|), awaitForever)
+import Conduit (ConduitT, awaitForever, mapC, runConduit, takeC, (.|))
 import Control.Concurrent.STM.TBChan (TBChan, isFullTBChan, readTBChan, writeTBChan)
+import Data.Conduit.Combinators (linesUnboundedAscii)
 import Data.Conduit.Network (appSink, appSource, clientSettings, runTCPClient)
 import Data.HashMap.Strict as HM
 import Data.UUID (UUID)
@@ -10,7 +11,6 @@ import Geo (Elevation)
 import GeoPoint (GeoPoint (..))
 import Relude
 import Text.Parsec (parse)
-import Data.Conduit.Combinators (linesUnboundedAscii)
 
 type FlightId = Text
 
@@ -50,7 +50,7 @@ handleAprsMessage broker =
   linesUnboundedAscii .| awaitForever processLine
   where
     processLine :: ByteString -> ConduitT ByteString Void IO ()
-    processLine line = 
+    processLine line =
       case parse aprsMessageParser "" line of
         Right msg -> do
           liftIO $ putText "."
@@ -58,7 +58,7 @@ handleAprsMessage broker =
         Left _ -> do
           liftIO $ putText "x"
           pass
-          -- liftIO $ appendFileBS errorLogFile line
+    -- liftIO $ appendFileBS errorLogFile line
 
     distributeMessage :: AprsMessage -> STM ()
     distributeMessage msg = do

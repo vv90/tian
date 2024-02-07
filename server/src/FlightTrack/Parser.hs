@@ -106,7 +106,6 @@ trackPointTimeParser = do
     Right x -> pure x
     Left e -> fail $ "Failed to parse track point time: " <> show e
 
-
 trackPointLatitudeParser :: Parsec Text () Latitude
 trackPointLatitudeParser = do
   deg <- readEither <$> count 2 digit

@@ -2,6 +2,7 @@ module Aprs.AprsMessage where
 
 import Aprs.AprsSymbol (AprsSymbol, matchSymbol)
 import Aprs.GlidernetId (GlidernetIdInfo, glidernetIdParser)
+import Data.Aeson qualified as Aeson
 import Data.Time (DiffTime, secondsToDiffTime)
 import Geo
   ( AngularSpeed (DegreesPerSecond),
@@ -35,8 +36,15 @@ import Text.Parsec
 import Text.Parsec.Char (digit)
 import Text.Parsec.Combinator (count)
 
+newtype DeviceId = DeviceId Text
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (Aeson.ToJSON, Aeson.FromJSON)
+
+getDeviceId :: DeviceId -> Text
+getDeviceId (DeviceId x) = x
+
 data AprsMessage = AprsMessage
-  { source :: Text,
+  { source :: DeviceId,
     symbol :: AprsSymbol,
     time :: DiffTime,
     lat :: Latitude,
@@ -224,7 +232,7 @@ applyAdditionalInfo msg _ = msg
 
 aprsMessageParser :: Parsec ByteString () AprsMessage
 aprsMessageParser = do
-  deviceId <- aprsSourceParser
+  deviceId <- DeviceId <$> aprsSourceParser
   void $ char '>' <* many1 (noneOf [':']) <* char ':' <* char '/'
   messageTime <- aprsTimeParser
   void $ char 'h'

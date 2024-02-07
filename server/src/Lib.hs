@@ -2,8 +2,9 @@
 
 module Lib (startApp, app) where
 
-import Aprs.AprsMessage (AprsMessage (..))
-import Aprs.Utils (AprsMessageBroker, FlightId, FlightPosition)
+import Aprs.AprsMessage (AprsMessage (..), DeviceId)
+import Aprs.Utils (AprsMessageBroker)
+import Backend.FlightsState (FlightPosition, toFlightPosition)
 import Conduit (ConduitT, ResourceT, bracketP, yield)
 import Control.Arrow (ArrowChoice (left))
 import Control.Concurrent.STM (modifyTVar)
@@ -242,7 +243,7 @@ type API =
     :<|> "test" :> "taskProgress" :> Capture "taskId" Int32 :> ReqBody '[JSON] (NonEmpty (Latitude, Longitude)) :> Post '[JSON] TaskProgressDto
     :<|> "test" :> "startLine" :> Capture "taskId" Int32 :> Get '[JSON] ((Latitude, Longitude), (Latitude, Longitude))
     :<|> "demoTask" :> Get '[JSON] (FlightTask, [NameMatch])
-    :<|> "watchFlights" :> WebSocketConduit () (FlightId, FlightPosition)
+    :<|> "watchFlights" :> WebSocketConduit () (DeviceId, FlightPosition)
     :<|> "deviceInfo" :> Capture "deviceId" Text :> Get '[JSON] (Maybe DeviceInfo)
 
 server :: HashMap Text DeviceInfo -> TVar AprsMessageBroker -> Server API
@@ -272,27 +273,24 @@ app deviceDict broker =
 api :: Proxy API
 api = Proxy
 
-watchFlights :: TVar AprsMessageBroker -> ConduitT () (FlightId, FlightPosition) (ResourceT IO) ()
+watchFlights :: TVar AprsMessageBroker -> ConduitT () (DeviceId, FlightPosition) (ResourceT IO) ()
 watchFlights broker =
-  let makeChan :: IO (UUID, TBChan AprsMessage)
+  let makeChan :: IO (UUID, TBChan (DeviceId, FlightPosition))
       makeChan = do
         chanId <- nextRandom
         chan <- newTBChanIO 1000
         atomically $ modifyTVar broker (HM.insert chanId chan)
         pure (chanId, chan)
 
-      disposeChan :: (UUID, TBChan AprsMessage) -> IO ()
+      disposeChan :: (UUID, TBChan (DeviceId, FlightPosition)) -> IO ()
       disposeChan (chanId, _) =
         atomically $ modifyTVar broker (HM.delete chanId)
 
-      readChan :: TBChan AprsMessage -> ConduitT () (FlightId, FlightPosition) (ResourceT IO) ()
+      readChan :: TBChan (DeviceId, FlightPosition) -> ConduitT () (DeviceId, FlightPosition) (ResourceT IO) ()
       readChan chan = do
         msg <- atomically $ readTBChan chan
-        yield $ fromAprsMessage msg
+        yield msg
         readChan chan
-
-      fromAprsMessage :: AprsMessage -> (FlightId, FlightPosition)
-      fromAprsMessage msg = (msg.source, (GeoPoint (latitude msg) (longitude msg), altitude msg))
    in bracketP
         makeChan
         disposeChan

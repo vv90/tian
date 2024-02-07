@@ -1,22 +1,24 @@
 module Aprs.Utils where
 
-import Aprs.AprsMessage (AprsMessage (..), aprsMessageParser)
+import Aprs.AprsMessage (AprsMessage (..), DeviceId, aprsMessageParser, getDeviceId)
+import Backend.FlightsState (FlightInformation, FlightPosition, makeFlightInformation, toFlightPosition)
 import Conduit (ConduitT, awaitForever, mapC, runConduit, takeC, (.|))
 import Control.Concurrent.STM.TBChan (TBChan, isFullTBChan, readTBChan, writeTBChan)
 import Data.Conduit.Combinators (linesUnboundedAscii)
 import Data.Conduit.Network (appSink, appSource, clientSettings, runTCPClient)
 import Data.HashMap.Strict as HM
 import Data.UUID (UUID)
-import Geo (Elevation)
-import GeoPoint (GeoPoint (..))
+import Glidernet.DeviceDatabase (DeviceInfo)
 import Relude
 import Text.Parsec (parse)
 
-type FlightId = Text
+-- type FlightId = Text
 
-type FlightPosition = (GeoPoint, Elevation)
+-- type FlightPosition = (GeoPoint, Elevation)
 
-type AprsMessageBroker = HashMap UUID (TBChan AprsMessage)
+type AprsMessageBroker = HashMap UUID (TBChan (DeviceId, FlightPosition))
+
+type FlightsState = HashMap Text (FlightInformation, FlightPosition)
 
 -- errorLogFile :: FilePath
 -- errorLogFile = "aprs-error.log"
@@ -31,22 +33,8 @@ withAuth ptSink responseSink = do
   putStrLn "authenticated"
   ptSink
 
-updateFlightsTable :: TVar AprsMessageBroker -> AprsMessage -> STM ()
-updateFlightsTable broker msg = do
-  chans <- HM.elems <$> readTVar broker
-
-  traverse_ writeAprsMessage chans
-  where
-    writeAprsMessage :: TBChan AprsMessage -> STM ()
-    writeAprsMessage chan =
-      isFullTBChan chan >>= \case
-        -- if the channel is full, discard the oldest message
-        -- it's better to lose a message than to block the whole system
-        True -> readTBChan chan >> writeTBChan chan msg
-        False -> writeTBChan chan msg
-
-handleAprsMessage :: TVar AprsMessageBroker -> ConduitT ByteString Void IO ()
-handleAprsMessage broker =
+handleAprsMessage :: HashMap Text DeviceInfo -> TVar AprsMessageBroker -> TVar FlightsState -> ConduitT ByteString Void IO ()
+handleAprsMessage devices broker flights =
   linesUnboundedAscii .| awaitForever processLine
   where
     processLine :: ByteString -> ConduitT ByteString Void IO ()
@@ -61,21 +49,28 @@ handleAprsMessage broker =
     -- liftIO $ appendFileBS errorLogFile line
 
     distributeMessage :: AprsMessage -> STM ()
-    distributeMessage msg = do
-      chans <- HM.elems <$> readTVar broker
-      traverse_ (writeAprsMessage msg) chans
+    distributeMessage msg =
+      let information :: FlightInformation
+          information = makeFlightInformation devices msg
 
-    writeAprsMessage :: AprsMessage -> TBChan AprsMessage -> STM ()
-    writeAprsMessage msg chan =
+          position :: FlightPosition
+          position = toFlightPosition msg
+       in do
+            modifyTVar' flights $ HM.insert (getDeviceId msg.source) (information, position)
+            chans <- HM.elems <$> readTVar broker
+            traverse_ (writeMessage (msg.source, position)) chans
+
+    writeMessage :: (DeviceId, FlightPosition) -> TBChan (DeviceId, FlightPosition) -> STM ()
+    writeMessage msg chan =
       isFullTBChan chan >>= \case
         -- if the channel is full, discard the oldest message
         -- it's better to lose a message than to block the whole system
         True -> readTBChan chan >> writeTBChan chan msg
         False -> writeTBChan chan msg
 
-runAprs :: TVar AprsMessageBroker -> IO ()
-runAprs broker =
+runAprs :: HashMap Text DeviceInfo -> TVar AprsMessageBroker -> TVar FlightsState -> IO ()
+runAprs devices broker flights =
   runTCPClient (clientSettings 14580 "aprs.glidernet.org") $ \server -> do
     -- errorLogFileExists <- doesFileExist errorLogFile
     -- unless errorLogFileExists $ writeFile errorLogFile ""
-    runConduit $ appSource server .| withAuth (handleAprsMessage broker) (appSink server)
+    runConduit $ appSource server .| withAuth (handleAprsMessage devices broker flights) (appSink server)

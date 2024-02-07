@@ -29,6 +29,7 @@ library
       Aprs.AprsSymbol
       Aprs.GlidernetId
       Aprs.Utils
+      Backend.FlightsState
       Backend.Utils
       Codegen
       Demo.DemoConduit

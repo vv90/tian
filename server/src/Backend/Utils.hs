@@ -29,4 +29,4 @@ runBackend = do
   deviceDict <- getDeviceDict
   broker <- newTVarIO HM.empty
   flights <- newTVarIO HM.empty
-  concurrently_ (startApp deviceDict broker 8081) (runAprs deviceDict broker flights)
+  concurrently_ (startApp broker flights 8081) (runAprs deviceDict broker flights)

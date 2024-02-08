@@ -1,8 +1,9 @@
-module Common.ApiCommands exposing (getDeviceInfo, hydrateTile, loadElevationTileCmd)
+module Common.ApiCommands exposing (getCurrentFlights, getFlightInformation, hydrateTile, loadElevationTileCmd)
 
 import Api.Types exposing (..)
 import Array exposing (Array)
 import Common.ApiResult exposing (ApiResult)
+import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Domain.GeoUtils exposing (scaleLatitude, scaleLongitude, sumLatitude, sumLongitude)
 import Http
 import Json.Decode as Decode
@@ -36,9 +37,22 @@ hydrateTile tile =
     Array.indexedMap (\i elev -> ( makeGeoPoint (i // tile.rowLength) (modBy tile.rowLength i), elev )) tile.elevations
 
 
-getDeviceInfo : String -> (ApiResult (Maybe DeviceInfo) -> msg) -> Cmd msg
-getDeviceInfo deviceId onLoaded =
+getFlightInformation : String -> (ApiResult (Maybe FlightInformation) -> msg) -> Cmd msg
+getFlightInformation deviceId onLoaded =
     Http.get
         { url = "/api/deviceInfo/" ++ deviceId
-        , expect = Http.expectJson onLoaded (Decode.maybe deviceInfoDecoder)
+        , expect = Http.expectJson onLoaded <| Decode.maybe flightInformationDecoder
+        }
+
+
+getCurrentFlights : (ApiResult (List ( String, ( FlightInformation, FlightPosition ) )) -> msg) -> Cmd msg
+getCurrentFlights onLoaded =
+    let
+        valueDecoder : Decode.Decoder ( FlightInformation, FlightPosition )
+        valueDecoder =
+            tupleDecoder ( flightInformationDecoder, flightPositionDecoder )
+    in
+    Http.get
+        { url = "/api/currentFlights/"
+        , expect = Http.expectJson onLoaded (Decode.list <| tupleDecoder ( Decode.string, valueDecoder ))
         }

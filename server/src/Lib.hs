@@ -2,9 +2,9 @@
 
 module Lib (startApp, app) where
 
-import Aprs.AprsMessage (DeviceId)
-import Aprs.Utils (AprsMessageBroker)
-import Backend.FlightsState (FlightPosition)
+import Aprs.AprsMessage (DeviceId (..))
+import Aprs.Utils (AprsMessageBroker, FlightsState)
+import Backend.FlightsState (FlightInformation, FlightPosition)
 import Conduit (ConduitT, ResourceT, bracketP, yield)
 import Control.Arrow (ArrowChoice (left))
 import Control.Concurrent.STM (modifyTVar)
@@ -24,7 +24,6 @@ import FlightTask (FlightTask)
 import FlightTrack (FlightTrack (..))
 import FlightTrack.Parser (buildFlightTrack, flightInfoParserAll)
 import Geo (Elevation (..), Latitude, Longitude)
-import Glidernet.DeviceDatabase (DeviceInfo)
 import Hasql.Session qualified as Session
 import NavPoint (NavPoint, name, navPointLinesParser)
 import Network.Wai.Handler.Warp (Port, run)
@@ -243,10 +242,11 @@ type API =
     :<|> "test" :> "startLine" :> Capture "taskId" Int32 :> Get '[JSON] ((Latitude, Longitude), (Latitude, Longitude))
     :<|> "demoTask" :> Get '[JSON] (FlightTask, [NameMatch])
     :<|> "watchFlights" :> WebSocketConduit () (DeviceId, FlightPosition)
-    :<|> "deviceInfo" :> Capture "deviceId" Text :> Get '[JSON] (Maybe DeviceInfo)
+    :<|> "flightInfo" :> Capture "deviceId" Text :> Get '[JSON] (Maybe FlightInformation)
+    :<|> "currentFlights" :> Get '[JSON] [(DeviceId, (FlightInformation, FlightPosition))]
 
-server :: HashMap Text DeviceInfo -> TVar AprsMessageBroker -> Server API
-server deviceDict flightsTvar =
+server :: TVar AprsMessageBroker -> TVar FlightsState -> Server API
+server broker flights =
   uploadNavPoints
     :<|> navPoints
     :<|> flightTasks
@@ -255,17 +255,18 @@ server deviceDict flightsTvar =
     :<|> testTaskProgress
     :<|> testStartLine
     :<|> demoTask
-    :<|> watchFlights flightsTvar
-    :<|> lookupDeviceInfo deviceDict
+    :<|> watchFlights broker
+    :<|> lookupFlightInformation flights
+    :<|> currentFlights flights
 
-startApp :: HashMap Text DeviceInfo -> TVar AprsMessageBroker -> Port -> IO ()
-startApp deviceDict broker port = do
+startApp :: TVar AprsMessageBroker -> TVar FlightsState -> Port -> IO ()
+startApp broker flights port = do
   putStrLn ("Server started on port " <> show port)
-  run port (app deviceDict broker)
+  run port (app broker flights)
 
-app :: HashMap Text DeviceInfo -> TVar AprsMessageBroker -> Application
-app deviceDict broker =
-  server deviceDict broker
+app :: TVar AprsMessageBroker -> TVar FlightsState -> Application
+app broker flights =
+  server broker flights
     & serve api
     & gzip def
 
@@ -304,6 +305,11 @@ demoTask = do
     Left e -> throwError $ err400 {errBody = "Error: " <> (encodeUtf8 . toLText) e}
     Right (Entity _ ft, nm) -> pure (ft, nm)
 
-lookupDeviceInfo :: HashMap Text DeviceInfo -> Text -> Handler (Maybe DeviceInfo)
-lookupDeviceInfo deviceDict deviceId =
-  pure $ HM.lookup deviceId deviceDict
+lookupFlightInformation :: TVar FlightsState -> Text -> Handler (Maybe FlightInformation)
+lookupFlightInformation flights deviceId = do
+  val <- atomically $ HM.lookup (DeviceId deviceId) <$> readTVar flights
+  pure $ fmap fst val
+
+currentFlights :: TVar FlightsState -> Handler [(DeviceId, (FlightInformation, FlightPosition))]
+currentFlights flights =
+  liftIO $ atomically $ HM.toList <$> readTVar flights

@@ -54,7 +54,7 @@ data AircraftType
   | Drone
   | Other
   | StaticObstacle
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Show, Read, Eq, Generic)
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)

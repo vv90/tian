@@ -1,6 +1,6 @@
 module Aprs.Utils where
 
-import Aprs.AprsMessage (AprsMessage (..), DeviceId, aprsMessageParser, getDeviceId)
+import Aprs.AprsMessage (AprsMessage (..), DeviceId, aprsMessageParser)
 import Backend.FlightsState (FlightInformation, FlightPosition, makeFlightInformation, toFlightPosition)
 import Conduit (ConduitT, awaitForever, mapC, runConduit, takeC, (.|))
 import Control.Concurrent.STM.TBChan (TBChan, isFullTBChan, readTBChan, writeTBChan)
@@ -18,7 +18,7 @@ import Text.Parsec (parse)
 
 type AprsMessageBroker = HashMap UUID (TBChan (DeviceId, FlightPosition))
 
-type FlightsState = HashMap Text (FlightInformation, FlightPosition)
+type FlightsState = HashMap DeviceId (FlightInformation, FlightPosition)
 
 -- errorLogFile :: FilePath
 -- errorLogFile = "aprs-error.log"
@@ -56,7 +56,7 @@ handleAprsMessage devices broker flights =
           position :: FlightPosition
           position = toFlightPosition msg
        in do
-            modifyTVar' flights $ HM.insert (getDeviceId msg.source) (information, position)
+            modifyTVar' flights $ HM.insert (msg.source) (information, position)
             chans <- HM.elems <$> readTVar broker
             traverse_ (writeMessage (msg.source, position)) chans
 

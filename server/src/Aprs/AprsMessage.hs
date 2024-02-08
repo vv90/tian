@@ -41,7 +41,7 @@ import Text.Parsec.Combinator (count)
 
 newtype DeviceId = DeviceId Text
   deriving stock (Show, Eq, Generic)
-  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving anyclass (Hashable, SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
     via ElmType "Api.Types.DeviceId" DeviceId

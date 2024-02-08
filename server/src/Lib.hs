@@ -2,9 +2,9 @@
 
 module Lib (startApp, app) where
 
-import Aprs.AprsMessage (AprsMessage (..), DeviceId)
+import Aprs.AprsMessage (DeviceId)
 import Aprs.Utils (AprsMessageBroker)
-import Backend.FlightsState (FlightPosition, toFlightPosition)
+import Backend.FlightsState (FlightPosition)
 import Conduit (ConduitT, ResourceT, bracketP, yield)
 import Control.Arrow (ArrowChoice (left))
 import Control.Concurrent.STM (modifyTVar)
@@ -23,8 +23,7 @@ import Entity (Entity (..))
 import FlightTask (FlightTask)
 import FlightTrack (FlightTrack (..))
 import FlightTrack.Parser (buildFlightTrack, flightInfoParserAll)
-import Geo (Elevation (..), GeoPosition (..), GeoPosition3d (..), Latitude, Longitude)
-import GeoPoint (GeoPoint (..))
+import Geo (Elevation (..), Latitude, Longitude)
 import Glidernet.DeviceDatabase (DeviceInfo)
 import Hasql.Session qualified as Session
 import NavPoint (NavPoint, name, navPointLinesParser)

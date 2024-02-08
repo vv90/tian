@@ -1,6 +1,10 @@
 module Aprs.GlidernetId where
 
+import Data.Aeson qualified as Aeson
 import Data.Bits (Bits (shiftR), (.&.))
+import Generics.SOP qualified as SOP
+import Language.Haskell.To.Elm (HasElmDecoder, HasElmEncoder, HasElmType)
+import Magic.ElmDeriving (ElmType)
 import Numeric (readHex)
 import Relude
 import Text.Parsec (Parsec, alphaNum, many1, string)
@@ -50,7 +54,11 @@ data AircraftType
   | Drone
   | Other
   | StaticObstacle
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving
+    (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
+    via ElmType "Api.Types.AircraftType" AircraftType
 
 matchAircraftType :: (Num a, Eq a) => a -> AircraftType
 matchAircraftType = \case

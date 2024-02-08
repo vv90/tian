@@ -1,10 +1,12 @@
 module Api.Types exposing
-    ( DeviceInfo
+    ( DeviceId(..)
+    , DeviceInfo
     , Direction(..)
     , Distance(..)
     , Elevation(..)
     , ElevationPointsTile
     , Entity
+    , FlightPosition
     , FlightTask
     , GeoPoint
     , Latitude(..)
@@ -17,6 +19,8 @@ module Api.Types exposing
     , TaskStart(..)
     , Turnpoint(..)
     , WaypointStyle(..)
+    , deviceIdDecoder
+    , deviceIdEncoder
     , deviceInfoDecoder
     , deviceInfoEncoder
     , directionDecoder
@@ -29,6 +33,8 @@ module Api.Types exposing
     , elevationPointsTileEncoder
     , entityDecoder
     , entityEncoder
+    , flightPositionDecoder
+    , flightPositionEncoder
     , flightTaskDecoder
     , flightTaskEncoder
     , geoPointDecoder
@@ -649,3 +655,42 @@ deviceInfoDecoder =
         |> Json.Decode.Pipeline.required "competitionNumber" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "tracked" Json.Decode.bool
         |> Json.Decode.Pipeline.required "identified" Json.Decode.bool
+
+
+type alias FlightPosition =
+    { lat : Latitude, lon : Longitude, alt : Elevation, timeSeconds : Int }
+
+
+flightPositionEncoder : FlightPosition -> Json.Encode.Value
+flightPositionEncoder a =
+    Json.Encode.object
+        [ ( "lat", latitudeEncoder a.lat )
+        , ( "lon", longitudeEncoder a.lon )
+        , ( "alt", elevationEncoder a.alt )
+        , ( "timeSeconds", Json.Encode.int a.timeSeconds )
+        ]
+
+
+flightPositionDecoder : Json.Decode.Decoder FlightPosition
+flightPositionDecoder =
+    Json.Decode.succeed FlightPosition
+        |> Json.Decode.Pipeline.required "lat" latitudeDecoder
+        |> Json.Decode.Pipeline.required "lon" longitudeDecoder
+        |> Json.Decode.Pipeline.required "alt" elevationDecoder
+        |> Json.Decode.Pipeline.required "timeSeconds" Json.Decode.int
+
+
+type DeviceId
+    = DeviceId String
+
+
+deviceIdEncoder : DeviceId -> Json.Encode.Value
+deviceIdEncoder a =
+    case a of
+        DeviceId b ->
+            Json.Encode.string b
+
+
+deviceIdDecoder : Json.Decode.Decoder DeviceId
+deviceIdDecoder =
+    Json.Decode.map DeviceId Json.Decode.string

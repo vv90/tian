@@ -3,7 +3,8 @@ module Aprs.AprsMessage where
 import Aprs.AprsSymbol (AprsSymbol, matchSymbol)
 import Aprs.GlidernetId (GlidernetIdInfo, glidernetIdParser)
 import Data.Aeson qualified as Aeson
-import Data.Time (DiffTime, secondsToDiffTime)
+import Data.Time (secondsToDiffTime)
+import Generics.SOP qualified as SOP
 import Geo
   ( AngularSpeed (DegreesPerSecond),
     Direction (..),
@@ -17,6 +18,8 @@ import Geo
     ddmTodd,
     elevationFeet,
   )
+import Language.Haskell.To.Elm (HasElmDecoder, HasElmEncoder, HasElmType)
+import Magic.ElmDeriving (ElmType)
 import Relude
 import Text.Parsec
   ( Parsec,
@@ -38,7 +41,10 @@ import Text.Parsec.Combinator (count)
 
 newtype DeviceId = DeviceId Text
   deriving stock (Show, Eq, Generic)
-  deriving anyclass (Aeson.ToJSON, Aeson.FromJSON)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving
+    (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
+    via ElmType "Api.Types.DeviceId" DeviceId
 
 getDeviceId :: DeviceId -> Text
 getDeviceId (DeviceId x) = x
@@ -46,7 +52,7 @@ getDeviceId (DeviceId x) = x
 data AprsMessage = AprsMessage
   { source :: DeviceId,
     symbol :: AprsSymbol,
-    time :: DiffTime,
+    timeSeconds :: Int,
     lat :: Latitude,
     lon :: Longitude,
     heading :: Direction,
@@ -66,7 +72,7 @@ instance GeoPosition3d AprsMessage where
   altitude x = x.elev
 
 instance RecordedGeoPosition AprsMessage where
-  time x = x.time
+  time = secondsToDiffTime . fromIntegral . timeSeconds
 
 aprsLatParser :: Parsec ByteString () Latitude
 aprsLatParser = do
@@ -102,14 +108,14 @@ aprsLonParser = do
     Right x -> pure $ LongitudeDegrees $ adjustForHemisphereFn x
     Left e -> fail $ "Failed to parse longitude: " ++ toString e
 
-aprsTimeParser :: Parsec ByteString () DiffTime
+aprsTimeParser :: Parsec ByteString () Int
 aprsTimeParser = do
   hrs <- readEither <$> count 2 digit
   mins <- readEither <$> count 2 digit
   secs <- readEither <$> count 2 digit
 
   case (\h m s -> h * 3600 + m * 60 + s) <$> hrs <*> mins <*> secs of
-    Right x -> pure $ secondsToDiffTime x
+    Right x -> pure x
     Left e -> fail $ "Failed to parse time: " ++ toString e
 
 aprsAltParser :: Parsec ByteString () Elevation
@@ -251,7 +257,7 @@ aprsMessageParser = do
       ( AprsMessage
           { source = deviceId,
             symbol = matchSymbol (primarySymbol, secondarySymbol),
-            time = messageTime,
+            timeSeconds = messageTime,
             lat = messageLat,
             lon = messageLon,
             heading = heading,

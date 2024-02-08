@@ -1,6 +1,6 @@
 module AprsMessageSpec where
 
-import Aprs.AprsMessage (AprsMessage (..), aprsMessageParser)
+import Aprs.AprsMessage (AprsMessage (..), DeviceId (..), aprsMessageParser)
 import Aprs.GlidernetId (AddressType (..), AircraftType (..), GlidernetIdInfo (..), glidernetIdParser)
 import Geo (Latitude (..), Longitude (..), ddmTodd)
 import Relude
@@ -132,6 +132,6 @@ spec = do
       let input = "FLRD0095F>OGFLR,qAS,LFNE:/160721h4337.14N/00507.75E'161/061/A=001204 !W82! id06D0095F -157fpm +0.1rot 10.2dB -0.5kHz gps1x2" :: ByteString
           result = parse aprsMessageParser "" input
 
-      source <$> result `shouldBe` Right "FLRD0095F"
+      source <$> result `shouldBe` Right (DeviceId "FLRD0095F")
       lat <$> result `shouldBe` Right (LatitudeDegrees $ ddmTodd 43 37.148)
       lon <$> result `shouldBe` Right (LongitudeDegrees $ ddmTodd 5 7.752)

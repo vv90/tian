@@ -32,8 +32,9 @@ import Text.Parsec
     noneOf,
     oneOf,
     option,
+    sepEndBy,
     spaces,
-    string, sepEndBy,
+    string,
   )
 import Text.Parsec.Char (digit)
 import Text.Parsec.Combinator (count)

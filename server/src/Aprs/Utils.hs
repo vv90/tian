@@ -3,18 +3,18 @@ module Aprs.Utils where
 import Aprs.AprsMessage (AprsMessage (..), DeviceId, aprsMessageParser)
 import Backend.FlightsState (FlightInformation, FlightPosition (..), makeFlightInformation, toFlightPosition)
 import Conduit (ConduitT, awaitForever, mapC, runConduit, takeC, (.|))
+import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async (concurrently_)
 import Control.Concurrent.STM.TBChan (TBChan, isFullTBChan, readTBChan, writeTBChan)
 import Data.Conduit.Combinators (linesUnboundedAscii)
 import Data.Conduit.Network (appSink, appSource, clientSettings, runTCPClient)
 import Data.HashMap.Strict as HM
+import Data.Time (getCurrentTime, utctDayTime)
 import Data.UUID (UUID)
 import Glidernet.DeviceDatabase (DeviceInfo)
 import Relude
 import Text.Parsec (parse)
-import Data.Time (getCurrentTime, utctDayTime)
 import TimeUtils (diffTimeToSeconds)
-import Control.Concurrent.Async (concurrently_)
-import Control.Concurrent (threadDelay)
 
 -- type FlightId = Text
 
@@ -50,7 +50,7 @@ handleAprsMessage devices broker flights =
         Left _ -> do
           -- liftIO $ putText "x"
           pass
-          -- liftIO $ appendFileBS errorLogFile line--(line <> "\n" <> show err <> "\n")
+    -- liftIO $ appendFileBS errorLogFile line--(line <> "\n" <> show err <> "\n")
 
     distributeMessage :: AprsMessage -> STM ()
     distributeMessage msg =
@@ -73,18 +73,15 @@ handleAprsMessage devices broker flights =
         False -> writeTBChan chan msg
 
 isPositionRecentEnough :: Int -> FlightPosition -> Bool
-isPositionRecentEnough currTimeSeconds (FlightPosition { timeSeconds }) = 
-  let 
-    timeDiffSeconds :: Int
-    timeDiffSeconds = currTimeSeconds - timeSeconds -- negative time difference means the position is from the previous day
-  in
-    timeDiffSeconds < 1800 && timeDiffSeconds >= 0 -- less than 30 minutes old and on the same day
-
+isPositionRecentEnough currTimeSeconds (FlightPosition {timeSeconds}) =
+  let timeDiffSeconds :: Int
+      timeDiffSeconds = currTimeSeconds - timeSeconds -- negative time difference means the position is from the previous day
+   in timeDiffSeconds < 1800 && timeDiffSeconds >= 0 -- less than 30 minutes old and on the same day
 
 cleanUpFlightsState :: TVar FlightsState -> IO ()
 cleanUpFlightsState flights = do
   currTimeSeconds <- round . diffTimeToSeconds . utctDayTime <$> getCurrentTime
-  atomically $ modifyTVar' flights (HM.filter (isPositionRecentEnough currTimeSeconds . snd))  
+  atomically $ modifyTVar' flights (HM.filter (isPositionRecentEnough currTimeSeconds . snd))
 
 runAprs :: HashMap Text DeviceInfo -> TVar AprsMessageBroker -> TVar FlightsState -> IO ()
 runAprs devices broker flights =

@@ -1,7 +1,7 @@
 module Aprs.Utils where
 
 import Aprs.AprsMessage (AprsMessage (..), DeviceId, aprsMessageParser)
-import Backend.FlightsState (FlightInformation, FlightPosition, makeFlightInformation, toFlightPosition)
+import Backend.FlightsState (FlightInformation, FlightPosition (..), makeFlightInformation, toFlightPosition)
 import Conduit (ConduitT, awaitForever, mapC, runConduit, takeC, (.|))
 import Control.Concurrent.STM.TBChan (TBChan, isFullTBChan, readTBChan, writeTBChan)
 import Data.Conduit.Combinators (linesUnboundedAscii)
@@ -11,6 +11,10 @@ import Data.UUID (UUID)
 import Glidernet.DeviceDatabase (DeviceInfo)
 import Relude
 import Text.Parsec (parse)
+import Data.Time (getCurrentTime, utctDayTime)
+import TimeUtils (diffTimeToSeconds)
+import Control.Concurrent.Async (concurrently_)
+import Control.Concurrent (threadDelay)
 
 -- type FlightId = Text
 
@@ -41,12 +45,12 @@ handleAprsMessage devices broker flights =
     processLine line =
       case parse aprsMessageParser "" line of
         Right msg -> do
-          liftIO $ putText "."
+          -- liftIO $ putText "."
           atomically $ distributeMessage msg
         Left _ -> do
-          liftIO $ putText "x"
+          -- liftIO $ putText "x"
           pass
-    -- liftIO $ appendFileBS errorLogFile line
+          -- liftIO $ appendFileBS errorLogFile line--(line <> "\n" <> show err <> "\n")
 
     distributeMessage :: AprsMessage -> STM ()
     distributeMessage msg =
@@ -56,7 +60,7 @@ handleAprsMessage devices broker flights =
           position :: FlightPosition
           position = toFlightPosition msg
        in do
-            modifyTVar' flights $ HM.insert (msg.source) (information, position)
+            modifyTVar' flights $ HM.insert msg.source (information, position)
             chans <- HM.elems <$> readTVar broker
             traverse_ (writeMessage (msg.source, position)) chans
 
@@ -68,9 +72,25 @@ handleAprsMessage devices broker flights =
         True -> readTBChan chan >> writeTBChan chan msg
         False -> writeTBChan chan msg
 
+isPositionRecentEnough :: Int -> FlightPosition -> Bool
+isPositionRecentEnough currTimeSeconds (FlightPosition { timeSeconds }) = 
+  let 
+    timeDiffSeconds :: Int
+    timeDiffSeconds = currTimeSeconds - timeSeconds -- negative time difference means the position is from the previous day
+  in
+    timeDiffSeconds < 1800 && timeDiffSeconds >= 0 -- less than 30 minutes old and on the same day
+
+
+cleanUpFlightsState :: TVar FlightsState -> IO ()
+cleanUpFlightsState flights = do
+  currTimeSeconds <- round . diffTimeToSeconds . utctDayTime <$> getCurrentTime
+  atomically $ modifyTVar' flights (HM.filter (isPositionRecentEnough currTimeSeconds . snd))  
+
 runAprs :: HashMap Text DeviceInfo -> TVar AprsMessageBroker -> TVar FlightsState -> IO ()
 runAprs devices broker flights =
   runTCPClient (clientSettings 14580 "aprs.glidernet.org") $ \server -> do
     -- errorLogFileExists <- doesFileExist errorLogFile
     -- unless errorLogFileExists $ writeFile errorLogFile ""
-    runConduit $ appSource server .| withAuth (handleAprsMessage devices broker flights) (appSink server)
+    concurrently_
+      (runConduit $ appSource server .| withAuth (handleAprsMessage devices broker flights) (appSink server))
+      (infinitely $ threadDelay 10000000 >> cleanUpFlightsState flights)

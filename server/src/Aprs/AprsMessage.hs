@@ -32,9 +32,8 @@ import Text.Parsec
     noneOf,
     oneOf,
     option,
-    sepBy,
     spaces,
-    string,
+    string, sepEndBy,
   )
 import Text.Parsec.Char (digit)
 import Text.Parsec.Combinator (count)
@@ -249,7 +248,7 @@ aprsMessageParser = do
   (heading, speed, alt) <- aprsInfoParser
   void spaces
 
-  additionalValues <- aprsAdditionalInfoParser `sepBy` spaces
+  additionalValues <- aprsAdditionalInfoParser `sepEndBy` spaces
 
   pure
     $ foldl'

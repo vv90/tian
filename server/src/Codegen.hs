@@ -1,5 +1,8 @@
 module Codegen where
 
+import Aprs.AprsMessage (DeviceId)
+import Aprs.GlidernetId (AircraftType)
+import Backend.FlightsState (FlightInformation, FlightPosition)
 import Data.HashMap.Lazy qualified as HashMap
 import Data.Text qualified as Text
 import Demo.NameMatch (NameMatch)
@@ -45,7 +48,11 @@ typeDefinitions =
       jsonDefinitions @NameMatch,
       jsonDefinitions @GeoPoint,
       jsonDefinitions @ElevationPointsTile,
-      jsonDefinitions @DeviceInfo
+      jsonDefinitions @DeviceInfo,
+      jsonDefinitions @FlightPosition,
+      jsonDefinitions @FlightInformation,
+      jsonDefinitions @AircraftType,
+      jsonDefinitions @DeviceId
     ]
 
 elmSrcPath :: FilePath

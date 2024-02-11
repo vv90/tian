@@ -8,7 +8,7 @@ data AprsSymbol
   | LargePlane
   | Helicopter
   | Parachute
-  | Baloon
+  | Balloon
   | GroundVehicle
   | StaticObject
   | Unknown
@@ -42,7 +42,7 @@ matchSymbol =
     ('/', 'g') -> Parachute
     ('\\', '^') -> SmallPlane
     ('/', '^') -> LargePlane
-    ('/', 'O') -> Baloon
+    ('/', 'O') -> Balloon
     ('/', 'z') -> GroundVehicle
     ('\\', 'n') -> StaticObject
     _ -> Unknown

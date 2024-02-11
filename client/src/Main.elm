@@ -7,7 +7,7 @@ module Main exposing
 import Api.Types exposing (..)
 import AppState
 import Browser
-import Common.ApiCommands exposing (getDeviceInfo)
+import Common.ApiCommands exposing (getCurrentFlights, getFlightInformation)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (Deferred(..), deferredToMaybe)
 import Common.Effect as Effect
@@ -70,7 +70,7 @@ type alias Model =
     , messages : List String
 
     -- , demoTask : Maybe FlightTask
-    , flightPositions : Dict String ( GeoPoint, Elevation, Deferred (Maybe DeviceInfo) )
+    , flightPositions : Dict String ( Deferred FlightInformation, FlightPosition )
     }
 
 
@@ -110,6 +110,7 @@ init flags =
     , Cmd.batch
         [ Cmd.map Map3dMsg m3dCmd
         , watchFlight ()
+        , getCurrentFlights CurrentFlightsReceived
         ]
     )
 
@@ -121,7 +122,8 @@ type Msg
       -- | GotDemoFlightTask (ApiResult FlightTask)
       -- | DemoInit (AsyncOperationStatus (ApiResult FlightTask))
     | FlightPositionReceived String
-    | DeviceInfoReceived String (ApiResult (Maybe DeviceInfo))
+    | FlightInformationReceived String (ApiResult (Maybe FlightInformation))
+    | CurrentFlightsReceived (ApiResult (List ( String, ( FlightInformation, FlightPosition ) )))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -161,36 +163,36 @@ update msg model =
 
         FlightPositionReceived str ->
             let
-                pos : Result D.Error ( String, ( GeoPoint, Elevation ) )
+                pos : Result D.Error ( DeviceId, FlightPosition )
                 pos =
-                    D.decodeString (tupleDecoder ( D.string, tupleDecoder ( geoPointDecoder, elevationDecoder ) )) str
+                    D.decodeString (tupleDecoder ( deviceIdDecoder, flightPositionDecoder )) str
 
-                updateFlights : String -> ( GeoPoint, Elevation ) -> ( Model, Cmd Msg )
-                updateFlights key ( gp, elev ) =
+                updateFlights : DeviceId -> FlightPosition -> ( Model, Cmd Msg )
+                updateFlights (DeviceId key) position =
                     case Dict.get key model.flightPositions of
-                        Just ( _, _, NotStarted ) ->
-                            ( { model | flightPositions = Dict.insert key ( gp, elev, InProgress ) model.flightPositions }
-                            , getDeviceInfo key (DeviceInfoReceived key)
+                        Just ( NotStarted, _ ) ->
+                            ( { model | flightPositions = Dict.insert key ( InProgress, position ) model.flightPositions }
+                            , getFlightInformation key (FlightInformationReceived key)
                             )
 
-                        Just ( _, _, InProgress ) ->
-                            ( { model | flightPositions = Dict.insert key ( gp, elev, InProgress ) model.flightPositions }
+                        Just ( InProgress, _ ) ->
+                            ( { model | flightPositions = Dict.insert key ( InProgress, position ) model.flightPositions }
                             , Cmd.none
                             )
 
-                        Just ( _, _, Updating info ) ->
-                            ( { model | flightPositions = Dict.insert key ( gp, elev, Updating info ) model.flightPositions }
+                        Just ( Updating info, _ ) ->
+                            ( { model | flightPositions = Dict.insert key ( Updating info, position ) model.flightPositions }
                             , Cmd.none
                             )
 
-                        Just ( _, _, Resolved info ) ->
-                            ( { model | flightPositions = Dict.insert key ( gp, elev, Resolved info ) model.flightPositions }
+                        Just ( Resolved info, _ ) ->
+                            ( { model | flightPositions = Dict.insert key ( Resolved info, position ) model.flightPositions }
                             , Cmd.none
                             )
 
                         Nothing ->
-                            ( { model | flightPositions = Dict.insert key ( gp, elev, InProgress ) model.flightPositions }
-                            , getDeviceInfo key (DeviceInfoReceived key)
+                            ( { model | flightPositions = Dict.insert key ( InProgress, position ) model.flightPositions }
+                            , getFlightInformation key (FlightInformationReceived key)
                             )
             in
             case pos of
@@ -200,17 +202,29 @@ update msg model =
                 Err _ ->
                     ( model, Cmd.none )
 
-        DeviceInfoReceived key (Ok info) ->
+        FlightInformationReceived key (Ok (Just info)) ->
             case Dict.get key model.flightPositions of
-                Just ( gp, elev, _ ) ->
-                    ( { model | flightPositions = Dict.insert key ( gp, elev, Resolved info ) model.flightPositions }
+                Just ( _, position ) ->
+                    ( { model | flightPositions = Dict.insert key ( Resolved info, position ) model.flightPositions }
                     , Cmd.none
                     )
 
                 _ ->
                     ( model, Cmd.none )
 
-        DeviceInfoReceived _ (Err _) ->
+        FlightInformationReceived _ _ ->
+            ( model, Cmd.none )
+
+        CurrentFlightsReceived (Ok flights) ->
+            ( { model
+                | flightPositions =
+                    Dict.fromList flights
+                        |> Dict.map (\_ -> Tuple.mapFirst Resolved)
+              }
+            , Cmd.none
+            )
+
+        CurrentFlightsReceived (Err _) ->
             ( model, Cmd.none )
 
 
@@ -281,17 +295,17 @@ view model =
         map3dItems : List Map3dItem
         map3dItems =
             let
-                label : String -> Deferred (Maybe DeviceInfo) -> String
+                label : String -> Deferred FlightInformation -> String
                 label key info =
                     info
                         |> deferredToMaybe
-                        |> Maybe.andThen identity
+                        |> Maybe.andThen .deviceInfo
                         |> Maybe.andThen .competitionNumber
                         |> Maybe.withDefault key
             in
             model.flightPositions
                 |> Dict.toList
-                |> List.map (\( key, ( pt, elev, info ) ) -> Marker (label key info) pt elev)
+                |> List.map (\( key, ( info, { lat, lon, alt } ) ) -> Marker (label key info) { lat = lat, lon = lon } alt)
 
         numActiveFlights : Int
         numActiveFlights =
@@ -340,18 +354,18 @@ view model =
                     (model.flightPositions
                         |> Dict.toList
                         |> List.map
-                            (\( key, ( point, _, info ) ) ->
+                            (\( key, ( info, { lat, lon } ) ) ->
                                 Input.button
                                     []
                                     { label =
                                         info
                                             |> deferredToMaybe
-                                            |> Maybe.andThen identity
+                                            |> Maybe.andThen .deviceInfo
                                             |> Maybe.map showDeviceInfo
                                             |> Maybe.map (\i -> key ++ " | " ++ i)
                                             |> Maybe.withDefault key
                                             |> text
-                                    , onPress = Just <| Map3dMsg <| Map3d.PointFocused point
+                                    , onPress = Just <| Map3dMsg <| Map3d.PointFocused { lat = lat, lon = lon }
                                     }
                             )
                     )

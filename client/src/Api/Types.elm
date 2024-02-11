@@ -1,10 +1,14 @@
 module Api.Types exposing
-    ( DeviceInfo
+    ( AircraftType(..)
+    , DeviceId(..)
+    , DeviceInfo
     , Direction(..)
     , Distance(..)
     , Elevation(..)
     , ElevationPointsTile
     , Entity
+    , FlightInformation
+    , FlightPosition
     , FlightTask
     , GeoPoint
     , Latitude(..)
@@ -17,6 +21,10 @@ module Api.Types exposing
     , TaskStart(..)
     , Turnpoint(..)
     , WaypointStyle(..)
+    , aircraftTypeDecoder
+    , aircraftTypeEncoder
+    , deviceIdDecoder
+    , deviceIdEncoder
     , deviceInfoDecoder
     , deviceInfoEncoder
     , directionDecoder
@@ -29,6 +37,10 @@ module Api.Types exposing
     , elevationPointsTileEncoder
     , entityDecoder
     , entityEncoder
+    , flightInformationDecoder
+    , flightInformationEncoder
+    , flightPositionDecoder
+    , flightPositionEncoder
     , flightTaskDecoder
     , flightTaskEncoder
     , geoPointDecoder
@@ -649,3 +661,184 @@ deviceInfoDecoder =
         |> Json.Decode.Pipeline.required "competitionNumber" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "tracked" Json.Decode.bool
         |> Json.Decode.Pipeline.required "identified" Json.Decode.bool
+
+
+type alias FlightPosition =
+    { lat : Latitude, lon : Longitude, alt : Elevation, timeSeconds : Int }
+
+
+flightPositionEncoder : FlightPosition -> Json.Encode.Value
+flightPositionEncoder a =
+    Json.Encode.object
+        [ ( "lat", latitudeEncoder a.lat )
+        , ( "lon", longitudeEncoder a.lon )
+        , ( "alt", elevationEncoder a.alt )
+        , ( "timeSeconds", Json.Encode.int a.timeSeconds )
+        ]
+
+
+flightPositionDecoder : Json.Decode.Decoder FlightPosition
+flightPositionDecoder =
+    Json.Decode.succeed FlightPosition
+        |> Json.Decode.Pipeline.required "lat" latitudeDecoder
+        |> Json.Decode.Pipeline.required "lon" longitudeDecoder
+        |> Json.Decode.Pipeline.required "alt" elevationDecoder
+        |> Json.Decode.Pipeline.required "timeSeconds" Json.Decode.int
+
+
+type alias FlightInformation =
+    { deviceInfo : Maybe DeviceInfo, aircraftType : AircraftType }
+
+
+flightInformationEncoder : FlightInformation -> Json.Encode.Value
+flightInformationEncoder a =
+    Json.Encode.object
+        [ ( "deviceInfo", Maybe.Extra.unwrap Json.Encode.null deviceInfoEncoder a.deviceInfo )
+        , ( "aircraftType", aircraftTypeEncoder a.aircraftType )
+        ]
+
+
+flightInformationDecoder : Json.Decode.Decoder FlightInformation
+flightInformationDecoder =
+    Json.Decode.succeed FlightInformation
+        |> Json.Decode.Pipeline.required "deviceInfo" (Json.Decode.nullable deviceInfoDecoder)
+        |> Json.Decode.Pipeline.required "aircraftType" aircraftTypeDecoder
+
+
+type AircraftType
+    = Glider
+    | TowPlane
+    | Helicopter
+    | Parachute
+    | DropPlane
+    | HangGlider
+    | ParaGlider
+    | PistonAircraft
+    | JetAircraft
+    | UnknownAircraftType
+    | Balloon
+    | Airship
+    | Drone
+    | Other
+    | StaticObstacle
+
+
+aircraftTypeEncoder : AircraftType -> Json.Encode.Value
+aircraftTypeEncoder a =
+    case a of
+        Glider ->
+            Json.Encode.string "Glider"
+
+        TowPlane ->
+            Json.Encode.string "TowPlane"
+
+        Helicopter ->
+            Json.Encode.string "Helicopter"
+
+        Parachute ->
+            Json.Encode.string "Parachute"
+
+        DropPlane ->
+            Json.Encode.string "DropPlane"
+
+        HangGlider ->
+            Json.Encode.string "HangGlider"
+
+        ParaGlider ->
+            Json.Encode.string "ParaGlider"
+
+        PistonAircraft ->
+            Json.Encode.string "PistonAircraft"
+
+        JetAircraft ->
+            Json.Encode.string "JetAircraft"
+
+        UnknownAircraftType ->
+            Json.Encode.string "UnknownAircraftType"
+
+        Balloon ->
+            Json.Encode.string "Balloon"
+
+        Airship ->
+            Json.Encode.string "Airship"
+
+        Drone ->
+            Json.Encode.string "Drone"
+
+        Other ->
+            Json.Encode.string "Other"
+
+        StaticObstacle ->
+            Json.Encode.string "StaticObstacle"
+
+
+aircraftTypeDecoder : Json.Decode.Decoder AircraftType
+aircraftTypeDecoder =
+    Json.Decode.string
+        |> Json.Decode.andThen
+            (\a ->
+                case a of
+                    "Glider" ->
+                        Json.Decode.succeed Glider
+
+                    "TowPlane" ->
+                        Json.Decode.succeed TowPlane
+
+                    "Helicopter" ->
+                        Json.Decode.succeed Helicopter
+
+                    "Parachute" ->
+                        Json.Decode.succeed Parachute
+
+                    "DropPlane" ->
+                        Json.Decode.succeed DropPlane
+
+                    "HangGlider" ->
+                        Json.Decode.succeed HangGlider
+
+                    "ParaGlider" ->
+                        Json.Decode.succeed ParaGlider
+
+                    "PistonAircraft" ->
+                        Json.Decode.succeed PistonAircraft
+
+                    "JetAircraft" ->
+                        Json.Decode.succeed JetAircraft
+
+                    "UnknownAircraftType" ->
+                        Json.Decode.succeed UnknownAircraftType
+
+                    "Balloon" ->
+                        Json.Decode.succeed Balloon
+
+                    "Airship" ->
+                        Json.Decode.succeed Airship
+
+                    "Drone" ->
+                        Json.Decode.succeed Drone
+
+                    "Other" ->
+                        Json.Decode.succeed Other
+
+                    "StaticObstacle" ->
+                        Json.Decode.succeed StaticObstacle
+
+                    _ ->
+                        Json.Decode.fail "No matching constructor"
+            )
+
+
+type DeviceId
+    = DeviceId String
+
+
+deviceIdEncoder : DeviceId -> Json.Encode.Value
+deviceIdEncoder a =
+    case a of
+        DeviceId b ->
+            Json.Encode.string b
+
+
+deviceIdDecoder : Json.Decode.Decoder DeviceId
+deviceIdDecoder =
+    Json.Decode.map DeviceId Json.Decode.string

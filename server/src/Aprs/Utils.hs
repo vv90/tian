@@ -62,11 +62,11 @@ runAprs devices broker flights =
         line <- await
         case parse aprsMessageParser "" <$> line of
           Just (Right msg) -> do
-            liftIO $ putText "." >> hFlush stdout
+            -- liftIO $ putText "." >> hFlush stdout
             atomically $ distributeMessage msg
             processLines
           Just (Left _) -> do
-            liftIO $ putText "x" >> hFlush stdout
+            -- liftIO $ putText "x" >> hFlush stdout
             -- pass
             whenJust line (liftIO . appendFileBS errorLogFile)
             processLines

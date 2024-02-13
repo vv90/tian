@@ -111,6 +111,11 @@ packWordsC byteOrder = do
     (BigEndian, Just b0', Just b1') -> do
       yield $ fromIntegral b0' `shiftL` 8 .|. fromIntegral b1'
       packWordsC byteOrder
-    (_, Just _b0', Nothing) ->
-      fail "Odd number of bytes in the input stream"
+    (LittleEndian, Just b0', Nothing) -> do
+      -- fail "Odd number of bytes in the input stream"
+      yield $ fromIntegral b0'
+      pass
+    (BigEndian, Just b0', Nothing) -> do
+      yield $ fromIntegral b0' `shiftL` 8
+      pass
     _ -> pass

@@ -14,6 +14,9 @@ import Relude
 import System.Directory (doesFileExist)
 import Utils (writeFileCompressed)
 
+-- 44,1.5 SW
+-- 51,17 NE
+
 compressFile :: IO ()
 compressFile = do
   content <- readFileLBS "./tiles/12/2109_1466.json"
@@ -64,10 +67,10 @@ generateTileElevationPoints tiffContents tileKey =
 seed :: IO ()
 seed =
   let startingTileKey :: Int -> MercatorTileKey
-      startingTileKey zoom = containingTile zoom $ GeoPoint (LatitudeDegrees 43.0) (LongitudeDegrees 5.0)
+      startingTileKey zoom = containingTile zoom $ GeoPoint (LatitudeDegrees 44.0) (LongitudeDegrees 5)
 
       endingTileKey :: Int -> MercatorTileKey
-      endingTileKey zoom = containingTile zoom $ GeoPoint (LatitudeDegrees 46.0) (LongitudeDegrees 8.0)
+      endingTileKey zoom = containingTile zoom $ GeoPoint (LatitudeDegrees 46.0) (LongitudeDegrees 9.0)
 
       getX :: MercatorTileKey -> Int
       getX = x
@@ -75,27 +78,40 @@ seed =
       getY :: MercatorTileKey -> Int
       getY = y
 
-      demFiles :: [FilePath]
-      demFiles =
-        [ "./demo/ASTGTMV003_N43E005_dem.tif",
-          "./demo/ASTGTMV003_N43E006_dem.tif",
-          "./demo/ASTGTMV003_N43E007_dem.tif",
-          "./demo/ASTGTMV003_N44E005_dem.tif",
-          "./demo/ASTGTMV003_N44E006_dem.tif",
-          "./demo/ASTGTMV003_N44E007_dem.tif",
-          "./demo/ASTGTMV003_N45E005_dem.tif",
-          "./demo/ASTGTMV003_N45E006_dem.tif",
-          "./demo/ASTGTMV003_N45E007_dem.tif"
-        ]
-
       tileKeys =
         [ MercatorTileKey x y z
           | z <- [12, 13, 14, 15],
             x <- [getX (startingTileKey z) .. getX (endingTileKey z)],
             y <- [getY (endingTileKey z) .. getY (startingTileKey z)]
         ]
+
+      demFiles :: [FilePath]
+      demFiles =
+        [ "./demo/ASTGTMV003_N45E005_dem.tif",
+          "./demo/ASTGTMV003_N45E006_dem.tif",
+          "./demo/ASTGTMV003_N45E007_dem.tif",
+          "./demo/ASTGTMV003_N45E008_dem.tif",
+          "./demo/ASTGTMV003_N45E009_dem.tif",
+          "./demo/ASTGTMV003_N46E005_dem.tif",
+          "./demo/ASTGTMV003_N46E006_dem.tif",
+          "./demo/ASTGTMV003_N46E007_dem.tif",
+          "./demo/ASTGTMV003_N46E008_dem.tif",
+          "./demo/ASTGTMV003_N46E009_dem.tif"
+        ]
+
+      readDemFile :: FilePath -> IO (Either String TiffContents)
+      readDemFile filePath = do
+        result <- runExceptT $ readTiffElevationData filePath
+        case result of
+          Right tiffContents -> pure $ Right tiffContents
+          Left err -> do
+            putStrLn $ "Error reading file " <> filePath
+            putStrLn err
+            pure $ Left err
    in do
-        elevationsResult <- sequence <$> mapConcurrently (runExceptT . readTiffElevationData) demFiles
+        -- demFiles <- ("./demo/" <>) <<$>> filter (isSuffixOf "_dem.tif") <$> listDirectory "./demo"
+
+        elevationsResult <- sequence <$> mapConcurrently readDemFile demFiles
 
         case elevationsResult of
           Left err -> putStrLn err

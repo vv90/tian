@@ -784,21 +784,9 @@ mapItemView model mapItem =
             let
                 ( pProjX, pProjY ) =
                     to3dPoint p elev |> project3dPoint
-
-                ( pgProjX, pgProjY ) =
-                    to3dPoint p (ElevationMeters 0) |> project3dPoint
             in
             ( Svg.g []
-                [ Svg.line
-                    [ SvgAttr.strokeWidth "1"
-                    , SvgAttr.stroke "#D7BDE2"
-                    , SvgAttr.x1 <| String.fromFloat pProjX
-                    , SvgAttr.y1 <| String.fromFloat pProjY
-                    , SvgAttr.x2 <| String.fromFloat pgProjX
-                    , SvgAttr.y2 <| String.fromFloat pgProjY
-                    ]
-                    []
-                , Svg.circle
+                [ Svg.circle
                     [ SvgAttr.fill "#34495E"
                     , SvgAttr.cx (String.fromFloat pProjX)
                     , SvgAttr.cy (String.fromFloat pProjY)

@@ -3,7 +3,7 @@ module Backend.Utils where
 import Aprs.Utils (runAprs)
 import Control.Concurrent.Async (concurrently_)
 import Data.HashMap.Strict as HM
-import Glidernet.DeviceDatabase (DeviceInfo (..), deviceDatabaseParser)
+import Glidernet.DeviceDatabase (DeviceInfo (..), DeviceType (..), deviceDatabaseParser)
 import Lib (startApp)
 import Network.HTTP.Simple (Response, getResponseBody, httpBS)
 import Relude
@@ -21,8 +21,13 @@ getDeviceDict = do
     parseDeviceDatabase =
       parse deviceDatabaseParser "" . getResponseBody
 
+    deviceTypePrefix :: DeviceType -> Text
+    deviceTypePrefix Flarm = "FLR"
+    deviceTypePrefix OGN = "OGN"
+    deviceTypePrefix ICAO = "ICA"
+
     makeDeviceDict :: [DeviceInfo] -> HashMap Text DeviceInfo
-    makeDeviceDict = HM.fromList . fmapToFst deviceId
+    makeDeviceDict = HM.fromList . fmapToFst (\info -> deviceTypePrefix info.deviceType <> info.deviceId)
 
 runBackend :: IO ()
 runBackend = do

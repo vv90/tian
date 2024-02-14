@@ -1,6 +1,6 @@
 module DeviceDatabaseSpec where
 
-import Glidernet.DeviceDatabase (DeviceInfo (..), deviceDatabaseParser, deviceInfoParser)
+import Glidernet.DeviceDatabase (DeviceInfo (..), DeviceType (..), deviceDatabaseParser, deviceInfoParser)
 import Relude
 import Test.Hspec
 import Text.Parsec (parse)
@@ -17,7 +17,7 @@ spec = context "DeviceInfo parser" $ do
           -- #DEVICE_TYPE,DEVICE_ID,AIRCRAFT_MODEL,REGISTRATION,CN,TRACKED,IDENTIFIED
           ( "'F','000000','HPH 304CZ-17','OK-7777','KN','Y','Y'\n",
             DeviceInfo
-              { deviceType = "F",
+              { deviceType = Flarm,
                 deviceId = "000000",
                 aircraftModel = Just "HPH 304CZ-17",
                 registration = Just "OK-7777",
@@ -33,7 +33,7 @@ spec = context "DeviceInfo parser" $ do
         cases =
           ( "'F','000114','','','','N','N'\n",
             DeviceInfo
-              { deviceType = "F",
+              { deviceType = Flarm,
                 deviceId = "000114",
                 aircraftModel = Nothing,
                 registration = Nothing,

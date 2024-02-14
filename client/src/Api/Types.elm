@@ -2,6 +2,7 @@ module Api.Types exposing
     ( AircraftType(..)
     , DeviceId(..)
     , DeviceInfo
+    , DeviceType(..)
     , Direction(..)
     , Distance(..)
     , Elevation(..)
@@ -27,6 +28,8 @@ module Api.Types exposing
     , deviceIdEncoder
     , deviceInfoDecoder
     , deviceInfoEncoder
+    , deviceTypeDecoder
+    , deviceTypeEncoder
     , directionDecoder
     , directionEncoder
     , distanceDecoder
@@ -628,7 +631,7 @@ elevationPointsTileDecoder =
 
 
 type alias DeviceInfo =
-    { deviceType : String
+    { deviceType : DeviceType
     , deviceId : String
     , aircraftModel : Maybe String
     , registration : Maybe String
@@ -641,7 +644,7 @@ type alias DeviceInfo =
 deviceInfoEncoder : DeviceInfo -> Json.Encode.Value
 deviceInfoEncoder a =
     Json.Encode.object
-        [ ( "deviceType", Json.Encode.string a.deviceType )
+        [ ( "deviceType", deviceTypeEncoder a.deviceType )
         , ( "deviceId", Json.Encode.string a.deviceId )
         , ( "aircraftModel", Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.aircraftModel )
         , ( "registration", Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.registration )
@@ -654,13 +657,52 @@ deviceInfoEncoder a =
 deviceInfoDecoder : Json.Decode.Decoder DeviceInfo
 deviceInfoDecoder =
     Json.Decode.succeed DeviceInfo
-        |> Json.Decode.Pipeline.required "deviceType" Json.Decode.string
+        |> Json.Decode.Pipeline.required "deviceType" deviceTypeDecoder
         |> Json.Decode.Pipeline.required "deviceId" Json.Decode.string
         |> Json.Decode.Pipeline.required "aircraftModel" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "registration" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "competitionNumber" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "tracked" Json.Decode.bool
         |> Json.Decode.Pipeline.required "identified" Json.Decode.bool
+
+
+type DeviceType
+    = Flarm
+    | OGN
+    | ICAO
+
+
+deviceTypeEncoder : DeviceType -> Json.Encode.Value
+deviceTypeEncoder a =
+    case a of
+        Flarm ->
+            Json.Encode.string "Flarm"
+
+        OGN ->
+            Json.Encode.string "OGN"
+
+        ICAO ->
+            Json.Encode.string "ICAO"
+
+
+deviceTypeDecoder : Json.Decode.Decoder DeviceType
+deviceTypeDecoder =
+    Json.Decode.string
+        |> Json.Decode.andThen
+            (\a ->
+                case a of
+                    "Flarm" ->
+                        Json.Decode.succeed Flarm
+
+                    "OGN" ->
+                        Json.Decode.succeed OGN
+
+                    "ICAO" ->
+                        Json.Decode.succeed ICAO
+
+                    _ ->
+                        Json.Decode.fail "No matching constructor"
+            )
 
 
 type alias FlightPosition =

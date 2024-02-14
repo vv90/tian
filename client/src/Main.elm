@@ -295,17 +295,21 @@ view model =
         map3dItems : List Map3dItem
         map3dItems =
             let
-                label : String -> Deferred FlightInformation -> String
-                label key info =
-                    info
+                label : String -> Elevation -> Deferred FlightInformation -> String
+                label key (ElevationMeters elev) info =
+                    (info
                         |> deferredToMaybe
                         |> Maybe.andThen .deviceInfo
-                        |> Maybe.andThen .competitionNumber
+                        |> Maybe.andThen .registration
                         |> Maybe.withDefault key
+                    )
+                        ++ "("
+                        ++ (elev |> round |> String.fromInt)
+                        ++ "m)"
             in
             model.flightPositions
                 |> Dict.toList
-                |> List.map (\( key, ( info, { lat, lon, alt } ) ) -> Marker (label key info) { lat = lat, lon = lon } alt)
+                |> List.map (\( key, ( info, { lat, lon, alt } ) ) -> Marker (label key alt info) { lat = lat, lon = lon } alt)
 
         numActiveFlights : Int
         numActiveFlights =

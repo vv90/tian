@@ -11,7 +11,7 @@ import Entity (Entity)
 import FlightTask (FlightTask, TaskFinish, TaskStart, Turnpoint)
 import Geo (Direction, Distance, Elevation, Latitude, Longitude)
 import GeoPoint (GeoPoint)
-import Glidernet.DeviceDatabase (DeviceInfo)
+import Glidernet.DeviceDatabase (DeviceInfo, DeviceType)
 import Language.Elm.Definition (Definition)
 import Language.Elm.Name (Module)
 import Language.Elm.Pretty qualified as Pretty
@@ -49,6 +49,7 @@ typeDefinitions =
       jsonDefinitions @GeoPoint,
       jsonDefinitions @ElevationPointsTile,
       jsonDefinitions @DeviceInfo,
+      jsonDefinitions @DeviceType,
       jsonDefinitions @FlightPosition,
       jsonDefinitions @FlightInformation,
       jsonDefinitions @AircraftType,

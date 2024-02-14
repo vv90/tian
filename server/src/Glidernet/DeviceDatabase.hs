@@ -10,8 +10,18 @@ import Text.Parsec (Parsec, between, char, choice, endOfLine, many1, noneOf, opt
 -- #DEVICE_TYPE,DEVICE_ID,AIRCRAFT_MODEL,REGISTRATION,CN,TRACKED,IDENTIFIED
 -- 'F','000000','HPH 304CZ-17','OK-7777','KN','Y','Y'
 
+data DeviceType
+  = Flarm
+  | OGN
+  | ICAO
+  deriving stock (Show, Read, Eq, Generic)
+  deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
+  deriving
+    (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
+    via ElmType "Api.Types.DeviceType" DeviceType
+
 data DeviceInfo = DeviceInfo
-  { deviceType :: Text,
+  { deviceType :: DeviceType,
     deviceId :: Text,
     aircraftModel :: Maybe Text,
     registration :: Maybe Text,
@@ -36,12 +46,20 @@ itemParser :: Parsec ByteString () a -> Parsec ByteString () a
 itemParser =
   between (char '\'') (char '\'')
 
+deviceTypeParser :: Parsec ByteString () DeviceType
+deviceTypeParser =
+  choice
+    [ Flarm <$ char 'F',
+      OGN <$ char 'O',
+      ICAO <$ char 'I'
+    ]
+
 deviceInfoParser :: Parsec ByteString () DeviceInfo
 deviceInfoParser =
   let nonEmptyTextParser :: Parsec ByteString () Text
       nonEmptyTextParser = toText <$> many1 (noneOf ['\'', ','])
    in DeviceInfo
-        <$> itemParser nonEmptyTextParser
+        <$> itemParser deviceTypeParser
         <* char ','
         <*> itemParser nonEmptyTextParser
         <* char ','

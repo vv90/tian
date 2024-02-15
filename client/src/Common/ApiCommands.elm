@@ -40,7 +40,7 @@ hydrateTile tile =
 getFlightInformation : String -> (ApiResult (Maybe FlightInformation) -> msg) -> Cmd msg
 getFlightInformation deviceId onLoaded =
     Http.get
-        { url = "/api/deviceInfo/" ++ deviceId
+        { url = "/api/flightInfo/" ++ deviceId
         , expect = Http.expectJson onLoaded <| Decode.maybe flightInformationDecoder
         }
 

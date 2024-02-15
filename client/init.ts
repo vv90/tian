@@ -34,27 +34,20 @@ const getConfig = async () => {
     node: rootNode,
   });
 
-  app.ports.watchFlight.subscribe(() => {
+  function subscribeToFlights() {
     const socket = new WebSocket(`ws://${location.hostname}:8081/watchFlights`);
 
     socket.addEventListener("message", (event) => {
       if (event.data instanceof Blob) {
         const reader = new FileReader();
 
-        reader.onload = () => {
-          // console.log("Result: " + reader.result);
-        };
-
         reader.readAsText(event.data);
-      } else {
-        // console.log("Result: " + event.data);
       }
-      // console.log("Received message from server:", event.data);
+
       app.ports.flightPositionReceiver.send(event.data);
     });
 
     socket.addEventListener("open", (event) => {
-      // socket.send("FLRD0155B");
       console.log("Connected to server: ", event);
     });
 
@@ -64,8 +57,11 @@ const getConfig = async () => {
 
     socket.addEventListener("close", (event) => {
       console.log("Closed: ", event);
+      subscribeToFlights();
     });
-  });
+  }
+
+  app.ports.watchFlight.subscribe(subscribeToFlights);
 
   app.ports.startDemo.subscribe(function () {
     // Create your WebSocket.

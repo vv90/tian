@@ -5,6 +5,7 @@ module Main (main) where
 import AprsMessageSpec qualified
 import DeviceDatabaseSpec qualified
 import FlightTrackSpec qualified
+import LocationDatapointSpec qualified
 import NavPointSpec qualified
 import Relude
 import TaskProgressSpec qualified
@@ -18,6 +19,7 @@ main = hspec $ do
   describe "TaskProgress" TaskProgressSpec.spec
   describe "AprsMessage" AprsMessageSpec.spec
   describe "DeviceDatabase" DeviceDatabaseSpec.spec
+  describe "LocationDatapoint" LocationDatapointSpec.spec
 
 -- spec :: Spec
 -- spec = do

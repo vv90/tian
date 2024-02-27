@@ -111,12 +111,18 @@ newtype Speed = SpeedMetersPerSecond Double
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
     via ElmType "Api.Types.Speed" Speed
 
+metersPerSecondSpeed :: Speed -> Double
+metersPerSecondSpeed (SpeedMetersPerSecond x) = x
+
 newtype AngularSpeed = DegreesPerSecond Double
   deriving stock (Show, Read, Eq, Generic)
   deriving anyclass (SOP.Generic, SOP.HasDatatypeInfo, Aeson.ToJSON, Aeson.FromJSON)
   deriving
     (HasElmType, HasElmEncoder Aeson.Value, HasElmDecoder Aeson.Value)
     via ElmType "Api.Types.AngularSpeed" AngularSpeed
+
+metersPerSecondAngularSpeed :: AngularSpeed -> Double
+metersPerSecondAngularSpeed (DegreesPerSecond x) = x
 
 class GeoPosition a where
   latitude :: a -> Latitude
@@ -132,7 +138,7 @@ instance GeoPosition (HorizontalPosition a) where
   latitude = LatitudeDegrees . Geodetic.decimalLatitude
   longitude = LongitudeDegrees . Geodetic.decimalLongitude
 
-roundN :: (RealFrac a, Integral b) => b -> a -> a
+roundN :: (RealFrac a) => Int -> a -> a
 roundN n x = ((fromIntegral @Integer) . round $ x * f) / f
   where
     f :: (RealFrac a) => a

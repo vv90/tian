@@ -6,5 +6,6 @@ example.txt
 temp/
 /demo/
 /tiles/
+/logs/
 aprs-error.log
 ddb.txt

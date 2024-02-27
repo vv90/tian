@@ -1,35 +1,38 @@
 module Aprs.Utils where
 
-import Aprs.AprsMessage (AprsMessage (..), DeviceId, aprsMessageParser)
+import Aprs.AprsMessage (AprsMessage (..), DeviceId, aprsMessageParser, getDeviceId)
+import Aprs.LocationDatapoint (fromAprsMessage)
 import Backend.FlightsState (FlightInformation, FlightPosition (..), makeFlightInformation, toFlightPosition)
 import Conduit (ConduitT, await, runConduit, yield, (.|))
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (concurrently_)
 import Control.Concurrent.STM.TBChan (TBChan, isFullTBChan, readTBChan, writeTBChan)
+import Data.Aeson qualified as Aeson
 import Data.Conduit.Combinators (linesUnboundedAscii)
 import Data.Conduit.Network (AppData, appSink, appSource, clientSettings, runTCPClient)
 import Data.HashMap.Strict as HM
-import Data.Time (getCurrentTime, utctDayTime)
+import Data.Time (UTCTime (utctDay), getCurrentTime, utctDayTime)
 import Data.UUID (UUID)
 import Glidernet.DeviceDatabase (DeviceInfo)
 import Relude
+import System.Directory (createDirectoryIfMissing)
+import System.FilePath ((<.>), (</>))
 import Text.Parsec (parse)
 import TimeUtils (diffTimeToSeconds)
-
--- type FlightId = Text
-
--- type FlightPosition = (GeoPoint, Elevation)
 
 type AprsMessageBroker = HashMap UUID (TBChan (DeviceId, FlightPosition))
 
 type FlightsState = HashMap DeviceId (FlightInformation, FlightPosition)
 
-errorLogFile :: FilePath
-errorLogFile = "aprs-error.log"
+-- errorLogFile :: FilePath
+-- errorLogFile = "aprs-error.log"
+
+logsDirectory :: FilePath
+logsDirectory = "logs"
 
 authC :: ConduitT a ByteString IO ()
 authC =
-  yield "user N0CALLX09 pass -1 vers TaskView 0.1 filter r/45.2/5.8/1000\r\n"
+  yield "user N0CALLX09 pass -1 vers TaskView 0.1 filter r/45.2/5.72/1000\r\n"
 
 withAuth :: ConduitT ByteString Void IO () -> ConduitT ByteString Void IO () -> ConduitT ByteString Void IO ()
 withAuth messageSink responseSink = do
@@ -48,6 +51,14 @@ cleanUpFlightsState flights = do
   currTimeSeconds <- round . diffTimeToSeconds . utctDayTime <$> getCurrentTime
   atomically $ modifyTVar' flights (HM.filter (isPositionRecentEnough currTimeSeconds . snd))
 
+saveMessageJson :: AprsMessage -> IO ()
+saveMessageJson msg = do
+  currDate <- getCurrentTime
+  let dirPath = logsDirectory </> show (utctDay currDate)
+  createDirectoryIfMissing True dirPath
+  let filePath = dirPath </> toString (getDeviceId msg.source) <.> "json"
+  appendFileLBS filePath (Aeson.encode $ fromAprsMessage msg)
+
 runAprs :: HashMap Text DeviceInfo -> TVar AprsMessageBroker -> TVar FlightsState -> IO ()
 runAprs devices broker flights =
   let runAprsClient :: IO ()
@@ -64,11 +75,13 @@ runAprs devices broker flights =
           Just (Right msg) -> do
             -- liftIO $ putText "." >> hFlush stdout
             atomically $ distributeMessage msg
+            _ <- liftIO $ saveMessageJson msg
+
             processLines
           Just (Left _) -> do
             -- liftIO $ putText "x" >> hFlush stdout
             -- pass
-            whenJust line (liftIO . appendFileBS errorLogFile)
+            -- whenJust line (liftIO . appendFileBS errorLogFile)
             processLines
           Nothing ->
             putStrLn "APRS connection closed"

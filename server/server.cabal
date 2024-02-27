@@ -28,6 +28,7 @@ library
       Aprs.AprsMessage
       Aprs.AprsSymbol
       Aprs.GlidernetId
+      Aprs.LocationDatapoint
       Aprs.Utils
       Backend.FlightsState
       Backend.Utils
@@ -320,6 +321,7 @@ test-suite server-test
       AprsMessageSpec
       DeviceDatabaseSpec
       FlightTrackSpec
+      LocationDatapointSpec
       NavPointSpec
       TaskProgressSpec
       Utils

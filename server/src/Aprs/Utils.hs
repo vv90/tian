@@ -3,6 +3,8 @@ module Aprs.Utils where
 import Aprs.AprsMessage (AprsMessage (..), DeviceId, aprsMessageParser, getDeviceId)
 import Aprs.LocationDatapoint (fromAprsMessage)
 import Backend.FlightsState (FlightInformation, FlightPosition (..), makeFlightInformation, toFlightPosition)
+import Codec.Compression.GZip (CompressParams (compressLevel))
+import Codec.Compression.GZip qualified as GZip
 import Conduit (ConduitT, await, runConduit, yield, (.|))
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (concurrently_)
@@ -15,12 +17,10 @@ import Data.Time (UTCTime (utctDay), getCurrentTime, utctDayTime)
 import Data.UUID (UUID)
 import Glidernet.DeviceDatabase (DeviceInfo)
 import Relude
-import System.Directory (createDirectoryIfMissing, listDirectory, removeFile, doesDirectoryExist, removeDirectory)
-import System.FilePath ((<.>), (</>), takeExtension, takeFileName)
+import System.Directory (createDirectoryIfMissing, doesDirectoryExist, listDirectory, removeDirectory, removeFile)
+import System.FilePath (takeExtension, (<.>), (</>))
 import Text.Parsec (parse)
 import TimeUtils (diffTimeToSeconds)
-import Codec.Compression.GZip (CompressParams(compressLevel))
-import Codec.Compression.GZip qualified as GZip
 
 type AprsMessageBroker = HashMap UUID (TBChan (DeviceId, FlightPosition))
 
@@ -50,35 +50,30 @@ isPositionRecentEnough currTimeSeconds (FlightPosition {timeSeconds}) =
 
 compressFiles :: FilePath -> IO ()
 compressFiles dirName =
-  let
-    compressionParams :: CompressParams
-    compressionParams = GZip.defaultCompressParams {compressLevel = GZip.bestCompression}
+  let compressionParams :: CompressParams
+      compressionParams = GZip.defaultCompressParams {compressLevel = GZip.bestCompression}
 
-    dirPath :: FilePath
-    dirPath = logsDirectory </> dirName
+      dirPath :: FilePath
+      dirPath = logsDirectory </> dirName
 
-    archivePath :: FilePath
-    archivePath = logsDirectory </> "archive" </> dirName
+      archivePath :: FilePath
+      archivePath = logsDirectory </> "archive" </> dirName
 
-    compressAndRemove :: FilePath -> IO ()
-    compressAndRemove fileName =
-      let
-        filePath :: FilePath
-        filePath = dirPath </> fileName
-      in do
-      contents <- readFileLBS filePath
-      createDirectoryIfMissing True archivePath
-      writeFileLBS (archivePath </> fileName <.> "gz") $ GZip.compressWith compressionParams contents
-      removeFile filePath
+      compressAndRemove :: FilePath -> IO ()
+      compressAndRemove fileName =
+        let filePath :: FilePath
+            filePath = dirPath </> fileName
+         in do
+              contents <- readFileLBS filePath
+              createDirectoryIfMissing True archivePath
+              writeFileLBS (archivePath </> fileName <.> "gz") $ GZip.compressWith compressionParams contents
+              removeFile filePath
+   in do
+        files <- filter ((== ".json") . takeExtension) <$> listDirectory dirPath
+        traverse_ compressAndRemove files
 
-  in do
-  files <- filter ((== ".json") . takeExtension) <$> listDirectory dirPath
-  traverse_ compressAndRemove files
-
-  leftover <- listDirectory dirPath
-  when (null leftover) $ removeDirectory dirPath
-
-
+        leftover <- listDirectory dirPath
+        when (null leftover) $ removeDirectory dirPath
 
 cleanUpFlightsState :: TVar FlightsState -> IO ()
 cleanUpFlightsState flights = do

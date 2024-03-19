@@ -17,8 +17,7 @@ data TrackFileInfo = TrackFileInfo
 
 trackFileInfoParser :: Parsec Text () TrackFileInfo
 trackFileInfoParser =
-  TrackFileInfo
-    <$> (toText <$> many1 alphaNum)
+  (TrackFileInfo . toText <$> many1 alphaNum)
     <* char '_'
     <*> (toText <$> many1 alphaNum)
     <* string ".igc"

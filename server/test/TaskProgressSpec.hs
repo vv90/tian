@@ -74,8 +74,7 @@ spec = do
             perpendicular start bearing (Length.metres 3000)
 
           lineLength =
-            GreatCircle.distance
-              <$> (GreatCircle.minorArcStart <$> startLine)
+            (GreatCircle.distance . GreatCircle.minorArcStart <$> startLine)
               <*> (GreatCircle.minorArcEnd <$> startLine)
       -- Geodetic.decimalLatitude . GreatCircle.minorArcStart
       --     <$> startLine `shouldBe` Just 0

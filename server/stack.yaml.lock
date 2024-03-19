@@ -19,9 +19,9 @@ packages:
   original:
     hackage: jord-2.0.0.0
 - completed:
-    hackage: haskell-to-elm-0.3.2.0@sha256:02085cf6ac5c1c696c1dc923033b5f01509fcbed67c32cc79139704888821e60,4441
+    hackage: haskell-to-elm-0.3.2.0@sha256:441d57a2ffc23dbf25cd6f9991aaaac8ce671b6b4c5077f6fb35e25a84258dc4,4594
     pantry-tree:
-      sha256: 118740f5a865608a00049a271f2a84af8ae1957f02c013967a2d363b1a80c800
+      sha256: 0e240021a4e29c585af983cdba5287944d73d10ee48e18c2ac20420f6042c724
       size: 650
   original:
     hackage: haskell-to-elm-0.3.2.0

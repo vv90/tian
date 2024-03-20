@@ -172,7 +172,6 @@ turnpointCrossed _targetNp currTp (np, TurnpointCylinder radius) =
   let (DistanceMeters npDistance) = distanceToTarget np currTp
    in if npDistance <= radius
         then -- Just $ toProgressPoint (Just targetNp) currTp
-
           Just
             $ TpCrossing
               { time = time currTp,
@@ -187,7 +186,6 @@ finishCrossed (np, FinishCylinder radius) _prevNp _lastPos currTp =
   let (DistanceMeters npDistance) = distanceToTarget np currTp
    in if npDistance <= radius
         then -- Just $ toProgressPoint Nothing currTp
-
           Just
             $ TpCrossing
               { time = TrackPoint.time currTp,

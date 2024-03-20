@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-21.1
+resolver: lts-22.13
   # url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2022/8/4.yaml
 
 # User packages to be built.
@@ -45,9 +45,7 @@ extra-deps:
 # Geographical Position Calculations
 - jord-2.0.0.0
 - haskell-to-elm-0.3.2.0
-- elm-syntax-0.3.2.0
-
-allow-newer: true
+- elm-syntax-0.3.3.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

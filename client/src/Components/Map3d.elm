@@ -37,15 +37,16 @@ import Components.Map3dUtils
         , mercatorRate
         , toMercatorPoint
         )
+import Components.Player exposing (Msg)
 import Constants exposing (earthCircumference)
 import Dict exposing (Dict)
 import Direction3d
 import Domain.GeoUtils exposing (degreesLatitude)
 import Flags exposing (WindowSize)
 import Frame2d exposing (Frame2d)
-import Html exposing (Html, div)
+import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (style)
-import Html.Events exposing (on)
+import Html.Events exposing (on, onClick)
 import Json.Decode as D
 import Length exposing (Length, Meters)
 import List.Extra
@@ -483,6 +484,7 @@ type Msg
     | DemoStarted
     | DemoTick Time.Posix
     | DemoFinished
+    | ViewReset
     | PointFocused GeoPoint
     | NoOp
 
@@ -680,7 +682,21 @@ update msg model =
                 focalPoint =
                     makePoint model (Length.meters 500) point
             in
-            { model | viewArgs = { viewArgs | focalPoint = focalPoint } }
+            { model
+                | viewArgs = { viewArgs | focalPoint = focalPoint }
+            }
+                |> updateTiles
+
+        ViewReset ->
+            let
+                newViewArgs =
+                    { focalPoint = model.viewArgs.focalPoint
+                    , azimuth = Angle.degrees 270
+                    , elevation = Angle.degrees 50
+                    , distance = Length.meters 25000
+                    }
+            in
+            { model | viewArgs = newViewArgs, demoState = DemoNotStarted }
                 |> updateTiles
 
         NoOp ->
@@ -729,7 +745,7 @@ subscriptions model =
     Sub.batch [ keyModSub, dragSub, cursorSub, demoSub ]
 
 
-mapItemView : Model -> Map3dItem -> ( Svg Msg, Scene3d.Entity WorldCoords )
+mapItemView : Model -> Map3dItem -> ( Svg msg, Scene3d.Entity WorldCoords )
 mapItemView model mapItem =
     let
         cmr : Camera3d Meters WorldCoords
@@ -830,8 +846,8 @@ mapItemView model mapItem =
             ( Svg.g [] [], Scene3d.nothing )
 
 
-view : List Map3dItem -> Model -> Html Msg
-view mapItems model =
+view : { restartOnboarding : msg, mapMsg : Msg -> msg } -> List Map3dItem -> Model -> Html msg
+view { restartOnboarding, mapMsg } mapItems model =
     let
         unwrapTexture : Deferred (Material.Texture Color) -> Material.Material WorldCoords { a | uvs : () }
         unwrapTexture =
@@ -877,7 +893,7 @@ view mapItems model =
             Scene3d.group <|
                 List.map toTile model.displayedTiles
 
-        mis : List ( Svg Msg, Scene3d.Entity WorldCoords )
+        mis : List ( Svg msg, Scene3d.Entity WorldCoords )
         mis =
             List.map (mapItemView model) mapItems
 
@@ -885,15 +901,15 @@ view mapItems model =
         entities =
             base :: List.map Tuple.second mis
 
-        svgs : List (Svg Msg)
+        svgs : List (Svg msg)
         svgs =
             List.map Tuple.first mis
     in
     div
-        [ on "mousedown" (D.map DragStart decodePosition)
-        , on "wheel" (D.map ZoomChanged decodeWheelEvent)
+        [ on "mousedown" (D.map (DragStart >> mapMsg) decodePosition)
+        , on "wheel" (D.map (ZoomChanged >> mapMsg) decodeWheelEvent)
         , style "position" "relative"
-        , Html.Events.preventDefaultOn "contextmenu" (D.succeed ( NoOp, True ))
+        , Html.Events.preventDefaultOn "contextmenu" (D.succeed ( mapMsg NoOp, True ))
         ]
         [ Scene3d.sunny
             { upDirection = Direction3d.positiveZ
@@ -923,6 +939,16 @@ view mapItems model =
             , style "top" "0"
             ]
             svgs
+        , button
+            [ style "position" "absolute" 
+            , style "top" "20px"
+            , style "right" "20px"
+            , style "width" "30px"
+            , style "height" "30px"
+            , style "border-radius" "30px"
+            , onClick restartOnboarding 
+            ]
+            [ text "R" ]
         ]
 
 

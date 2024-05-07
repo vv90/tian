@@ -1,73 +1,73 @@
 module Api.Types exposing
-    ( AircraftType(..)
-    , DeviceId(..)
-    , DeviceInfo
-    , DeviceType(..)
-    , Direction(..)
-    , Distance(..)
-    , Elevation(..)
-    , ElevationPointsTile
-    , Entity
-    , FlightInformation
-    , FlightPosition
-    , FlightTask
-    , GeoPoint
-    , Latitude(..)
-    , Longitude(..)
-    , NameMatch
-    , NavPoint
-    , ProgressPoint
-    , TaskFinish(..)
-    , TaskProgress
-    , TaskStart(..)
-    , Turnpoint(..)
-    , WaypointStyle(..)
-    , aircraftTypeDecoder
-    , aircraftTypeEncoder
-    , deviceIdDecoder
-    , deviceIdEncoder
-    , deviceInfoDecoder
-    , deviceInfoEncoder
-    , deviceTypeDecoder
-    , deviceTypeEncoder
-    , directionDecoder
-    , directionEncoder
-    , distanceDecoder
-    , distanceEncoder
-    , elevationDecoder
-    , elevationEncoder
-    , elevationPointsTileDecoder
-    , elevationPointsTileEncoder
-    , entityDecoder
-    , entityEncoder
-    , flightInformationDecoder
-    , flightInformationEncoder
-    , flightPositionDecoder
-    , flightPositionEncoder
-    , flightTaskDecoder
-    , flightTaskEncoder
-    , geoPointDecoder
-    , geoPointEncoder
-    , latitudeDecoder
-    , latitudeEncoder
-    , longitudeDecoder
-    , longitudeEncoder
-    , nameMatchDecoder
-    , nameMatchEncoder
-    , navPointDecoder
-    , navPointEncoder
-    , progressPointDecoder
-    , progressPointEncoder
-    , taskFinishDecoder
-    , taskFinishEncoder
-    , taskProgressDecoder
-    , taskProgressEncoder
-    , taskStartDecoder
-    , taskStartEncoder
-    , turnpointDecoder
-    , turnpointEncoder
-    , waypointStyleDecoder
+    ( WaypointStyle(..)
     , waypointStyleEncoder
+    , waypointStyleDecoder
+    , Latitude(..)
+    , latitudeEncoder
+    , latitudeDecoder
+    , Longitude(..)
+    , longitudeEncoder
+    , longitudeDecoder
+    , Elevation(..)
+    , elevationEncoder
+    , elevationDecoder
+    , Direction(..)
+    , directionEncoder
+    , directionDecoder
+    , Distance(..)
+    , distanceEncoder
+    , distanceDecoder
+    , NavPoint
+    , navPointEncoder
+    , navPointDecoder
+    , Turnpoint(..)
+    , turnpointEncoder
+    , turnpointDecoder
+    , TaskStart(..)
+    , taskStartEncoder
+    , taskStartDecoder
+    , TaskFinish(..)
+    , taskFinishEncoder
+    , taskFinishDecoder
+    , FlightTask
+    , flightTaskEncoder
+    , flightTaskDecoder
+    , Entity
+    , entityEncoder
+    , entityDecoder
+    , ProgressPoint
+    , progressPointEncoder
+    , progressPointDecoder
+    , TaskProgress
+    , taskProgressEncoder
+    , taskProgressDecoder
+    , NameMatch
+    , nameMatchEncoder
+    , nameMatchDecoder
+    , GeoPoint
+    , geoPointEncoder
+    , geoPointDecoder
+    , ElevationPointsTile
+    , elevationPointsTileEncoder
+    , elevationPointsTileDecoder
+    , DeviceInfo
+    , deviceInfoEncoder
+    , deviceInfoDecoder
+    , DeviceType(..)
+    , deviceTypeEncoder
+    , deviceTypeDecoder
+    , FlightPosition
+    , flightPositionEncoder
+    , flightPositionDecoder
+    , FlightInformation
+    , flightInformationEncoder
+    , flightInformationDecoder
+    , AircraftType(..)
+    , aircraftTypeEncoder
+    , aircraftTypeDecoder
+    , DeviceId(..)
+    , deviceIdEncoder
+    , deviceIdDecoder
     )
 
 import Array
@@ -79,25 +79,25 @@ import Maybe.Extra
 import Time
 
 
-type WaypointStyle
-    = Unknown
-    | Waypoint
-    | AirfieldGrass
-    | Outlanding
-    | AirfieldGliding
-    | AirfieldSolid
-    | MountainPass
-    | MountainTop
-    | TransmitterMast
-    | VOR
-    | NDB
-    | CoolingTower
-    | Dam
-    | Tunnel
-    | Bridge
-    | PowerPlant
-    | Castle
-    | Intersection
+type WaypointStyle 
+    = Unknown 
+    | Waypoint 
+    | AirfieldGrass 
+    | Outlanding 
+    | AirfieldGliding 
+    | AirfieldSolid 
+    | MountainPass 
+    | MountainTop 
+    | TransmitterMast 
+    | VOR 
+    | NDB 
+    | CoolingTower 
+    | Dam 
+    | Tunnel 
+    | Bridge 
+    | PowerPlant 
+    | Castle 
+    | Intersection 
 
 
 waypointStyleEncoder : WaypointStyle -> Json.Encode.Value
@@ -160,70 +160,67 @@ waypointStyleEncoder a =
 
 waypointStyleDecoder : Json.Decode.Decoder WaypointStyle
 waypointStyleDecoder =
-    Json.Decode.string
-        |> Json.Decode.andThen
-            (\a ->
-                case a of
-                    "Unknown" ->
-                        Json.Decode.succeed Unknown
+    Json.Decode.string |>
+    Json.Decode.andThen (\a -> case a of
+        "Unknown" ->
+            Json.Decode.succeed Unknown
 
-                    "Waypoint" ->
-                        Json.Decode.succeed Waypoint
+        "Waypoint" ->
+            Json.Decode.succeed Waypoint
 
-                    "AirfieldGrass" ->
-                        Json.Decode.succeed AirfieldGrass
+        "AirfieldGrass" ->
+            Json.Decode.succeed AirfieldGrass
 
-                    "Outlanding" ->
-                        Json.Decode.succeed Outlanding
+        "Outlanding" ->
+            Json.Decode.succeed Outlanding
 
-                    "AirfieldGliding" ->
-                        Json.Decode.succeed AirfieldGliding
+        "AirfieldGliding" ->
+            Json.Decode.succeed AirfieldGliding
 
-                    "AirfieldSolid" ->
-                        Json.Decode.succeed AirfieldSolid
+        "AirfieldSolid" ->
+            Json.Decode.succeed AirfieldSolid
 
-                    "MountainPass" ->
-                        Json.Decode.succeed MountainPass
+        "MountainPass" ->
+            Json.Decode.succeed MountainPass
 
-                    "MountainTop" ->
-                        Json.Decode.succeed MountainTop
+        "MountainTop" ->
+            Json.Decode.succeed MountainTop
 
-                    "TransmitterMast" ->
-                        Json.Decode.succeed TransmitterMast
+        "TransmitterMast" ->
+            Json.Decode.succeed TransmitterMast
 
-                    "VOR" ->
-                        Json.Decode.succeed VOR
+        "VOR" ->
+            Json.Decode.succeed VOR
 
-                    "NDB" ->
-                        Json.Decode.succeed NDB
+        "NDB" ->
+            Json.Decode.succeed NDB
 
-                    "CoolingTower" ->
-                        Json.Decode.succeed CoolingTower
+        "CoolingTower" ->
+            Json.Decode.succeed CoolingTower
 
-                    "Dam" ->
-                        Json.Decode.succeed Dam
+        "Dam" ->
+            Json.Decode.succeed Dam
 
-                    "Tunnel" ->
-                        Json.Decode.succeed Tunnel
+        "Tunnel" ->
+            Json.Decode.succeed Tunnel
 
-                    "Bridge" ->
-                        Json.Decode.succeed Bridge
+        "Bridge" ->
+            Json.Decode.succeed Bridge
 
-                    "PowerPlant" ->
-                        Json.Decode.succeed PowerPlant
+        "PowerPlant" ->
+            Json.Decode.succeed PowerPlant
 
-                    "Castle" ->
-                        Json.Decode.succeed Castle
+        "Castle" ->
+            Json.Decode.succeed Castle
 
-                    "Intersection" ->
-                        Json.Decode.succeed Intersection
+        "Intersection" ->
+            Json.Decode.succeed Intersection
 
-                    _ ->
-                        Json.Decode.fail "No matching constructor"
-            )
+        _ ->
+            Json.Decode.fail "No matching constructor")
 
 
-type Latitude
+type Latitude 
     = LatitudeDegrees Float
 
 
@@ -239,7 +236,7 @@ latitudeDecoder =
     Json.Decode.map LatitudeDegrees Json.Decode.float
 
 
-type Longitude
+type Longitude 
     = LongitudeDegrees Float
 
 
@@ -255,7 +252,7 @@ longitudeDecoder =
     Json.Decode.map LongitudeDegrees Json.Decode.float
 
 
-type Elevation
+type Elevation 
     = ElevationMeters Float
 
 
@@ -271,7 +268,7 @@ elevationDecoder =
     Json.Decode.map ElevationMeters Json.Decode.float
 
 
-type Direction
+type Direction 
     = DirectionDegrees Int
 
 
@@ -287,7 +284,7 @@ directionDecoder =
     Json.Decode.map DirectionDegrees Json.Decode.int
 
 
-type Distance
+type Distance 
     = DistanceMeters Float
 
 
@@ -303,7 +300,7 @@ distanceDecoder =
     Json.Decode.map DistanceMeters Json.Decode.float
 
 
-type alias NavPoint =
+type alias NavPoint  =
     { name : String
     , code : String
     , country : Maybe String
@@ -314,44 +311,41 @@ type alias NavPoint =
     , rwdir : Maybe Direction
     , rwlen : Maybe Distance
     , freq : Maybe String
-    , desc : String
-    }
+    , desc : String }
 
 
 navPointEncoder : NavPoint -> Json.Encode.Value
 navPointEncoder a =
-    Json.Encode.object
-        [ ( "name", Json.Encode.string a.name )
-        , ( "code", Json.Encode.string a.code )
-        , ( "country", Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.country )
-        , ( "lat", latitudeEncoder a.lat )
-        , ( "lon", longitudeEncoder a.lon )
-        , ( "elev", elevationEncoder a.elev )
-        , ( "style", waypointStyleEncoder a.style )
-        , ( "rwdir", Maybe.Extra.unwrap Json.Encode.null directionEncoder a.rwdir )
-        , ( "rwlen", Maybe.Extra.unwrap Json.Encode.null distanceEncoder a.rwlen )
-        , ( "freq", Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.freq )
-        , ( "desc", Json.Encode.string a.desc )
-        ]
+    Json.Encode.object [ ("name" , Json.Encode.string a.name)
+    , ("code" , Json.Encode.string a.code)
+    , ("country" , Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.country)
+    , ("lat" , latitudeEncoder a.lat)
+    , ("lon" , longitudeEncoder a.lon)
+    , ("elev" , elevationEncoder a.elev)
+    , ("style" , waypointStyleEncoder a.style)
+    , ("rwdir" , Maybe.Extra.unwrap Json.Encode.null directionEncoder a.rwdir)
+    , ("rwlen" , Maybe.Extra.unwrap Json.Encode.null distanceEncoder a.rwlen)
+    , ("freq" , Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.freq)
+    , ("desc" , Json.Encode.string a.desc) ]
 
 
 navPointDecoder : Json.Decode.Decoder NavPoint
 navPointDecoder =
-    Json.Decode.succeed NavPoint
-        |> Json.Decode.Pipeline.required "name" Json.Decode.string
-        |> Json.Decode.Pipeline.required "code" Json.Decode.string
-        |> Json.Decode.Pipeline.required "country" (Json.Decode.nullable Json.Decode.string)
-        |> Json.Decode.Pipeline.required "lat" latitudeDecoder
-        |> Json.Decode.Pipeline.required "lon" longitudeDecoder
-        |> Json.Decode.Pipeline.required "elev" elevationDecoder
-        |> Json.Decode.Pipeline.required "style" waypointStyleDecoder
-        |> Json.Decode.Pipeline.required "rwdir" (Json.Decode.nullable directionDecoder)
-        |> Json.Decode.Pipeline.required "rwlen" (Json.Decode.nullable distanceDecoder)
-        |> Json.Decode.Pipeline.required "freq" (Json.Decode.nullable Json.Decode.string)
-        |> Json.Decode.Pipeline.required "desc" Json.Decode.string
+    Json.Decode.succeed NavPoint |>
+    Json.Decode.Pipeline.required "name" Json.Decode.string |>
+    Json.Decode.Pipeline.required "code" Json.Decode.string |>
+    Json.Decode.Pipeline.required "country" (Json.Decode.nullable Json.Decode.string) |>
+    Json.Decode.Pipeline.required "lat" latitudeDecoder |>
+    Json.Decode.Pipeline.required "lon" longitudeDecoder |>
+    Json.Decode.Pipeline.required "elev" elevationDecoder |>
+    Json.Decode.Pipeline.required "style" waypointStyleDecoder |>
+    Json.Decode.Pipeline.required "rwdir" (Json.Decode.nullable directionDecoder) |>
+    Json.Decode.Pipeline.required "rwlen" (Json.Decode.nullable distanceDecoder) |>
+    Json.Decode.Pipeline.required "freq" (Json.Decode.nullable Json.Decode.string) |>
+    Json.Decode.Pipeline.required "desc" Json.Decode.string
 
 
-type Turnpoint
+type Turnpoint 
     = TurnpointCylinder Float
 
 
@@ -367,7 +361,7 @@ turnpointDecoder =
     Json.Decode.map TurnpointCylinder Json.Decode.float
 
 
-type TaskStart
+type TaskStart 
     = StartLine Float
 
 
@@ -383,7 +377,7 @@ taskStartDecoder =
     Json.Decode.map StartLine Json.Decode.float
 
 
-type TaskFinish
+type TaskFinish 
     = FinishLine Float
     | FinishCylinder Float
 
@@ -392,81 +386,57 @@ taskFinishEncoder : TaskFinish -> Json.Encode.Value
 taskFinishEncoder a =
     case a of
         FinishLine b ->
-            Json.Encode.object
-                [ ( "tag", Json.Encode.string "FinishLine" )
-                , ( "contents", Json.Encode.float b )
-                ]
+            Json.Encode.object [ ("tag" , Json.Encode.string "FinishLine")
+            , ("contents" , Json.Encode.float b) ]
 
         FinishCylinder b ->
-            Json.Encode.object
-                [ ( "tag", Json.Encode.string "FinishCylinder" )
-                , ( "contents", Json.Encode.float b )
-                ]
+            Json.Encode.object [ ("tag" , Json.Encode.string "FinishCylinder")
+            , ("contents" , Json.Encode.float b) ]
 
 
 taskFinishDecoder : Json.Decode.Decoder TaskFinish
 taskFinishDecoder =
-    Json.Decode.field "tag" Json.Decode.string
-        |> Json.Decode.andThen
-            (\a ->
-                case a of
-                    "FinishLine" ->
-                        Json.Decode.succeed FinishLine
-                            |> Json.Decode.Pipeline.required "contents" Json.Decode.float
+    Json.Decode.field "tag" Json.Decode.string |>
+    Json.Decode.andThen (\a -> case a of
+        "FinishLine" ->
+            Json.Decode.succeed FinishLine |>
+            Json.Decode.Pipeline.required "contents" Json.Decode.float
 
-                    "FinishCylinder" ->
-                        Json.Decode.succeed FinishCylinder
-                            |> Json.Decode.Pipeline.required "contents" Json.Decode.float
+        "FinishCylinder" ->
+            Json.Decode.succeed FinishCylinder |>
+            Json.Decode.Pipeline.required "contents" Json.Decode.float
 
-                    _ ->
-                        Json.Decode.fail "No matching constructor"
-            )
+        _ ->
+            Json.Decode.fail "No matching constructor")
 
 
-type alias FlightTask =
-    { start : ( NavPoint, TaskStart )
-    , turnpoints : List ( NavPoint, Turnpoint )
-    , finish : ( NavPoint, TaskFinish )
-    }
+type alias FlightTask  =
+    { start : (NavPoint , TaskStart)
+    , turnpoints : List (NavPoint , Turnpoint)
+    , finish : (NavPoint , TaskFinish) }
 
 
 flightTaskEncoder : FlightTask -> Json.Encode.Value
 flightTaskEncoder a =
-    Json.Encode.object
-        [ ( "start"
-          , case a.start of
-                ( b, c ) ->
-                    Json.Encode.list identity [ navPointEncoder b, taskStartEncoder c ]
-          )
-        , ( "turnpoints"
-          , Json.Encode.list
-                (\b ->
-                    case b of
-                        ( c, d ) ->
-                            Json.Encode.list identity
-                                [ navPointEncoder c
-                                , turnpointEncoder d
-                                ]
-                )
-                a.turnpoints
-          )
-        , ( "finish"
-          , case a.finish of
-                ( b, c ) ->
-                    Json.Encode.list identity
-                        [ navPointEncoder b
-                        , taskFinishEncoder c
-                        ]
-          )
-        ]
+    Json.Encode.object [ ("start" , case a.start of
+        (b , c) ->
+            Json.Encode.list identity [navPointEncoder b, taskStartEncoder c])
+    , ("turnpoints" , Json.Encode.list (\b -> case b of
+        (c , d) ->
+            Json.Encode.list identity [ navPointEncoder c
+            , turnpointEncoder d ]) a.turnpoints)
+    , ("finish" , case a.finish of
+        (b , c) ->
+            Json.Encode.list identity [ navPointEncoder b
+            , taskFinishEncoder c ]) ]
 
 
 flightTaskDecoder : Json.Decode.Decoder FlightTask
 flightTaskDecoder =
-    Json.Decode.succeed FlightTask
-        |> Json.Decode.Pipeline.required "start" (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 navPointDecoder) (Json.Decode.index 1 taskStartDecoder))
-        |> Json.Decode.Pipeline.required "turnpoints" (Json.Decode.list (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 navPointDecoder) (Json.Decode.index 1 turnpointDecoder)))
-        |> Json.Decode.Pipeline.required "finish" (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 navPointDecoder) (Json.Decode.index 1 taskFinishDecoder))
+    Json.Decode.succeed FlightTask |>
+    Json.Decode.Pipeline.required "start" (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 navPointDecoder) (Json.Decode.index 1 taskStartDecoder)) |>
+    Json.Decode.Pipeline.required "turnpoints" (Json.Decode.list (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 navPointDecoder) (Json.Decode.index 1 turnpointDecoder))) |>
+    Json.Decode.Pipeline.required "finish" (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 navPointDecoder) (Json.Decode.index 1 taskFinishDecoder))
 
 
 type alias Entity a b =
@@ -475,201 +445,177 @@ type alias Entity a b =
 
 entityEncoder : (a -> Json.Encode.Value) -> (b -> Json.Encode.Value) -> Entity a b -> Json.Encode.Value
 entityEncoder a b c =
-    Json.Encode.object [ ( "key", a c.key ), ( "entity", b c.entity ) ]
+    Json.Encode.object [("key" , a c.key), ("entity" , b c.entity)]
 
 
 entityDecoder : Json.Decode.Decoder a -> Json.Decode.Decoder b -> Json.Decode.Decoder (Entity a b)
 entityDecoder a b =
-    Json.Decode.succeed Entity
-        |> Json.Decode.Pipeline.required "key" a
-        |> Json.Decode.Pipeline.required "entity" b
+    Json.Decode.succeed Entity |>
+    Json.Decode.Pipeline.required "key" a |>
+    Json.Decode.Pipeline.required "entity" b
 
 
-type alias ProgressPoint =
+type alias ProgressPoint  =
     { time : Int
     , lat : Latitude
     , lon : Longitude
     , altitude : Elevation
     , target : Maybe String
     , distance : Float
-    , speed : Maybe Float
-    }
+    , speed : Maybe Float }
 
 
 progressPointEncoder : ProgressPoint -> Json.Encode.Value
 progressPointEncoder a =
-    Json.Encode.object
-        [ ( "time", Json.Encode.int a.time )
-        , ( "lat", latitudeEncoder a.lat )
-        , ( "lon", longitudeEncoder a.lon )
-        , ( "altitude", elevationEncoder a.altitude )
-        , ( "target", Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.target )
-        , ( "distance", Json.Encode.float a.distance )
-        , ( "speed", Maybe.Extra.unwrap Json.Encode.null Json.Encode.float a.speed )
-        ]
+    Json.Encode.object [ ("time" , Json.Encode.int a.time)
+    , ("lat" , latitudeEncoder a.lat)
+    , ("lon" , longitudeEncoder a.lon)
+    , ("altitude" , elevationEncoder a.altitude)
+    , ("target" , Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.target)
+    , ("distance" , Json.Encode.float a.distance)
+    , ("speed" , Maybe.Extra.unwrap Json.Encode.null Json.Encode.float a.speed) ]
 
 
 progressPointDecoder : Json.Decode.Decoder ProgressPoint
 progressPointDecoder =
-    Json.Decode.succeed ProgressPoint
-        |> Json.Decode.Pipeline.required "time" Json.Decode.int
-        |> Json.Decode.Pipeline.required "lat" latitudeDecoder
-        |> Json.Decode.Pipeline.required "lon" longitudeDecoder
-        |> Json.Decode.Pipeline.required "altitude" elevationDecoder
-        |> Json.Decode.Pipeline.required "target" (Json.Decode.nullable Json.Decode.string)
-        |> Json.Decode.Pipeline.required "distance" Json.Decode.float
-        |> Json.Decode.Pipeline.required "speed" (Json.Decode.nullable Json.Decode.float)
+    Json.Decode.succeed ProgressPoint |>
+    Json.Decode.Pipeline.required "time" Json.Decode.int |>
+    Json.Decode.Pipeline.required "lat" latitudeDecoder |>
+    Json.Decode.Pipeline.required "lon" longitudeDecoder |>
+    Json.Decode.Pipeline.required "altitude" elevationDecoder |>
+    Json.Decode.Pipeline.required "target" (Json.Decode.nullable Json.Decode.string) |>
+    Json.Decode.Pipeline.required "distance" Json.Decode.float |>
+    Json.Decode.Pipeline.required "speed" (Json.Decode.nullable Json.Decode.float)
 
 
-type alias TaskProgress =
+type alias TaskProgress  =
     { taskId : Int
     , date : Time.Posix
     , compId : String
     , points : List ProgressPoint
-    , legs : List ( Latitude, Longitude )
-    }
+    , legs : List (Latitude , Longitude) }
 
 
 taskProgressEncoder : TaskProgress -> Json.Encode.Value
 taskProgressEncoder a =
-    Json.Encode.object
-        [ ( "taskId", Json.Encode.int a.taskId )
-        , ( "date", Iso8601.encode a.date )
-        , ( "compId", Json.Encode.string a.compId )
-        , ( "points", Json.Encode.list progressPointEncoder a.points )
-        , ( "legs"
-          , Json.Encode.list
-                (\b ->
-                    case b of
-                        ( c, d ) ->
-                            Json.Encode.list identity
-                                [ latitudeEncoder c
-                                , longitudeEncoder d
-                                ]
-                )
-                a.legs
-          )
-        ]
+    Json.Encode.object [ ("taskId" , Json.Encode.int a.taskId)
+    , ("date" , Iso8601.encode a.date)
+    , ("compId" , Json.Encode.string a.compId)
+    , ("points" , Json.Encode.list progressPointEncoder a.points)
+    , ("legs" , Json.Encode.list (\b -> case b of
+        (c , d) ->
+            Json.Encode.list identity [ latitudeEncoder c
+            , longitudeEncoder d ]) a.legs) ]
 
 
 taskProgressDecoder : Json.Decode.Decoder TaskProgress
 taskProgressDecoder =
-    Json.Decode.succeed TaskProgress
-        |> Json.Decode.Pipeline.required "taskId" Json.Decode.int
-        |> Json.Decode.Pipeline.required "date" Iso8601.decoder
-        |> Json.Decode.Pipeline.required "compId" Json.Decode.string
-        |> Json.Decode.Pipeline.required "points" (Json.Decode.list progressPointDecoder)
-        |> Json.Decode.Pipeline.required "legs" (Json.Decode.list (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 latitudeDecoder) (Json.Decode.index 1 longitudeDecoder)))
+    Json.Decode.succeed TaskProgress |>
+    Json.Decode.Pipeline.required "taskId" Json.Decode.int |>
+    Json.Decode.Pipeline.required "date" Iso8601.decoder |>
+    Json.Decode.Pipeline.required "compId" Json.Decode.string |>
+    Json.Decode.Pipeline.required "points" (Json.Decode.list progressPointDecoder) |>
+    Json.Decode.Pipeline.required "legs" (Json.Decode.list (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 latitudeDecoder) (Json.Decode.index 1 longitudeDecoder)))
 
 
-type alias NameMatch =
+type alias NameMatch  =
     { compId : String, name : String }
 
 
 nameMatchEncoder : NameMatch -> Json.Encode.Value
 nameMatchEncoder a =
-    Json.Encode.object
-        [ ( "compId", Json.Encode.string a.compId )
-        , ( "name", Json.Encode.string a.name )
-        ]
+    Json.Encode.object [ ("compId" , Json.Encode.string a.compId)
+    , ("name" , Json.Encode.string a.name) ]
 
 
 nameMatchDecoder : Json.Decode.Decoder NameMatch
 nameMatchDecoder =
-    Json.Decode.succeed NameMatch
-        |> Json.Decode.Pipeline.required "compId" Json.Decode.string
-        |> Json.Decode.Pipeline.required "name" Json.Decode.string
+    Json.Decode.succeed NameMatch |>
+    Json.Decode.Pipeline.required "compId" Json.Decode.string |>
+    Json.Decode.Pipeline.required "name" Json.Decode.string
 
 
-type alias GeoPoint =
+type alias GeoPoint  =
     { lat : Latitude, lon : Longitude }
 
 
 geoPointEncoder : GeoPoint -> Json.Encode.Value
 geoPointEncoder a =
-    Json.Encode.object
-        [ ( "lat", latitudeEncoder a.lat )
-        , ( "lon", longitudeEncoder a.lon )
-        ]
+    Json.Encode.object [ ("lat" , latitudeEncoder a.lat)
+    , ("lon" , longitudeEncoder a.lon) ]
 
 
 geoPointDecoder : Json.Decode.Decoder GeoPoint
 geoPointDecoder =
-    Json.Decode.succeed GeoPoint
-        |> Json.Decode.Pipeline.required "lat" latitudeDecoder
-        |> Json.Decode.Pipeline.required "lon" longitudeDecoder
+    Json.Decode.succeed GeoPoint |>
+    Json.Decode.Pipeline.required "lat" latitudeDecoder |>
+    Json.Decode.Pipeline.required "lon" longitudeDecoder
 
 
-type alias ElevationPointsTile =
+type alias ElevationPointsTile  =
     { origin : GeoPoint
     , latStep : Latitude
     , lonStep : Longitude
     , rowLength : Int
-    , elevations : Array.Array Int
-    }
+    , elevations : Array.Array Int }
 
 
 elevationPointsTileEncoder : ElevationPointsTile -> Json.Encode.Value
 elevationPointsTileEncoder a =
-    Json.Encode.object
-        [ ( "origin", geoPointEncoder a.origin )
-        , ( "latStep", latitudeEncoder a.latStep )
-        , ( "lonStep", longitudeEncoder a.lonStep )
-        , ( "rowLength", Json.Encode.int a.rowLength )
-        , ( "elevations", Json.Encode.array Json.Encode.int a.elevations )
-        ]
+    Json.Encode.object [ ("origin" , geoPointEncoder a.origin)
+    , ("latStep" , latitudeEncoder a.latStep)
+    , ("lonStep" , longitudeEncoder a.lonStep)
+    , ("rowLength" , Json.Encode.int a.rowLength)
+    , ("elevations" , Json.Encode.array Json.Encode.int a.elevations) ]
 
 
 elevationPointsTileDecoder : Json.Decode.Decoder ElevationPointsTile
 elevationPointsTileDecoder =
-    Json.Decode.succeed ElevationPointsTile
-        |> Json.Decode.Pipeline.required "origin" geoPointDecoder
-        |> Json.Decode.Pipeline.required "latStep" latitudeDecoder
-        |> Json.Decode.Pipeline.required "lonStep" longitudeDecoder
-        |> Json.Decode.Pipeline.required "rowLength" Json.Decode.int
-        |> Json.Decode.Pipeline.required "elevations" (Json.Decode.array Json.Decode.int)
+    Json.Decode.succeed ElevationPointsTile |>
+    Json.Decode.Pipeline.required "origin" geoPointDecoder |>
+    Json.Decode.Pipeline.required "latStep" latitudeDecoder |>
+    Json.Decode.Pipeline.required "lonStep" longitudeDecoder |>
+    Json.Decode.Pipeline.required "rowLength" Json.Decode.int |>
+    Json.Decode.Pipeline.required "elevations" (Json.Decode.array Json.Decode.int)
 
 
-type alias DeviceInfo =
+type alias DeviceInfo  =
     { deviceType : DeviceType
     , deviceId : String
     , aircraftModel : Maybe String
     , registration : Maybe String
     , competitionNumber : Maybe String
     , tracked : Bool
-    , identified : Bool
-    }
+    , identified : Bool }
 
 
 deviceInfoEncoder : DeviceInfo -> Json.Encode.Value
 deviceInfoEncoder a =
-    Json.Encode.object
-        [ ( "deviceType", deviceTypeEncoder a.deviceType )
-        , ( "deviceId", Json.Encode.string a.deviceId )
-        , ( "aircraftModel", Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.aircraftModel )
-        , ( "registration", Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.registration )
-        , ( "competitionNumber", Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.competitionNumber )
-        , ( "tracked", Json.Encode.bool a.tracked )
-        , ( "identified", Json.Encode.bool a.identified )
-        ]
+    Json.Encode.object [ ("deviceType" , deviceTypeEncoder a.deviceType)
+    , ("deviceId" , Json.Encode.string a.deviceId)
+    , ("aircraftModel" , Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.aircraftModel)
+    , ("registration" , Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.registration)
+    , ("competitionNumber" , Maybe.Extra.unwrap Json.Encode.null Json.Encode.string a.competitionNumber)
+    , ("tracked" , Json.Encode.bool a.tracked)
+    , ("identified" , Json.Encode.bool a.identified) ]
 
 
 deviceInfoDecoder : Json.Decode.Decoder DeviceInfo
 deviceInfoDecoder =
-    Json.Decode.succeed DeviceInfo
-        |> Json.Decode.Pipeline.required "deviceType" deviceTypeDecoder
-        |> Json.Decode.Pipeline.required "deviceId" Json.Decode.string
-        |> Json.Decode.Pipeline.required "aircraftModel" (Json.Decode.nullable Json.Decode.string)
-        |> Json.Decode.Pipeline.required "registration" (Json.Decode.nullable Json.Decode.string)
-        |> Json.Decode.Pipeline.required "competitionNumber" (Json.Decode.nullable Json.Decode.string)
-        |> Json.Decode.Pipeline.required "tracked" Json.Decode.bool
-        |> Json.Decode.Pipeline.required "identified" Json.Decode.bool
+    Json.Decode.succeed DeviceInfo |>
+    Json.Decode.Pipeline.required "deviceType" deviceTypeDecoder |>
+    Json.Decode.Pipeline.required "deviceId" Json.Decode.string |>
+    Json.Decode.Pipeline.required "aircraftModel" (Json.Decode.nullable Json.Decode.string) |>
+    Json.Decode.Pipeline.required "registration" (Json.Decode.nullable Json.Decode.string) |>
+    Json.Decode.Pipeline.required "competitionNumber" (Json.Decode.nullable Json.Decode.string) |>
+    Json.Decode.Pipeline.required "tracked" Json.Decode.bool |>
+    Json.Decode.Pipeline.required "identified" Json.Decode.bool
 
 
-type DeviceType
-    = Flarm
-    | OGN
-    | ICAO
+type DeviceType 
+    = Flarm 
+    | OGN 
+    | ICAO 
 
 
 deviceTypeEncoder : DeviceType -> Json.Encode.Value
@@ -687,82 +633,75 @@ deviceTypeEncoder a =
 
 deviceTypeDecoder : Json.Decode.Decoder DeviceType
 deviceTypeDecoder =
-    Json.Decode.string
-        |> Json.Decode.andThen
-            (\a ->
-                case a of
-                    "Flarm" ->
-                        Json.Decode.succeed Flarm
+    Json.Decode.string |>
+    Json.Decode.andThen (\a -> case a of
+        "Flarm" ->
+            Json.Decode.succeed Flarm
 
-                    "OGN" ->
-                        Json.Decode.succeed OGN
+        "OGN" ->
+            Json.Decode.succeed OGN
 
-                    "ICAO" ->
-                        Json.Decode.succeed ICAO
+        "ICAO" ->
+            Json.Decode.succeed ICAO
 
-                    _ ->
-                        Json.Decode.fail "No matching constructor"
-            )
+        _ ->
+            Json.Decode.fail "No matching constructor")
 
 
-type alias FlightPosition =
+type alias FlightPosition  =
     { lat : Latitude, lon : Longitude, alt : Elevation, timeSeconds : Int }
 
 
 flightPositionEncoder : FlightPosition -> Json.Encode.Value
 flightPositionEncoder a =
-    Json.Encode.object
-        [ ( "lat", latitudeEncoder a.lat )
-        , ( "lon", longitudeEncoder a.lon )
-        , ( "alt", elevationEncoder a.alt )
-        , ( "timeSeconds", Json.Encode.int a.timeSeconds )
-        ]
+    Json.Encode.object [ ("lat" , latitudeEncoder a.lat)
+    , ("lon" , longitudeEncoder a.lon)
+    , ("alt" , elevationEncoder a.alt)
+    , ("timeSeconds" , Json.Encode.int a.timeSeconds) ]
 
 
 flightPositionDecoder : Json.Decode.Decoder FlightPosition
 flightPositionDecoder =
-    Json.Decode.succeed FlightPosition
-        |> Json.Decode.Pipeline.required "lat" latitudeDecoder
-        |> Json.Decode.Pipeline.required "lon" longitudeDecoder
-        |> Json.Decode.Pipeline.required "alt" elevationDecoder
-        |> Json.Decode.Pipeline.required "timeSeconds" Json.Decode.int
+    Json.Decode.succeed FlightPosition |>
+    Json.Decode.Pipeline.required "lat" latitudeDecoder |>
+    Json.Decode.Pipeline.required "lon" longitudeDecoder |>
+    Json.Decode.Pipeline.required "alt" elevationDecoder |>
+    Json.Decode.Pipeline.required "timeSeconds" Json.Decode.int
 
 
-type alias FlightInformation =
+type alias FlightInformation  =
     { deviceInfo : Maybe DeviceInfo, aircraftType : AircraftType }
 
 
 flightInformationEncoder : FlightInformation -> Json.Encode.Value
 flightInformationEncoder a =
-    Json.Encode.object
-        [ ( "deviceInfo", Maybe.Extra.unwrap Json.Encode.null deviceInfoEncoder a.deviceInfo )
-        , ( "aircraftType", aircraftTypeEncoder a.aircraftType )
-        ]
+    Json.Encode.object [ ("deviceInfo" , Maybe.Extra.unwrap Json.Encode.null deviceInfoEncoder a.deviceInfo)
+    , ("aircraftType" , aircraftTypeEncoder a.aircraftType) ]
 
 
 flightInformationDecoder : Json.Decode.Decoder FlightInformation
 flightInformationDecoder =
-    Json.Decode.succeed FlightInformation
-        |> Json.Decode.Pipeline.required "deviceInfo" (Json.Decode.nullable deviceInfoDecoder)
-        |> Json.Decode.Pipeline.required "aircraftType" aircraftTypeDecoder
+    Json.Decode.succeed FlightInformation |>
+    Json.Decode.Pipeline.required "deviceInfo" (Json.Decode.nullable deviceInfoDecoder) |>
+    Json.Decode.Pipeline.required "aircraftType" aircraftTypeDecoder
 
 
-type AircraftType
-    = Glider
-    | TowPlane
-    | Helicopter
-    | Parachute
-    | DropPlane
-    | HangGlider
-    | ParaGlider
-    | PistonAircraft
-    | JetAircraft
-    | UnknownAircraftType
-    | Balloon
-    | Airship
-    | Drone
-    | Other
-    | StaticObstacle
+type AircraftType 
+    = Glider 
+    | TowPlane 
+    | Helicopter 
+    | Parachute 
+    | DropPlane 
+    | HangGlider 
+    | ParaGlider 
+    | PistonAircraft 
+    | JetAircraft 
+    | UnknownAircraftType 
+    | Balloon 
+    | Airship 
+    | Drone 
+    | Other 
+    | StaticObstacle 
 
 
 aircraftTypeEncoder : AircraftType -> Json.Encode.Value
@@ -816,61 +755,58 @@ aircraftTypeEncoder a =
 
 aircraftTypeDecoder : Json.Decode.Decoder AircraftType
 aircraftTypeDecoder =
-    Json.Decode.string
-        |> Json.Decode.andThen
-            (\a ->
-                case a of
-                    "Glider" ->
-                        Json.Decode.succeed Glider
+    Json.Decode.string |>
+    Json.Decode.andThen (\a -> case a of
+        "Glider" ->
+            Json.Decode.succeed Glider
 
-                    "TowPlane" ->
-                        Json.Decode.succeed TowPlane
+        "TowPlane" ->
+            Json.Decode.succeed TowPlane
 
-                    "Helicopter" ->
-                        Json.Decode.succeed Helicopter
+        "Helicopter" ->
+            Json.Decode.succeed Helicopter
 
-                    "Parachute" ->
-                        Json.Decode.succeed Parachute
+        "Parachute" ->
+            Json.Decode.succeed Parachute
 
-                    "DropPlane" ->
-                        Json.Decode.succeed DropPlane
+        "DropPlane" ->
+            Json.Decode.succeed DropPlane
 
-                    "HangGlider" ->
-                        Json.Decode.succeed HangGlider
+        "HangGlider" ->
+            Json.Decode.succeed HangGlider
 
-                    "ParaGlider" ->
-                        Json.Decode.succeed ParaGlider
+        "ParaGlider" ->
+            Json.Decode.succeed ParaGlider
 
-                    "PistonAircraft" ->
-                        Json.Decode.succeed PistonAircraft
+        "PistonAircraft" ->
+            Json.Decode.succeed PistonAircraft
 
-                    "JetAircraft" ->
-                        Json.Decode.succeed JetAircraft
+        "JetAircraft" ->
+            Json.Decode.succeed JetAircraft
 
-                    "UnknownAircraftType" ->
-                        Json.Decode.succeed UnknownAircraftType
+        "UnknownAircraftType" ->
+            Json.Decode.succeed UnknownAircraftType
 
-                    "Balloon" ->
-                        Json.Decode.succeed Balloon
+        "Balloon" ->
+            Json.Decode.succeed Balloon
 
-                    "Airship" ->
-                        Json.Decode.succeed Airship
+        "Airship" ->
+            Json.Decode.succeed Airship
 
-                    "Drone" ->
-                        Json.Decode.succeed Drone
+        "Drone" ->
+            Json.Decode.succeed Drone
 
-                    "Other" ->
-                        Json.Decode.succeed Other
+        "Other" ->
+            Json.Decode.succeed Other
 
-                    "StaticObstacle" ->
-                        Json.Decode.succeed StaticObstacle
+        "StaticObstacle" ->
+            Json.Decode.succeed StaticObstacle
 
-                    _ ->
-                        Json.Decode.fail "No matching constructor"
-            )
+        _ ->
+            Json.Decode.fail "No matching constructor")
 
 
-type DeviceId
+type DeviceId 
     = DeviceId String
 
 

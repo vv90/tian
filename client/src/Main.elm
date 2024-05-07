@@ -13,6 +13,7 @@ import Common.Deferred exposing (Deferred(..), deferredToMaybe)
 import Common.Effect as Effect
 import Common.JsonCodecsExtra exposing (tupleDecoder)
 import Common.Palette as Palette
+import Components.Button exposing (primaryButton)
 import Components.Map3d as Map3d
 import Components.Map3dUtils exposing (Map3dItem(..))
 import Demo.Demo as Demo
@@ -29,6 +30,8 @@ import Html exposing (Html, div)
 import Html.Attributes exposing (style)
 import Json.Decode as D
 import Ports exposing (flightPositionReceiver, watchFlight)
+import Sidebar
+import Task
 
 
 main : Program Flags Model Msg
@@ -39,18 +42,6 @@ main =
         , view = view
         , subscriptions = subscriptions
         }
-
-
-sidebarWidth : Int
-sidebarWidth =
-    480
-
-
-withSidebarOffset : WindowSize -> WindowSize
-withSidebarOffset windowSize =
-    { height = windowSize.height
-    , width = windowSize.width - sidebarWidth
-    }
 
 
 
@@ -68,6 +59,7 @@ type alias Model =
     , testProgressModel : TestProgress.Model
     , appState : AppState.Model
     , messages : List String
+    , sidebarModel : Sidebar.Model
 
     -- , demoTask : Maybe FlightTask
     , flightPositions : Dict String ( Deferred FlightInformation, FlightPosition )
@@ -82,6 +74,13 @@ withAppState appState model =
 withFlightTaskPage : FlightTaskPage.Model -> Model -> Model
 withFlightTaskPage ftpModel model =
     { model | flightTaskPage = ftpModel }
+
+
+withSidebarOffset : WindowSize -> WindowSize
+withSidebarOffset windowSize =
+    { height = windowSize.height
+    , width = windowSize.width - Sidebar.sidebarWidth
+    }
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -103,6 +102,7 @@ init flags =
                 |> AppState.withPendingNavPoints
                 |> AppState.withPendingFlightTasks
       , messages = []
+      , sidebarModel = Sidebar.init flags
 
       --   , demoTask = Nothing
       , flightPositions = Dict.empty
@@ -121,6 +121,7 @@ type Msg
     | AppStateMsg AppState.Msg
       -- | GotDemoFlightTask (ApiResult FlightTask)
       -- | DemoInit (AsyncOperationStatus (ApiResult FlightTask))
+    | SidebarMsg Sidebar.Msg
     | FlightPositionReceived String
     | FlightInformationReceived String (ApiResult (Maybe FlightInformation))
     | CurrentFlightsReceived (ApiResult (List ( String, ( FlightInformation, FlightPosition ) )))
@@ -160,6 +161,19 @@ update msg model =
                     AppState.update m model.appState
             in
             ( { model | appState = nextModel }, Cmd.map AppStateMsg cmd )
+
+        SidebarMsg m ->
+            let
+                ( nextModel, cmd, mainCmd ) =
+                    Sidebar.update
+                        { startDemo = Task.succeed (Map3dMsg Map3d.DemoStarted) |> Task.perform identity
+                        , resetMap = Task.succeed (Map3dMsg Map3d.ViewReset) |> Task.perform identity
+                        , none = Cmd.none
+                        }
+                        m
+                        model.sidebarModel
+            in
+            ( { model | sidebarModel = nextModel }, Cmd.batch [ Cmd.map SidebarMsg cmd, mainCmd ] )
 
         FlightPositionReceived str ->
             let
@@ -239,59 +253,9 @@ subscriptions model =
         ]
 
 
-sidebar : Element msg -> Html msg
-sidebar content =
-    div
-        [ style "width" (String.fromInt sidebarWidth ++ "px")
-        , style "background" "white"
-        ]
-        [ Element.layout
-            [ Font.size 16
-            , Font.family [ Font.typeface "Roboto" ]
-            , paddingEach { top = 30, bottom = 10, left = 30, right = 30 }
-            ]
-            (column [ height fill ]
-                [ content
-                , column
-                    [ alignBottom
-                    , Font.color Palette.darkGray
-                    , spacing 5
-                    , Font.size 14
-                    ]
-                    [ text "Contact me: "
-                    , row []
-                        [ text " • "
-                        , link [ Font.color Palette.primary ]
-                            { url = "mailto:vladimir.kirienko.e@gmail.com"
-                            , label = text "vladimir.kirienko.e@gmail.com"
-                            }
-                        ]
-                    , row []
-                        [ text " • "
-                        , link [ Font.color Palette.primary ]
-                            { url = "https://www.linkedin.com/in/vladimir-kirienko/"
-                            , label = text "linkedin.com/in/vladimir-kirienko"
-                            }
-                        ]
-                    ]
-                ]
-            )
-        ]
-
-
 view : Model -> Html Msg
 view model =
     let
-        primaryButton : { label : Element msg, onPress : Maybe msg } -> Element msg
-        primaryButton { label, onPress } =
-            Input.button
-                [ Font.color Palette.white
-                , Background.color Palette.primary
-                , padding 10
-                , Border.rounded 5
-                ]
-                { onPress = onPress, label = label }
-
         map3dItems : List Map3dItem
         map3dItems =
             let
@@ -321,66 +285,66 @@ view model =
                 |> List.filterMap identity
                 |> String.join " | "
 
-        tutorial : Element Msg
-        tutorial =
-            column [ padding 10, spacing 10, height fill, width fill ]
-                [ paragraph [ Font.bold ] [ text "Controls" ]
-                , paragraph [] [ text "Drag – move the map" ]
-                , paragraph [] [ text "Right click + drag – rotate the camera" ]
-                , paragraph [] [ text "Scroll – zoom" ]
-                , primaryButton
-                    { onPress =
-                        case model.map3dModel.demoState of
-                            Map3d.DemoNotStarted ->
-                                Just <| Map3dMsg Map3d.DemoStarted
-
-                            Map3d.DemoInProgress _ ->
-                                Just <| Map3dMsg Map3d.DemoFinished
-                    , label =
-                        case model.map3dModel.demoState of
-                            Map3d.DemoNotStarted ->
-                                text "Start Demo"
-
-                            Map3d.DemoInProgress _ ->
-                                text "Stop Demo"
-                    }
-                , paragraph [ Font.bold ] [ text <| "Active flights:" ++ String.fromInt numActiveFlights ]
-                , column
-                    [ spacing 20
-                    , padding 10
-                    , scrollbarY
-                    , height <| minimum 100 <| maximum 500 <| fill
-                    , width <| minimum 100 <| fill
-                    , Border.width 1
-                    , Border.color Palette.lightGray
-                    , Border.rounded 5
-                    ]
-                    (model.flightPositions
-                        |> Dict.toList
-                        |> List.map
-                            (\( key, ( info, { lat, lon } ) ) ->
-                                Input.button
-                                    []
-                                    { label =
-                                        info
-                                            |> deferredToMaybe
-                                            |> Maybe.andThen .deviceInfo
-                                            |> Maybe.map showDeviceInfo
-                                            |> Maybe.map (\i -> key ++ " | " ++ i)
-                                            |> Maybe.withDefault key
-                                            |> text
-                                    , onPress = Just <| Map3dMsg <| Map3d.PointFocused { lat = lat, lon = lon }
-                                    }
-                            )
-                    )
-                ]
+        -- tutorial : Element Msg
+        -- tutorial =
+        -- column [ padding 10, spacing 10, height fill, width fill ]
+        --     [ paragraph [ Font.bold ] [ text "Controls" ]
+        --     , paragraph [] [ text "Drag – move the map" ]
+        --     , paragraph [] [ text "Right click + drag – rotate the camera" ]
+        --     , paragraph [] [ text "Scroll – zoom" ]
+        --     , primaryButton []
+        --         { onPress =
+        --             case model.map3dModel.demoState of
+        --                 Map3d.DemoNotStarted ->
+        --                     Just <| Map3dMsg Map3d.DemoStarted
+        --                 Map3d.DemoInProgress _ ->
+        --                     Just <| Map3dMsg Map3d.DemoFinished
+        --         , label =
+        --             case model.map3dModel.demoState of
+        --                 Map3d.DemoNotStarted ->
+        --                     text "Start Demo"
+        --                 Map3d.DemoInProgress _ ->
+        --                     text "Stop Demo"
+        --         }
+        -- , paragraph [ Font.bold ] [ text <| "Active flights:" ++ String.fromInt numActiveFlights ]
+        -- , column
+        --     [ spacing 20
+        --     , padding 10
+        --     , scrollbarY
+        --     , height <| minimum 100 <| maximum 500 <| fill
+        --     , width <| minimum 100 <| fill
+        --     , Border.width 1
+        --     , Border.color Palette.lightGray
+        --     , Border.rounded 5
+        --     ]
+        --     (model.flightPositions
+        --         |> Dict.toList
+        --         |> List.map
+        --             (\( key, ( info, { lat, lon } ) ) ->
+        --                 Input.button
+        --                     []
+        --                     { label =
+        --                         info
+        --                             |> deferredToMaybe
+        --                             |> Maybe.andThen .deviceInfo
+        --                             |> Maybe.map showDeviceInfo
+        --                             |> Maybe.map (\i -> key ++ " | " ++ i)
+        --                             |> Maybe.withDefault key
+        --                             |> text
+        --                     , onPress = Just <| Map3dMsg <| Map3d.PointFocused { lat = lat, lon = lon }
+        --                     }
+        --             )
+        --     )
+        -- ]
+        sidebarView : Html Msg
+        sidebarView =
+            Sidebar.view { flightPositions = model.flightPositions, onFlightSelected = Map3d.PointFocused >> Map3dMsg, mapMsg = SidebarMsg } model.sidebarModel
     in
     div
         [ style "display" "flex"
         , style "flex-direction" "row"
         ]
-        [ tutorial
-            |> sidebar
+        [ sidebarView
 
         -- Element.map FlightTaskPageMsg <|
         --     FlightTaskPage.view
@@ -388,7 +352,7 @@ view model =
         --         , flightTasks = model.appState.flightTasks
         --         }
         --         model.flightTaskPage
-        , Map3d.view map3dItems model.map3dModel |> Html.map Map3dMsg
+        , Map3d.view { restartOnboarding = SidebarMsg Sidebar.OnboardingRestarted, mapMsg = Map3dMsg } map3dItems model.map3dModel
 
         -- , detachedView TopLeft <|
         --     Element.map FlightTaskPageMsg <|

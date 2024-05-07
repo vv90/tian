@@ -9,13 +9,13 @@ stack build --file-watch --fast
 - Run server (does not reload on code change, needs manual stopping and re-running). The `--fast` flag is omitted because the better runtime performance is preferred over the short build time when running the server.
 
 ```sh
-stack run server
+stack run server-exe
 ```
 
 - Run codegen locally
 
 ```sh
-stack run codegen
+stack run codegen-exe
 ```
 
 - Run tests, watching files

@@ -4,6 +4,7 @@ module Flags exposing (Config, Flags, WindowSize)
 type alias Flags =
     { windowSize : WindowSize
     , config : Config
+    , onboardingCompleted : Bool
     }
 
 

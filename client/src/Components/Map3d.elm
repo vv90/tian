@@ -689,6 +689,7 @@ update msg model =
 
         ViewReset ->
             let
+                newViewArgs : ViewArgs
                 newViewArgs =
                     { focalPoint = model.viewArgs.focalPoint
                     , azimuth = Angle.degrees 270
@@ -940,13 +941,13 @@ view { restartOnboarding, mapMsg } mapItems model =
             ]
             svgs
         , button
-            [ style "position" "absolute" 
+            [ style "position" "absolute"
             , style "top" "20px"
             , style "right" "20px"
             , style "width" "30px"
             , style "height" "30px"
             , style "border-radius" "30px"
-            , onClick restartOnboarding 
+            , onClick restartOnboarding
             ]
             [ text "R" ]
         ]

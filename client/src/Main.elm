@@ -12,19 +12,12 @@ import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (Deferred(..), deferredToMaybe)
 import Common.Effect as Effect
 import Common.JsonCodecsExtra exposing (tupleDecoder)
-import Common.Palette as Palette
-import Components.Button exposing (primaryButton)
 import Components.Map3d as Map3d
 import Components.Map3dUtils exposing (Map3dItem(..))
 import Demo.Demo as Demo
 import Demo.FlightTaskPage as FlightTaskPage
 import Demo.Test.TestProgress as TestProgress
 import Dict exposing (Dict)
-import Element exposing (..)
-import Element.Background as Background
-import Element.Border as Border
-import Element.Font as Font
-import Element.Input as Input
 import Flags exposing (Flags, WindowSize)
 import Html exposing (Html, div)
 import Html.Attributes exposing (style)
@@ -275,67 +268,6 @@ view model =
                 |> Dict.toList
                 |> List.map (\( key, ( info, { lat, lon, alt } ) ) -> Marker (label key alt info) { lat = lat, lon = lon } alt)
 
-        numActiveFlights : Int
-        numActiveFlights =
-            model.flightPositions |> Dict.size
-
-        showDeviceInfo : DeviceInfo -> String
-        showDeviceInfo info =
-            [ info.registration, info.competitionNumber, info.aircraftModel ]
-                |> List.filterMap identity
-                |> String.join " | "
-
-        -- tutorial : Element Msg
-        -- tutorial =
-        -- column [ padding 10, spacing 10, height fill, width fill ]
-        --     [ paragraph [ Font.bold ] [ text "Controls" ]
-        --     , paragraph [] [ text "Drag – move the map" ]
-        --     , paragraph [] [ text "Right click + drag – rotate the camera" ]
-        --     , paragraph [] [ text "Scroll – zoom" ]
-        --     , primaryButton []
-        --         { onPress =
-        --             case model.map3dModel.demoState of
-        --                 Map3d.DemoNotStarted ->
-        --                     Just <| Map3dMsg Map3d.DemoStarted
-        --                 Map3d.DemoInProgress _ ->
-        --                     Just <| Map3dMsg Map3d.DemoFinished
-        --         , label =
-        --             case model.map3dModel.demoState of
-        --                 Map3d.DemoNotStarted ->
-        --                     text "Start Demo"
-        --                 Map3d.DemoInProgress _ ->
-        --                     text "Stop Demo"
-        --         }
-        -- , paragraph [ Font.bold ] [ text <| "Active flights:" ++ String.fromInt numActiveFlights ]
-        -- , column
-        --     [ spacing 20
-        --     , padding 10
-        --     , scrollbarY
-        --     , height <| minimum 100 <| maximum 500 <| fill
-        --     , width <| minimum 100 <| fill
-        --     , Border.width 1
-        --     , Border.color Palette.lightGray
-        --     , Border.rounded 5
-        --     ]
-        --     (model.flightPositions
-        --         |> Dict.toList
-        --         |> List.map
-        --             (\( key, ( info, { lat, lon } ) ) ->
-        --                 Input.button
-        --                     []
-        --                     { label =
-        --                         info
-        --                             |> deferredToMaybe
-        --                             |> Maybe.andThen .deviceInfo
-        --                             |> Maybe.map showDeviceInfo
-        --                             |> Maybe.map (\i -> key ++ " | " ++ i)
-        --                             |> Maybe.withDefault key
-        --                             |> text
-        --                     , onPress = Just <| Map3dMsg <| Map3d.PointFocused { lat = lat, lon = lon }
-        --                     }
-        --             )
-        --     )
-        -- ]
         sidebarView : Html Msg
         sidebarView =
             Sidebar.view { flightPositions = model.flightPositions, onFlightSelected = Map3d.PointFocused >> Map3dMsg, mapMsg = SidebarMsg } model.sidebarModel

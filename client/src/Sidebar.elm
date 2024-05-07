@@ -1,7 +1,6 @@
-module Sidebar exposing (..)
+module Sidebar exposing (MainCmds, Model(..), Msg(..), OnboardingStep(..), Props, init, sidebarWidth, update, view)
 
 import Api.Types exposing (DeviceInfo, FlightInformation, FlightPosition, GeoPoint)
-import AppState
 import Common.Deferred exposing (Deferred, deferredToMaybe)
 import Common.Palette as Palette
 import Components.Button exposing (primaryButton)
@@ -10,7 +9,7 @@ import Element exposing (..)
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import Flags exposing (Flags, WindowSize)
+import Flags exposing (Flags)
 import Html exposing (Html, div)
 import Html.Attributes exposing (style)
 import Ports
@@ -112,7 +111,7 @@ view props state =
             , Font.family [ Font.typeface "Roboto" ]
             , paddingEach { top = 30, bottom = 10, left = 30, right = 30 }
             ]
-            (column [ width fill, height fill, spacing 20 ]
+            (column [ width fill, height fill, padding 10, spacing 20 ]
                 [ image [ width (px 107) ]
                     { src = VitePluginHelper.asset "/assets/images/logo.svg"
                     , description = "Tian"
@@ -163,35 +162,42 @@ viewFlightsTable { flightPositions, onFlightSelected } =
             [ info.registration, info.competitionNumber, info.aircraftModel ]
                 |> List.filterMap identity
                 |> String.join " | "
+
+        numActiveFlights : Int
+        numActiveFlights =
+            flightPositions |> Dict.size
     in
-    column
-        [ spacing 20
-        , padding 10
-        , scrollbarY
-        , height <| minimum 100 <| maximum 500 <| fill
-        , width <| minimum 100 <| fill
-        , Border.width 1
-        , Border.color Palette.lightGray
-        , Border.rounded 5
+    column [ spacing 10, height fill, width fill ]
+        [ paragraph [ Font.bold ] [ text <| "Active flights:" ++ String.fromInt numActiveFlights ]
+        , column
+            [ spacing 20
+            , padding 10
+            , scrollbarY
+            , height <| minimum 100 <| maximum 500 <| fill
+            , width <| minimum 100 <| fill
+            , Border.width 1
+            , Border.color Palette.lightGray
+            , Border.rounded 5
+            ]
+            (flightPositions
+                |> Dict.toList
+                |> List.map
+                    (\( key, ( info, { lat, lon } ) ) ->
+                        Input.button
+                            []
+                            { label =
+                                info
+                                    |> deferredToMaybe
+                                    |> Maybe.andThen .deviceInfo
+                                    |> Maybe.map showDeviceInfo
+                                    |> Maybe.map (\i -> key ++ " | " ++ i)
+                                    |> Maybe.withDefault key
+                                    |> text
+                            , onPress = Just <| onFlightSelected { lat = lat, lon = lon }
+                            }
+                    )
+            )
         ]
-        (flightPositions
-            |> Dict.toList
-            |> List.map
-                (\( key, ( info, { lat, lon } ) ) ->
-                    Input.button
-                        []
-                        { label =
-                            info
-                                |> deferredToMaybe
-                                |> Maybe.andThen .deviceInfo
-                                |> Maybe.map showDeviceInfo
-                                |> Maybe.map (\i -> key ++ " | " ++ i)
-                                |> Maybe.withDefault key
-                                |> text
-                        , onPress = Just <| onFlightSelected { lat = lat, lon = lon }
-                        }
-                )
-        )
 
 
 viewOnboarding : Props msg -> OnboardingStep -> Element msg

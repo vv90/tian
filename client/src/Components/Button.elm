@@ -1,4 +1,4 @@
-module Components.Button exposing (..)
+module Components.Button exposing (primaryButton)
 
 import Common.Palette as Palette
 import Element exposing (..)

@@ -30,6 +30,8 @@ const getConfig = async () => {
         width: window.innerWidth,
       },
       config,
+      onboardingCompleted:
+        localStorage.getItem("onboardingCompleted") === "true",
     },
     node: rootNode,
   });
@@ -62,6 +64,10 @@ const getConfig = async () => {
   }
 
   app.ports.watchFlight.subscribe(subscribeToFlights);
+
+  app.ports.onboardingCompleted.subscribe(() => {
+    localStorage.setItem("onboardingCompleted", "true");
+  });
 
   app.ports.startDemo.subscribe(function () {
     // Create your WebSocket.

@@ -120,7 +120,7 @@ rotateDemoSteps : Model -> List ViewMovementStep
 rotateDemoSteps model =
     [ { finalView =
             { focalPoint = model.viewArgs.focalPoint
-            , azimuth = Angle.degrees 0
+            , azimuth = Angle.degrees 180
             , elevation = model.viewArgs.elevation
             , distance = model.viewArgs.distance
             }
@@ -138,7 +138,7 @@ zoomDemoSteps model =
             { focalPoint = model.viewArgs.focalPoint
             , azimuth = model.viewArgs.azimuth
             , elevation = model.viewArgs.elevation
-            , distance = Length.meters 5000
+            , distance = Length.meters 10000
             }
       , durationMillis = 3000
       }

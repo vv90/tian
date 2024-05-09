@@ -319,12 +319,3 @@ stateOf currentStep subjectStep =
 
         _ ->
             Pending
-
-
-
--- controlsStyle : ControlsStep -> ControlsStep -> List (Attribute msg)
--- controlsStyle controlStep current =
---     if current == step then
---         [ Font.bold, Font.color Palette.primary ]
---     else
---         [ Font.color Palette.darkGray ]

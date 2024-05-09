@@ -159,7 +159,11 @@ update msg model =
             let
                 ( nextModel, cmd, mainCmd ) =
                     Sidebar.update
-                        { startDemo = Task.succeed (Map3dMsg Map3d.DemoStarted) |> Task.perform identity
+                        { startDemo =
+                            Map3d.DemoStarted
+                                >> Map3dMsg
+                                >> Task.succeed
+                                >> Task.perform identity
                         , resetMap = Task.succeed (Map3dMsg Map3d.ViewReset) |> Task.perform identity
                         , none = Cmd.none
                         }

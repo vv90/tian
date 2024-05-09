@@ -1,5 +1,6 @@
 module Components.Map3d exposing
     ( DemoState(..)
+    , DemoType(..)
     , Model
     , Msg(..)
     , TileData
@@ -70,8 +71,15 @@ import Time
 import Viewpoint3d
 
 
-type alias DemoStep =
+type alias ViewMovementStep =
     { finalView : ViewArgs, durationMillis : Int }
+
+
+type DemoType
+    = DragDemo
+    | RotateDemo
+    | ZoomDemo
+    | ComplexDemo
 
 
 makePoint : Model -> Quantity Float Meters -> GeoPoint -> Point3d Meters WorldCoords
@@ -83,8 +91,65 @@ makePoint model elev =
         >> Point3d.translateIn Direction3d.positiveZ elev
 
 
-demoSteps : Model -> List DemoStep
-demoSteps model =
+dragDemoSteps : Model -> List ViewMovementStep
+dragDemoSteps model =
+    let
+        initialFocalPoint : Point3d Meters WorldCoords
+        initialFocalPoint =
+            model.viewArgs.focalPoint
+
+        movementAxis : Axis3d.Axis3d Meters WorldCoords
+        movementAxis =
+            Axis3d.through initialFocalPoint Direction3d.positiveX
+    in
+    [ { finalView =
+            { focalPoint = Point3d.along movementAxis (Length.meters 5000)
+            , azimuth = model.viewArgs.azimuth
+            , elevation = model.viewArgs.elevation
+            , distance = model.viewArgs.distance
+            }
+      , durationMillis = 3000
+      }
+    , { finalView = model.viewArgs
+      , durationMillis = 3000
+      }
+    ]
+
+
+rotateDemoSteps : Model -> List ViewMovementStep
+rotateDemoSteps model =
+    [ { finalView =
+            { focalPoint = model.viewArgs.focalPoint
+            , azimuth = Angle.degrees 180
+            , elevation = model.viewArgs.elevation
+            , distance = model.viewArgs.distance
+            }
+      , durationMillis = 3000
+      }
+    , { finalView = model.viewArgs
+      , durationMillis = 3000
+      }
+    ]
+
+
+zoomDemoSteps : Model -> List ViewMovementStep
+zoomDemoSteps model =
+    [ { finalView =
+            { focalPoint = model.viewArgs.focalPoint
+            , azimuth = model.viewArgs.azimuth
+            , elevation = model.viewArgs.elevation
+            , distance = Length.meters 10000
+            }
+      , durationMillis = 3000
+      }
+    , { finalView = model.viewArgs
+      , durationMillis = 3000
+      }
+    ]
+
+
+complexDemoSteps : Model -> List ViewMovementStep
+complexDemoSteps model =
     [ { finalView =
             { focalPoint =
                 makePoint
@@ -156,7 +221,7 @@ makeFrames numTicks initialView finalView =
         |> List.map updTick
 
 
-demoFrames : ViewArgs -> List DemoStep -> List ViewArgs -> List ViewArgs
+demoFrames : ViewArgs -> List ViewMovementStep -> List ViewArgs -> List ViewArgs
 demoFrames currentView stepsToGo readyFrames =
     case stepsToGo of
         [] ->
@@ -166,7 +231,7 @@ demoFrames currentView stepsToGo readyFrames =
             demoFrames nextStep.finalView remainingSteps (readyFrames ++ makeFrames (nextStep.durationMillis // 10) currentView nextStep.finalView)
 
 
-demoFrames_ : Model -> List DemoStep -> List ViewArgs
+demoFrames_ : Model -> List ViewMovementStep -> List ViewArgs
 demoFrames_ model steps =
     demoFrames model.viewArgs steps []
 
@@ -481,7 +546,7 @@ type Msg
     | DragStop ( Float, Float )
     | CursorMoved ( Float, Float )
     | ZoomChanged WheelEvent
-    | DemoStarted
+    | DemoStarted DemoType
     | DemoTick Time.Posix
     | DemoFinished
     | ViewReset
@@ -648,10 +713,26 @@ update msg model =
             in
             updateTiles newModel
 
-        DemoStarted ->
+        DemoStarted demoType ->
+            let
+                demoSteps : List ViewMovementStep
+                demoSteps =
+                    case demoType of
+                        DragDemo ->
+                            dragDemoSteps model
+
+                        RotateDemo ->
+                            rotateDemoSteps model
+
+                        ZoomDemo ->
+                            zoomDemoSteps model
+
+                        ComplexDemo ->
+                            complexDemoSteps model
+            in
             ( { model
                 | demoState =
-                    demoSteps model
+                    demoSteps
                         |> demoFrames_ model
                         |> DemoInProgress
               }

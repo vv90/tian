@@ -4,6 +4,7 @@ import Api.Types exposing (DeviceInfo, FlightInformation, FlightPosition, GeoPoi
 import Common.Deferred exposing (Deferred, deferredToMaybe)
 import Common.Palette as Palette
 import Components.Button exposing (primaryButton)
+import Components.Map3d exposing (DemoType(..))
 import Dict exposing (Dict)
 import Element exposing (..)
 import Element.Border as Border
@@ -12,6 +13,7 @@ import Element.Input as Input
 import Flags exposing (Flags)
 import Html exposing (Html, div)
 import Html.Attributes exposing (style)
+import List.Extra
 import Ports
 import VitePluginHelper
 
@@ -38,12 +40,18 @@ init flags =
 type OnboardingStep
     = WhatIsTian
     | FlightsTable
-    | Controls
+    | Controls ControlsStep
     | CameraMovementDemo
 
 
+type ControlsStep
+    = ControlsStepDrag
+    | ControlsStepRotate
+    | ControlsStepZoom
+
+
 type alias MainCmds msg =
-    { startDemo : Cmd msg
+    { startDemo : DemoType -> Cmd msg
     , resetMap : Cmd msg
     , none : Cmd msg
     }
@@ -56,10 +64,16 @@ nexOnboaringStep mainCmds step =
             ( FlightsTable, mainCmds.none )
 
         FlightsTable ->
-            ( Controls, mainCmds.none )
+            ( Controls ControlsStepDrag, mainCmds.startDemo DragDemo )
 
-        Controls ->
-            ( CameraMovementDemo, mainCmds.startDemo )
+        Controls ControlsStepDrag ->
+            ( Controls ControlsStepRotate, mainCmds.startDemo RotateDemo )
+
+        Controls ControlsStepRotate ->
+            ( Controls ControlsStepZoom, mainCmds.startDemo ZoomDemo )
+
+        Controls ControlsStepZoom ->
+            ( CameraMovementDemo, mainCmds.startDemo ComplexDemo )
 
         CameraMovementDemo ->
             ( CameraMovementDemo, mainCmds.none )
@@ -219,7 +233,8 @@ viewOnboarding props step =
                     , description = "Glider"
                     }
                 , paragraph [] [ text "Tian is a flight monitoring app. It allows you to explore and follow flights on a 3D map." ]
-                , paragraph [] [ text "Made by glider pilot for glider pilots." ]
+                , paragraph [] [ text "Made by a glider pilot for glider pilots." ]
+                , paragraph [] [ text "This app is a technical preview, it provides 3D elevation data only for limited area." ]
                 , Element.map props.mapMsg nextStepButton
                 ]
 
@@ -230,12 +245,17 @@ viewOnboarding props step =
                 , Element.map props.mapMsg nextStepButton
                 ]
 
-        Controls ->
+        Controls currentStep ->
+            let
+                colorByState : ControlsStep -> List (Attribute msg)
+                colorByState =
+                    stepStateAttrs << stateOf currentStep
+            in
             column [ width fill, height fill, spacing 20 ]
                 [ paragraph [] [ text "Here's how you can navigate the map:" ]
-                , paragraph [] [ text "Drag – move the map" ]
-                , paragraph [] [ text "Right click + drag – rotate the camera" ]
-                , paragraph [] [ text "Scroll – zoom" ]
+                , paragraph (colorByState ControlsStepDrag) [ text "Drag – move the map" ]
+                , paragraph (colorByState ControlsStepRotate) [ text "Right click + drag – rotate the camera" ]
+                , paragraph (colorByState ControlsStepZoom) [ text "Scroll – zoom" ]
                 , Element.map props.mapMsg nextStepButton
                 ]
 
@@ -251,21 +271,51 @@ viewOnboarding props step =
                 ]
 
 
+type StepState
+    = Passed
+    | Active
+    | Pending
 
--- view : Element msg -> Html msg
--- view content =
---     div
---         [ style "width" (String.fromInt sidebarWidth ++ "px")
---         , style "background" "white"
---         ]
---         [ Element.layout
---             [ Font.size 16
---             , Font.family [ Font.typeface "Roboto" ]
---             , paddingEach { top = 30, bottom = 10, left = 30, right = 30 }
---             ]
---             (column [ height fill ]
---                 [ content
---                 ,
---                 ]
---             )
---         ]
+
+stepStateAttrs : StepState -> List (Attribute msg)
+stepStateAttrs state =
+    case state of
+        Passed ->
+            [ Font.color Palette.darkerGray ]
+
+        Active ->
+            [ Font.color Palette.primary ]
+
+        Pending ->
+            [ Font.color Palette.darkGray ]
+
+
+orderOfSteps : List ControlsStep
+orderOfSteps =
+    [ ControlsStepDrag, ControlsStepRotate, ControlsStepZoom ]
+
+
+stateOf : ControlsStep -> ControlsStep -> StepState
+stateOf currentStep subjectStep =
+    let
+        currentStepIndex : Maybe Int
+        currentStepIndex =
+            List.Extra.elemIndex currentStep orderOfSteps
+
+        subjectStepIndex : Maybe Int
+        subjectStepIndex =
+            List.Extra.elemIndex subjectStep orderOfSteps
+    in
+    case ( currentStepIndex, subjectStepIndex ) of
+        ( Just current, Just subject ) ->
+            if current == subject then
+                Active
+
+            else if current > subject then
+                Passed
+
+            else
+                Pending
+
+        _ ->
+            Pending

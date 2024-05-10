@@ -45,7 +45,7 @@ import Direction3d
 import Domain.GeoUtils exposing (degreesLatitude)
 import Flags exposing (WindowSize)
 import Frame2d exposing (Frame2d)
-import Html exposing (Html, button, div, text)
+import Html exposing (Html, button, div, p, text)
 import Html.Attributes exposing (style)
 import Html.Events exposing (on, onClick)
 import Json.Decode as D
@@ -263,6 +263,7 @@ type alias Model =
     , displayedTiles : List ( TileKey, ( Point2d Meters PlaneCoords, Point2d Meters PlaneCoords ) )
     , cursorPosition : Maybe ( Float, Float )
     , demoState : DemoState
+    , showControlsInfo : Bool
     }
 
 
@@ -527,6 +528,7 @@ init windowSize origin =
             , displayedTiles = []
             , cursorPosition = Nothing
             , demoState = DemoNotStarted
+            , showControlsInfo = False
             }
     in
     updateTiles model
@@ -551,6 +553,7 @@ type Msg
     | DemoFinished
     | ViewReset
     | PointFocused GeoPoint
+    | ControlsInformationToggled
     | NoOp
 
 
@@ -780,6 +783,9 @@ update msg model =
             in
             { model | viewArgs = newViewArgs, demoState = DemoNotStarted }
                 |> updateTiles
+
+        ControlsInformationToggled ->
+            ( { model | showControlsInfo = not model.showControlsInfo }, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
@@ -1031,6 +1037,36 @@ view { restartOnboarding, mapMsg } mapItems model =
             , onClick restartOnboarding
             ]
             [ text "R" ]
+        , button
+            [ style "position" "absolute"
+            , style "left" "20px"
+            , style "bottom" "20px"
+            , style "width" "30px"
+            , style "height" "30px"
+            , style "border-radius" "30px"
+            , onClick (mapMsg ControlsInformationToggled)
+            ]
+            [ text "i" ]
+        , if model.showControlsInfo then
+            div
+                [ style "position" "absolute"
+                , style "left" "60px"
+                , style "bottom" "20px"
+                , style "border" "1px solid #ccc"
+                , style "padding" "10px"
+                , style "background-color" "#fff"
+                , style "border-radius" "5px"
+                , style "display" "flex"
+                , style "flex-direction" "column"
+                , style "gap" "5px"
+                ]
+                [ p [] [ text "Drag – move the map" ]
+                , p [] [ text "Right click + drag – rotate the camera" ]
+                , p [] [ text "Scroll – zoom" ]
+                ]
+
+          else
+            text ""
         ]
 
 

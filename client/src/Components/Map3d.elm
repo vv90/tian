@@ -253,7 +253,7 @@ type alias TileData =
 
 
 type alias Model =
-    { windowSize : WindowSize
+    { mapWindowSize : WindowSize
     , dragControlsAzimuthAndElevation : Bool
     , mapFrame : Frame2d MercatorUnit PlaneCoords { defines : MercatorCoords }
     , mercatorRate : Quantity Float (Rate Meters MercatorUnit)
@@ -353,7 +353,7 @@ updateTiles model =
     let
         numTiles : Int
         numTiles =
-            round (toFloat model.windowSize.width / 256)
+            round (toFloat model.mapWindowSize.width / 256)
 
         cmr : Camera3d Meters WorldCoords
         cmr =
@@ -361,7 +361,7 @@ updateTiles model =
 
         sRect : Rectangle2d Pixels screenCoords
         sRect =
-            screenRectangle model.windowSize
+            screenRectangle model.mapWindowSize
 
         pLeft : Maybe (Point3d Meters WorldCoords)
         pLeft =
@@ -370,7 +370,7 @@ updateTiles model =
 
         pRight : Maybe (Point3d Meters WorldCoords)
         pRight =
-            Camera3d.ray cmr sRect (Point2d.pixels (toFloat model.windowSize.width) 0)
+            Camera3d.ray cmr sRect (Point2d.pixels (toFloat model.mapWindowSize.width) 0)
                 |> Axis3d.intersectionWithPlane Plane3d.xy
 
         dist : Maybe (Quantity Float Meters)
@@ -402,7 +402,7 @@ updateTiles model =
                 |> MaybeX.unwrap
                     []
                     (makeTiles
-                        (isInView model.viewArgs model.windowSize)
+                        (isInView model.viewArgs model.mapWindowSize)
                         model.mapFrame
                         model.mercatorRate
                         (Point3d.projectInto xyPlane model.viewArgs.focalPoint)
@@ -518,7 +518,7 @@ init windowSize origin =
 
         model : Model
         model =
-            { windowSize = windowSize
+            { mapWindowSize = windowSize
             , dragControlsAzimuthAndElevation = False
             , viewArgs = viewArgs
             , mapFrame = mercatorFrame origin
@@ -627,16 +627,16 @@ update msg model =
                         projectedPoint =
                             Camera3d.ray
                                 (camera model.viewArgs)
-                                (screenRectangle model.windowSize)
-                                (Point2d.pixels x (toFloat model.windowSize.height - y))
+                                (screenRectangle model.mapWindowSize)
+                                (Point2d.pixels x (toFloat model.mapWindowSize.height - y))
                                 |> Axis3d.intersectionWithPlane Plane3d.xy
 
                         projectedPrevPoint : Maybe (Point3d Meters WorldCoords)
                         projectedPrevPoint =
                             Camera3d.ray
                                 (camera model.viewArgs)
-                                (screenRectangle model.windowSize)
-                                (Point2d.pixels (Tuple.first xy) (toFloat model.windowSize.height - Tuple.second xy))
+                                (screenRectangle model.mapWindowSize)
+                                (Point2d.pixels (Tuple.first xy) (toFloat model.mapWindowSize.height - Tuple.second xy))
                                 |> Axis3d.intersectionWithPlane Plane3d.xy
 
                         direction : Maybe (Direction3d.Direction3d WorldCoords)
@@ -845,8 +845,8 @@ mapItemView model mapItem =
             Rectangle2d.from
                 Point2d.origin
                 (Point2d.pixels
-                    (toFloat model.windowSize.width)
-                    (toFloat model.windowSize.height)
+                    (toFloat model.mapWindowSize.width)
+                    (toFloat model.mapWindowSize.height)
                 )
 
         to3dPoint : GeoPoint -> Elevation -> Point3d Meters WorldCoords
@@ -864,7 +864,7 @@ mapItemView model mapItem =
                 screenRect
                 p3d
                 |> Point2d.toTuple Pixels.inPixels
-                |> Tuple.mapSecond (\n -> toFloat model.windowSize.height - n)
+                |> Tuple.mapSecond (\n -> toFloat model.mapWindowSize.height - n)
     in
     case mapItem of
         Point geoPoint elevation ->
@@ -1003,7 +1003,7 @@ view { restartOnboarding, mapMsg } mapItems model =
             { upDirection = Direction3d.positiveZ
             , sunlightDirection = Direction3d.fromAzimuthInAndElevationFrom SketchPlane3d.xy (Angle.degrees 45) (Angle.degrees 45) |> Direction3d.reverse
             , shadows = True
-            , dimensions = ( Pixels.pixels model.windowSize.width, Pixels.pixels model.windowSize.height )
+            , dimensions = ( Pixels.pixels model.mapWindowSize.width, Pixels.pixels model.mapWindowSize.height )
             , camera = camera model.viewArgs
             , clipDepth = Length.meters 1
             , background = Scene3d.transparentBackground
@@ -1019,9 +1019,9 @@ view { restartOnboarding, mapMsg } mapItems model =
         --     , dimensions = ( Pixels.pixels model.windowSize.width, Pixels.pixels model.windowSize.height )
         --     }
         , Svg.svg
-            [ SvgAttr.width (String.fromInt model.windowSize.width)
-            , SvgAttr.height (String.fromInt model.windowSize.height)
-            , SvgAttr.viewBox (String.join " " [ "0", "0", String.fromInt model.windowSize.width, String.fromInt model.windowSize.height ])
+            [ SvgAttr.width (String.fromInt model.mapWindowSize.width)
+            , SvgAttr.height (String.fromInt model.mapWindowSize.height)
+            , SvgAttr.viewBox (String.join " " [ "0", "0", String.fromInt model.mapWindowSize.width, String.fromInt model.mapWindowSize.height ])
             , style "position" "absolute"
             , style "left" "0"
             , style "top" "0"

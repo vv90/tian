@@ -45,7 +45,8 @@ main =
 
 
 type alias Model =
-    { map3dModel : Map3d.Model
+    { windowWidth : Int
+    , map3dModel : Map3d.Model
     , flightTaskPage : FlightTaskPage.Model
 
     -- , flightTrackPage : Maybe FlightTrackUpload.Model
@@ -85,7 +86,8 @@ init flags =
                 -- ( LatitudeDegrees 52.030558, LongitudeDegrees 39.662962 )
                 { lat = LatitudeDegrees 45.208451, lon = LongitudeDegrees 5.726031 }
     in
-    ( { map3dModel = map3dModel
+    ( { windowWidth = flags.windowSize.width
+      , map3dModel = map3dModel
       , flightTaskPage = FlightTaskPage.DemoPage Demo.init
 
       --   , flightTrackPage = Nothing
@@ -252,6 +254,20 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
+    if model.windowWidth < 768 then
+        viewMobile model
+
+    else
+        viewDesktop model
+
+
+viewMobile : Model -> Html Msg
+viewMobile _ =
+    Html.text "Mobile and tablet screens are not supported yet"
+
+
+viewDesktop : Model -> Html Msg
+viewDesktop model =
     let
         map3dItems : List Map3dItem
         map3dItems =

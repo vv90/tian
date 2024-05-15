@@ -63,19 +63,24 @@ instance GeoPosition3d FlightPosition where
 instance RecordedGeoPosition FlightPosition where
   time = secondsToDiffTime . fromIntegral . timeSeconds
 
-makeFlightInformation :: HashMap Text DeviceInfo -> AprsMessage -> FlightInformation
-makeFlightInformation devicesDict msg =
-  let aircraftTypeFromSymbol :: AprsSymbol -> AircraftType
-      aircraftTypeFromSymbol AprsSymbol.Glider = GlidernetId.Glider
-      aircraftTypeFromSymbol AprsSymbol.SmallPlane = GlidernetId.PistonAircraft
-      aircraftTypeFromSymbol AprsSymbol.LargePlane = GlidernetId.JetAircraft
-      aircraftTypeFromSymbol AprsSymbol.Helicopter = GlidernetId.Helicopter
-      aircraftTypeFromSymbol AprsSymbol.Parachute = GlidernetId.Parachute
-      aircraftTypeFromSymbol AprsSymbol.Balloon = GlidernetId.Balloon
-      aircraftTypeFromSymbol AprsSymbol.GroundVehicle = GlidernetId.Other
-      aircraftTypeFromSymbol AprsSymbol.StaticObject = GlidernetId.StaticObstacle
-      aircraftTypeFromSymbol AprsSymbol.Unknown = GlidernetId.Other
-   in FlightInformation
-        { deviceInfo = HM.lookup (getDeviceId msg.source) devicesDict,
-          aircraftType = maybe (aircraftTypeFromSymbol msg.symbol) GlidernetId.senderType msg.glidernetId
-        }
+aircraftTypeFromSymbol :: AprsSymbol -> AircraftType
+aircraftTypeFromSymbol AprsSymbol.Glider = GlidernetId.Glider
+aircraftTypeFromSymbol AprsSymbol.SmallPlane = GlidernetId.PistonAircraft
+aircraftTypeFromSymbol AprsSymbol.LargePlane = GlidernetId.JetAircraft
+aircraftTypeFromSymbol AprsSymbol.Helicopter = GlidernetId.Helicopter
+aircraftTypeFromSymbol AprsSymbol.Parachute = GlidernetId.Parachute
+aircraftTypeFromSymbol AprsSymbol.Balloon = GlidernetId.Balloon
+aircraftTypeFromSymbol AprsSymbol.GroundVehicle = GlidernetId.Other
+aircraftTypeFromSymbol AprsSymbol.StaticObject = GlidernetId.StaticObstacle
+aircraftTypeFromSymbol AprsSymbol.Unknown = GlidernetId.Other
+
+makeFlightInformation :: Maybe DeviceInfo -> AprsMessage -> FlightInformation
+makeFlightInformation deviceInfo msg =
+  FlightInformation
+    { deviceInfo = deviceInfo,
+      aircraftType = maybe (aircraftTypeFromSymbol msg.symbol) GlidernetId.senderType msg.glidernetId
+    }
+
+lookupFlightInformation :: HashMap Text DeviceInfo -> AprsMessage -> FlightInformation
+lookupFlightInformation devicesDict msg =
+  makeFlightInformation (HM.lookup (getDeviceId msg.source) devicesDict) msg

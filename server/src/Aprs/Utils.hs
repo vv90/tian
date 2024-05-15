@@ -1,8 +1,9 @@
 module Aprs.Utils where
 
 import Aprs.AprsMessage (AprsMessage (..), DeviceId, aprsMessageParser, getDeviceId)
+import Aprs.GlidernetId (AircraftType)
 import Aprs.LocationDatapoint (fromAprsMessage)
-import Backend.FlightsState (FlightInformation, FlightPosition (..), makeFlightInformation, toFlightPosition)
+import Backend.FlightsState (FlightInformation (..), FlightPosition (..), lookupFlightInformation, toFlightPosition)
 import Codec.Compression.GZip (CompressParams (compressLevel))
 import Codec.Compression.GZip qualified as GZip
 import Conduit (ConduitT, await, runConduit, yield, (.|))
@@ -85,12 +86,12 @@ cleanUpFlightsState flights = do
   currTimeSeconds <- round . diffTimeToSeconds . utctDayTime <$> getCurrentTime
   atomically $ modifyTVar' flights (HM.filter (isPositionRecentEnough currTimeSeconds . snd))
 
-saveMessageJson :: AprsMessage -> IO ()
-saveMessageJson msg = do
+saveMessageJson :: AircraftType -> AprsMessage -> IO ()
+saveMessageJson aircraftType msg = do
   currDate <- getCurrentTime
   let dirPath = logsDirectory </> show (utctDay currDate)
   createDirectoryIfMissing True dirPath
-  let filePath = dirPath </> toString (getDeviceId msg.source) <.> "json"
+  let filePath = dirPath </> toString (getDeviceId msg.source) <.> show aircraftType <.> "json"
   appendFileLBS filePath (Aeson.encode $ fromAprsMessage msg)
 
 runAprs :: HashMap Text DeviceInfo -> TVar AprsMessageBroker -> TVar FlightsState -> IO ()
@@ -108,8 +109,12 @@ runAprs devices broker flights =
         case parse aprsMessageParser "" <$> line of
           Just (Right msg) -> do
             -- liftIO $ putText "." >> hFlush stdout
-            atomically $ distributeMessage msg
-            _ <- liftIO $ saveMessageJson msg
+
+            let flightInfo :: FlightInformation
+                flightInfo = lookupFlightInformation devices msg
+
+            atomically $ distributeMessage flightInfo msg
+            _ <- liftIO $ saveMessageJson flightInfo.aircraftType msg
 
             processLines
           Just (Left _) -> do
@@ -120,15 +125,12 @@ runAprs devices broker flights =
           Nothing ->
             putStrLn "APRS connection closed"
 
-      distributeMessage :: AprsMessage -> STM ()
-      distributeMessage msg =
-        let information :: FlightInformation
-            information = makeFlightInformation devices msg
-
-            position :: FlightPosition
+      distributeMessage :: FlightInformation -> AprsMessage -> STM ()
+      distributeMessage flightInfo msg =
+        let position :: FlightPosition
             position = toFlightPosition msg
          in do
-              modifyTVar' flights $ HM.insert msg.source (information, position)
+              modifyTVar' flights $ HM.insert msg.source (flightInfo, position)
               chans <- HM.elems <$> readTVar broker
               traverse_ (writeMessage (msg.source, position)) chans
 

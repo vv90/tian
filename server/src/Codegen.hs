@@ -12,6 +12,7 @@ import FlightTask (FlightTask, TaskFinish, TaskStart, Turnpoint)
 import Geo (Direction, Distance, Elevation, Latitude, Longitude)
 import GeoPoint (GeoPoint)
 import Glidernet.DeviceDatabase (DeviceInfo, DeviceType)
+import GlidingUtils (TotalEnergyPoint)
 import Language.Elm.Definition (Definition)
 import Language.Elm.Name (Module)
 import Language.Elm.Pretty qualified as Pretty
@@ -53,7 +54,8 @@ typeDefinitions =
       jsonDefinitions @FlightPosition,
       jsonDefinitions @FlightInformation,
       jsonDefinitions @AircraftType,
-      jsonDefinitions @DeviceId
+      jsonDefinitions @DeviceId,
+      jsonDefinitions @TotalEnergyPoint
     ]
 
 elmSrcPath :: FilePath

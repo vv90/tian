@@ -12,6 +12,7 @@ import Geo
     GeoPosition3d (..),
     Latitude,
     Longitude,
+    MovingGeoPosition (..),
     RecordedGeoPosition (..),
     Speed (..),
     degreesLatitude,
@@ -54,8 +55,8 @@ instance Aeson.ToJSON LocationDatapoint where
       ( timeSeconds x,
         roundN 4 $ degreesLatitude $ lat x,
         roundN 4 $ degreesLongitude $ lon x,
-        heading x,
-        roundN 4 $ metersPerSecondSpeed $ speed x,
+        x.heading,
+        roundN 4 $ metersPerSecondSpeed x.speed,
         roundN 4 $ metersElevation $ elev x,
         roundN 4 . metersPerSecondSpeed <$> verticalSpeed x,
         roundN 4 . metersPerSecondAngularSpeed <$> rotation x
@@ -64,8 +65,8 @@ instance Aeson.ToJSON LocationDatapoint where
 instance Aeson.FromJSON LocationDatapoint where
   parseJSON = Aeson.withArray "LocationDatapoint" $ \arr ->
     case toList arr of
-      [timeSeconds, lat, lon, heading, speed, elev, verticalSpeed, rotation] ->
-        LocationDatapoint <$> Aeson.parseJSON timeSeconds <*> Aeson.parseJSON lat <*> Aeson.parseJSON lon <*> Aeson.parseJSON heading <*> Aeson.parseJSON speed <*> Aeson.parseJSON elev <*> Aeson.parseJSON verticalSpeed <*> Aeson.parseJSON rotation
+      [timeSeconds, lat, lon, heading', speed', elev, verticalSpeed, rotation] ->
+        LocationDatapoint <$> Aeson.parseJSON timeSeconds <*> Aeson.parseJSON lat <*> Aeson.parseJSON lon <*> Aeson.parseJSON heading' <*> Aeson.parseJSON speed' <*> Aeson.parseJSON elev <*> Aeson.parseJSON verticalSpeed <*> Aeson.parseJSON rotation
       _ -> fail "Expected array of 8 elements"
 
 instance GeoPosition LocationDatapoint where
@@ -73,7 +74,15 @@ instance GeoPosition LocationDatapoint where
   longitude x = x.lon
 
 instance GeoPosition3d LocationDatapoint where
+  altitude :: LocationDatapoint -> Elevation
   altitude x = x.elev
 
 instance RecordedGeoPosition LocationDatapoint where
   time = secondsToDiffTime . fromIntegral . timeSeconds
+
+instance MovingGeoPosition LocationDatapoint where
+  speed :: LocationDatapoint -> Speed
+  speed x = x.speed
+
+  heading :: LocationDatapoint -> Direction
+  heading x = x.heading

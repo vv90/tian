@@ -20,6 +20,7 @@ module Api.Types exposing
     , TaskFinish(..)
     , TaskProgress
     , TaskStart(..)
+    , TotalEnergyPoint
     , Turnpoint(..)
     , WaypointStyle(..)
     , aircraftTypeDecoder
@@ -64,6 +65,8 @@ module Api.Types exposing
     , taskProgressEncoder
     , taskStartDecoder
     , taskStartEncoder
+    , totalEnergyPointDecoder
+    , totalEnergyPointEncoder
     , turnpointDecoder
     , turnpointEncoder
     , waypointStyleDecoder
@@ -884,3 +887,33 @@ deviceIdEncoder a =
 deviceIdDecoder : Json.Decode.Decoder DeviceId
 deviceIdDecoder =
     Json.Decode.map DeviceId Json.Decode.string
+
+
+type alias TotalEnergyPoint =
+    { lat : Latitude
+    , lon : Longitude
+    , alt : Elevation
+    , tod : Int
+    , energy : Float
+    }
+
+
+totalEnergyPointEncoder : TotalEnergyPoint -> Json.Encode.Value
+totalEnergyPointEncoder a =
+    Json.Encode.object
+        [ ( "lat", latitudeEncoder a.lat )
+        , ( "lon", longitudeEncoder a.lon )
+        , ( "alt", elevationEncoder a.alt )
+        , ( "tod", Json.Encode.int a.tod )
+        , ( "energy", Json.Encode.float a.energy )
+        ]
+
+
+totalEnergyPointDecoder : Json.Decode.Decoder TotalEnergyPoint
+totalEnergyPointDecoder =
+    Json.Decode.succeed TotalEnergyPoint
+        |> Json.Decode.Pipeline.required "lat" latitudeDecoder
+        |> Json.Decode.Pipeline.required "lon" longitudeDecoder
+        |> Json.Decode.Pipeline.required "alt" elevationDecoder
+        |> Json.Decode.Pipeline.required "tod" Json.Decode.int
+        |> Json.Decode.Pipeline.required "energy" Json.Decode.float

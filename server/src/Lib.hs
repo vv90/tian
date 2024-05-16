@@ -3,6 +3,7 @@
 module Lib (startApp, app) where
 
 import Aprs.AprsMessage (DeviceId (..))
+import Aprs.LocationDatapoint (LocationDatapoint)
 import Aprs.Utils (AprsMessageBroker, FlightsState)
 import Backend.FlightsState (FlightInformation, FlightPosition)
 import Conduit (ConduitT, ResourceT, bracketP, yield)
@@ -10,9 +11,11 @@ import Control.Arrow (ArrowChoice (left))
 import Control.Concurrent.STM (modifyTVar)
 import Control.Concurrent.STM.TBChan (TBChan, newTBChanIO, readTBChan)
 import Control.Monad.Except (withExceptT)
+import Data.Aeson as Aeson
+import Data.ByteString qualified as BS
 import Data.HashMap.Strict qualified as HM
 import Data.List.NonEmpty qualified as NE (cons, reverse)
-import Data.Time (UTCTime (UTCTime))
+import Data.Time (UTCTime (..))
 import Data.Time.Calendar (fromGregorian)
 import Data.UUID (UUID)
 import Data.UUID.V4 (nextRandom)
@@ -24,6 +27,7 @@ import FlightTask (FlightTask)
 import FlightTrack (FlightTrack (..))
 import FlightTrack.Parser (buildFlightTrack, flightInfoParserAll)
 import Geo (Elevation (..), Latitude, Longitude)
+import GlidingUtils (TotalEnergyPoint, calculateTotalEnergy)
 import Hasql.Session qualified as Session
 import NavPoint (NavPoint, name, navPointLinesParser)
 import Network.Wai.Handler.Warp (Port, run)
@@ -34,6 +38,8 @@ import Relude
 import Servant
 import Servant.API.WebSocketConduit (WebSocketConduit)
 import Servant.Multipart (FileData (fdFileName, fdPayload), FromMultipart (fromMultipart), Mem, MultipartData (files), MultipartForm)
+import System.Directory (listDirectory)
+import System.FilePath ((</>))
 import TaskProgress (TaskProgressDto, toDto)
 import TaskProgressUtils (progress, taskStartLine)
 import Text.Parsec (Parsec, parse)
@@ -244,6 +250,7 @@ type API =
     :<|> "watchFlights" :> WebSocketConduit () (DeviceId, FlightPosition)
     :<|> "flightInfo" :> Capture "deviceId" Text :> Get '[JSON] (Maybe FlightInformation)
     :<|> "currentFlights" :> Get '[JSON] [(DeviceId, (FlightInformation, FlightPosition))]
+    :<|> "totalEnergy" :> Capture "deviceId" Text :> Get '[JSON] (Maybe [TotalEnergyPoint])
 
 server :: TVar AprsMessageBroker -> TVar FlightsState -> Server API
 server broker flights =
@@ -258,6 +265,7 @@ server broker flights =
     :<|> watchFlights broker
     :<|> lookupFlightInformation flights
     :<|> currentFlights flights
+    :<|> totalEnergy
 
 startApp :: TVar AprsMessageBroker -> TVar FlightsState -> Port -> IO ()
 startApp broker flights port = do
@@ -313,3 +321,20 @@ lookupFlightInformation flights deviceId = do
 currentFlights :: TVar FlightsState -> Handler [(DeviceId, (FlightInformation, FlightPosition))]
 currentFlights flights =
   liftIO $ atomically $ HM.toList <$> readTVar flights
+
+totalEnergy :: Text -> Handler (Maybe [TotalEnergyPoint])
+totalEnergy deviceId =
+  let logsDirectory :: FilePath
+      logsDirectory = "logs"
+
+      findDeviceFile :: IO (Maybe FilePath)
+      findDeviceFile = find (isPrefixOf (toString deviceId)) <$> listDirectory logsDirectory
+
+      readDeviceFile :: FilePath -> IO [TotalEnergyPoint]
+      readDeviceFile fp = do
+        content <- liftIO $ BS.split 10 <$> readFileBS (logsDirectory </> fp)
+        locationPoints <- either fail pure $ traverse (Aeson.eitherDecodeStrict @LocationDatapoint) content
+        pure $ calculateTotalEnergy <$> locationPoints
+   in liftIO $ do
+        maybeFile <- findDeviceFile
+        traverse readDeviceFile maybeFile

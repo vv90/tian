@@ -50,6 +50,7 @@ import Html.Attributes exposing (style)
 import Html.Events exposing (on, onClick)
 import Json.Decode as D
 import Length exposing (Length, Meters)
+import LineSegment3d
 import List.Extra
 import Maybe.Extra as MaybeX
 import Pixels exposing (Pixels)
@@ -64,7 +65,7 @@ import Scene3d.Material as Material
 import Scene3d.Mesh as Mesh
 import SketchPlane3d exposing (SketchPlane3d)
 import Svg exposing (Svg)
-import Svg.Attributes as SvgAttr
+import Svg.Attributes as SvgAttr exposing (in_)
 import Task
 import Tile exposing (TileKey, ZoomLevel, tileKeyToUrl, zoomLevel)
 import Time
@@ -833,8 +834,8 @@ subscriptions model =
     Sub.batch [ keyModSub, dragSub, cursorSub, demoSub ]
 
 
-mapItemView : Model -> Map3dItem -> ( Svg msg, Scene3d.Entity WorldCoords )
-mapItemView model mapItem =
+mapItemView : { flightSelected : String -> msg } -> Model -> Map3dItem -> ( Svg msg, Scene3d.Entity WorldCoords )
+mapItemView { flightSelected } model mapItem =
     let
         cmr : Camera3d Meters WorldCoords
         cmr =
@@ -867,47 +868,62 @@ mapItemView model mapItem =
                 |> Tuple.mapSecond (\n -> toFloat model.mapWindowSize.height - n)
     in
     case mapItem of
-        Point geoPoint elevation ->
+        Point geoPoint elevation value ->
             let
-                ( pProjX, pProjY ) =
-                    to3dPoint geoPoint elevation |> project3dPoint
+                -- ( pProjX, pProjY ) =
+                --     to3dPoint geoPoint elevation |> project3dPoint
+                descend : Float
+                descend =
+                    if value < 0 then
+                        min 255 -(value * 5)
+
+                    else
+                        0
+
+                ascend : Float
+                ascend =
+                    if value > 0 then
+                        min 255 (value * 5)
+
+                    else
+                        0
+
+                color : Color
+                color =
+                    Color.rgb255 (255 - round descend) (255 - round descend - round ascend) (255 - round ascend)
             in
-            ( Svg.g []
-                [ Svg.circle
-                    [ SvgAttr.fill "#34495E"
-                    , SvgAttr.cx (String.fromFloat pProjX)
-                    , SvgAttr.cy (String.fromFloat pProjY)
-                    , SvgAttr.r "3"
-                    ]
-                    []
-                ]
-            , Scene3d.nothing
+            ( Svg.g [] []
+            , Scene3d.point { radius = Pixels.float 4 } (Material.color color) (to3dPoint geoPoint elevation)
             )
 
-        Marker id p elev ->
+        Marker label id p elev ->
             let
                 ( pProjX, pProjY ) =
                     to3dPoint p elev |> project3dPoint
+
+                point : Point3d Meters WorldCoords
+                point =
+                    to3dPoint p elev
+
+                groundProjection : Point3d Meters WorldCoords
+                groundProjection =
+                    Point3d.projectOnto Plane3d.xy point
             in
-            ( Svg.g []
-                [ Svg.circle
-                    [ SvgAttr.fill "#34495E"
-                    , SvgAttr.cx (String.fromFloat pProjX)
-                    , SvgAttr.cy (String.fromFloat pProjY)
-                    , SvgAttr.r "3"
-                    ]
-                    []
-                , Svg.text_
-                    [ SvgAttr.x <| String.fromFloat pProjX
-                    , SvgAttr.y <| String.fromFloat pProjY
-                    , SvgAttr.dy "-10"
-                    , SvgAttr.textAnchor "middle"
-                    , SvgAttr.fill "#34495E"
-                    , SvgAttr.fontFamily "Roboto Mono"
-                    ]
-                    [ Svg.text id ]
+            ( Svg.text_
+                [ SvgAttr.x <| String.fromFloat pProjX
+                , SvgAttr.y <| String.fromFloat pProjY
+                , SvgAttr.dy "-10"
+                , SvgAttr.textAnchor "middle"
+                , SvgAttr.fill "#34495E"
+                , SvgAttr.fontFamily "Roboto Mono"
+                , SvgAttr.cursor "pointer"
+                , onClick (flightSelected id)
                 ]
-            , Scene3d.nothing
+                [ Svg.text label ]
+            , Scene3d.group
+                [ Scene3d.point { radius = Pixels.float 4 } (Material.color Color.blue) (to3dPoint p elev)
+                , Scene3d.lineSegment (Material.color Color.purple) (LineSegment3d.from point groundProjection)
+                ]
             )
 
         Line xs ->
@@ -934,8 +950,8 @@ mapItemView model mapItem =
             ( Svg.g [] [], Scene3d.nothing )
 
 
-view : { restartOnboarding : msg, mapMsg : Msg -> msg } -> List Map3dItem -> Model -> Html msg
-view { restartOnboarding, mapMsg } mapItems model =
+view : { restartOnboarding : msg, flightSelected : String -> msg, mapMsg : Msg -> msg } -> List Map3dItem -> Model -> Html msg
+view { restartOnboarding, flightSelected, mapMsg } mapItems model =
     let
         unwrapTexture : Deferred (Material.Texture Color) -> Material.Material WorldCoords { a | uvs : () }
         unwrapTexture =
@@ -983,7 +999,7 @@ view { restartOnboarding, mapMsg } mapItems model =
 
         mis : List ( Svg msg, Scene3d.Entity WorldCoords )
         mis =
-            List.map (mapItemView model) mapItems
+            List.map (mapItemView { flightSelected = flightSelected } model) mapItems
 
         entities : List (Scene3d.Entity WorldCoords)
         entities =
@@ -1001,7 +1017,7 @@ view { restartOnboarding, mapMsg } mapItems model =
         ]
         [ Scene3d.sunny
             { upDirection = Direction3d.positiveZ
-            , sunlightDirection = Direction3d.fromAzimuthInAndElevationFrom SketchPlane3d.xy (Angle.degrees 45) (Angle.degrees 45) |> Direction3d.reverse
+            , sunlightDirection = Direction3d.fromAzimuthInAndElevationFrom SketchPlane3d.xy (Angle.degrees 180) (Angle.degrees 60) |> Direction3d.reverse
             , shadows = True
             , dimensions = ( Pixels.pixels model.mapWindowSize.width, Pixels.pixels model.mapWindowSize.height )
             , camera = camera model.viewArgs
@@ -1009,15 +1025,6 @@ view { restartOnboarding, mapMsg } mapItems model =
             , background = Scene3d.transparentBackground
             , entities = entities
             }
-
-        --   Scene3d.cloudy
-        --     { entities = entities
-        --     , upDirection = Direction3d.positiveZ
-        --     , camera = camera model.viewArgs
-        --     , clipDepth = Length.meters 1
-        --     , background = Scene3d.transparentBackground
-        --     , dimensions = ( Pixels.pixels model.windowSize.width, Pixels.pixels model.windowSize.height )
-        --     }
         , Svg.svg
             [ SvgAttr.width (String.fromInt model.mapWindowSize.width)
             , SvgAttr.height (String.fromInt model.mapWindowSize.height)

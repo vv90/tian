@@ -15,7 +15,7 @@ import Data.Aeson as Aeson
 import Data.ByteString qualified as BS
 import Data.HashMap.Strict qualified as HM
 import Data.List.NonEmpty qualified as NE (cons, reverse)
-import Data.Time (UTCTime (..))
+import Data.Time (UTCTime (..), getCurrentTime)
 import Data.Time.Calendar (fromGregorian)
 import Data.UUID (UUID)
 import Data.UUID.V4 (nextRandom)
@@ -39,7 +39,7 @@ import Servant
 import Servant.API.WebSocketConduit (WebSocketConduit)
 import Servant.Multipart (FileData (fdFileName, fdPayload), FromMultipart (fromMultipart), Mem, MultipartData (files), MultipartForm)
 import System.Directory (listDirectory)
-import System.FilePath ((</>))
+import System.FilePath (takeFileName, (</>))
 import TaskProgress (TaskProgressDto, toDto)
 import TaskProgressUtils (progress, taskStartLine)
 import Text.Parsec (Parsec, parse)
@@ -327,14 +327,16 @@ totalEnergy deviceId =
   let logsDirectory :: FilePath
       logsDirectory = "logs"
 
-      findDeviceFile :: IO (Maybe FilePath)
-      findDeviceFile = find (isPrefixOf (toString deviceId)) <$> listDirectory logsDirectory
+      findDeviceFile :: FilePath -> IO (Maybe FilePath)
+      findDeviceFile dirPath =
+        find (\path -> toString deviceId `isPrefixOf` takeFileName path) <$> listDirectory dirPath
 
-      readDeviceFile :: FilePath -> IO [TotalEnergyPoint]
+      readDeviceFile :: FilePath -> Handler [TotalEnergyPoint]
       readDeviceFile fp = do
-        content <- liftIO $ BS.split 10 <$> readFileBS (logsDirectory </> fp)
-        locationPoints <- either fail pure $ traverse (Aeson.eitherDecodeStrict @LocationDatapoint) content
+        content <- liftIO $ BS.split 10 <$> readFileBS fp
+        locationPoints <- either (\e -> throwError $ err500 {errBody = "Error: " <> (encodeUtf8 . toLText) e}) pure $ traverse (Aeson.eitherDecodeStrict @LocationDatapoint) (filter (\bs -> BS.length bs > 0) content)
         pure $ calculateTotalEnergy <$> locationPoints
-   in liftIO $ do
-        maybeFile <- findDeviceFile
-        traverse readDeviceFile maybeFile
+   in do
+        todaysDirectoryName <- show . utctDay <$> liftIO getCurrentTime
+        maybeFile <- liftIO $ findDeviceFile (logsDirectory </> todaysDirectoryName)
+        traverse (\fp -> readDeviceFile (logsDirectory </> todaysDirectoryName </> fp)) maybeFile

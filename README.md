@@ -66,3 +66,23 @@ Import digital elevation map
 ```sh
 raster2pgsql -s 4326 -I -C -M -F -t 100x100 ASTGTMV003_N45E005_dem.tif | psql -h localhost -d cvdb -p 5433 -U admin
 ```
+
+### Copying data from the server
+
+SSH into the server and archive the folder
+
+```sh
+tar -czf archive.tar.gz tian-deploy/logs/archive
+```
+
+Copy the archive to the local machine
+
+```sh
+scp root@[server-ip]:archive.tar.gz ./tian-logs
+```
+
+Extract
+
+```sh
+tar -xzf archive.tar.gz archive
+```

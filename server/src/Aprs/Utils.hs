@@ -92,7 +92,7 @@ saveMessageJson aircraftType msg = do
   let dirPath = logsDirectory </> show (utctDay currDate)
   createDirectoryIfMissing True dirPath
   let filePath = dirPath </> toString (getDeviceId msg.source) <.> show aircraftType <.> "json"
-  appendFileLBS filePath (Aeson.encode $ fromAprsMessage msg)
+  appendFileLBS filePath (Aeson.encode (fromAprsMessage msg) <> "\n")
 
 runAprs :: HashMap Text DeviceInfo -> TVar AprsMessageBroker -> TVar FlightsState -> IO ()
 runAprs devices broker flights =

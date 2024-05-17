@@ -134,6 +134,10 @@ class (GeoPosition a) => GeoPosition3d a where
 class (GeoPosition a) => RecordedGeoPosition a where
   time :: a -> DiffTime
 
+class (GeoPosition a) => MovingGeoPosition a where
+  speed :: a -> Speed
+  heading :: a -> Direction
+
 instance GeoPosition (HorizontalPosition a) where
   latitude = LatitudeDegrees . Geodetic.decimalLatitude
   longitude = LongitudeDegrees . Geodetic.decimalLongitude

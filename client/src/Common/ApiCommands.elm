@@ -1,4 +1,4 @@
-module Common.ApiCommands exposing (getCurrentFlights, getFlightInformation, hydrateTile, loadElevationTileCmd)
+module Common.ApiCommands exposing (getCurrentFlights, getFlightInformation, getTotalEnergy, hydrateTile, loadElevationTileCmd)
 
 import Api.Types exposing (..)
 import Array exposing (Array)
@@ -55,4 +55,12 @@ getCurrentFlights onLoaded =
     Http.get
         { url = "/api/currentFlights/"
         , expect = Http.expectJson onLoaded (Decode.list <| tupleDecoder ( Decode.string, valueDecoder ))
+        }
+
+
+getTotalEnergy : String -> (ApiResult (Maybe (List TotalEnergyPoint)) -> msg) -> Cmd msg
+getTotalEnergy deviceId onLoaded =
+    Http.get
+        { url = "/api/totalEnergy/" ++ deviceId
+        , expect = Http.expectJson onLoaded <| Decode.maybe (Decode.list totalEnergyPointDecoder)
         }

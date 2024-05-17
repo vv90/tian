@@ -13,6 +13,7 @@ import Geo
     GeoPosition3d (..),
     Latitude (LatitudeDegrees),
     Longitude (LongitudeDegrees),
+    MovingGeoPosition (..),
     RecordedGeoPosition (..),
     Speed (..),
     ddmTodd,
@@ -73,6 +74,10 @@ instance GeoPosition3d AprsMessage where
 
 instance RecordedGeoPosition AprsMessage where
   time = secondsToDiffTime . fromIntegral . timeSeconds
+
+instance MovingGeoPosition AprsMessage where
+  speed x = x.speed
+  heading x = x.heading
 
 aprsLatParser :: Parsec ByteString () Latitude
 aprsLatParser = do
@@ -246,7 +251,7 @@ aprsMessageParser = do
   primarySymbol <- primarySymbolParser
   messageLon <- aprsLonParser
   secondarySymbol <- secondarySymbolParser
-  (heading, speed, alt) <- aprsInfoParser
+  (heading', speed', alt) <- aprsInfoParser
   void spaces
 
   additionalValues <- aprsAdditionalInfoParser `sepEndBy` spaces
@@ -260,8 +265,8 @@ aprsMessageParser = do
             timeSeconds = messageTime,
             lat = messageLat,
             lon = messageLon,
-            heading = heading,
-            speed = speed,
+            heading = heading',
+            speed = speed',
             elev = alt,
             glidernetId = Nothing,
             verticalSpeed = Nothing,

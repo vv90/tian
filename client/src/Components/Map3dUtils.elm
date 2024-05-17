@@ -36,8 +36,8 @@ import Vector2d exposing (Vector2d)
 
 
 type Map3dItem
-    = Point GeoPoint Elevation
-    | Marker String GeoPoint Elevation
+    = Point GeoPoint Elevation Float
+    | Marker String String GeoPoint Elevation
     | Line (List ( GeoPoint, Elevation ))
     | Cylinder GeoPoint Distance Elevation
 

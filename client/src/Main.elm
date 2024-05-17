@@ -6,8 +6,9 @@ module Main exposing
 
 import Api.Types exposing (..)
 import AppState
+import Basics.Extra
 import Browser
-import Common.ApiCommands exposing (getCurrentFlights, getFlightInformation)
+import Common.ApiCommands exposing (getCurrentFlights, getFlightInformation, getTotalEnergy)
 import Common.ApiResult exposing (ApiResult)
 import Common.Deferred exposing (Deferred(..), deferredToMaybe)
 import Common.Effect as Effect
@@ -57,6 +58,7 @@ type alias Model =
 
     -- , demoTask : Maybe FlightTask
     , flightPositions : Dict String ( Deferred FlightInformation, FlightPosition )
+    , totalEnergyPoints : List TotalEnergyPoint
     }
 
 
@@ -101,6 +103,7 @@ init flags =
 
       --   , demoTask = Nothing
       , flightPositions = Dict.empty
+      , totalEnergyPoints = []
       }
     , Cmd.batch
         [ Cmd.map Map3dMsg m3dCmd
@@ -120,6 +123,8 @@ type Msg
     | FlightPositionReceived String
     | FlightInformationReceived String (ApiResult (Maybe FlightInformation))
     | CurrentFlightsReceived (ApiResult (List ( String, ( FlightInformation, FlightPosition ) )))
+    | FlightSelected String
+    | TotalEnergyPointsReceived (ApiResult (Maybe (List TotalEnergyPoint)))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -240,6 +245,15 @@ update msg model =
         CurrentFlightsReceived (Err _) ->
             ( model, Cmd.none )
 
+        FlightSelected deviceId ->
+            ( model, getTotalEnergy deviceId TotalEnergyPointsReceived )
+
+        TotalEnergyPointsReceived (Ok (Just points)) ->
+            ( { model | totalEnergyPoints = points }, Cmd.none )
+
+        TotalEnergyPointsReceived _ ->
+            ( { model | totalEnergyPoints = [] }, Cmd.none )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -266,11 +280,38 @@ viewMobile _ =
     Html.text "Mobile and tablet screens are not supported yet"
 
 
+energyDeltaPoints : List TotalEnergyPoint -> List Map3dItem
+energyDeltaPoints totalEnergyPoints =
+    energyDeltaPoints_ [] totalEnergyPoints
+
+
+energyDeltaPoints_ : List Map3dItem -> List TotalEnergyPoint -> List Map3dItem
+energyDeltaPoints_ acc remainingPoints =
+    case remainingPoints of
+        [] ->
+            acc
+
+        [ _ ] ->
+            acc
+
+        p0 :: p1 :: ps ->
+            let
+                delta : Float
+                delta =
+                    Basics.Extra.safeDivide (p1.energy - p0.energy) (toFloat p1.tod - toFloat p0.tod) |> Maybe.withDefault 0
+
+                deltaPoint : Map3dItem
+                deltaPoint =
+                    Point { lat = p0.lat, lon = p0.lon } p0.alt delta
+            in
+            energyDeltaPoints_ (deltaPoint :: acc) (p1 :: ps)
+
+
 viewDesktop : Model -> Html Msg
 viewDesktop model =
     let
-        map3dItems : List Map3dItem
-        map3dItems =
+        flightPositionItems : List Map3dItem
+        flightPositionItems =
             let
                 label : String -> Elevation -> Deferred FlightInformation -> String
                 label key (ElevationMeters elev) info =
@@ -286,7 +327,11 @@ viewDesktop model =
             in
             model.flightPositions
                 |> Dict.toList
-                |> List.map (\( key, ( info, { lat, lon, alt } ) ) -> Marker (label key alt info) { lat = lat, lon = lon } alt)
+                |> List.map (\( key, ( info, { lat, lon, alt } ) ) -> Marker (label key alt info) key { lat = lat, lon = lon } alt)
+
+        totalEnergyItems : List Map3dItem
+        totalEnergyItems =
+            energyDeltaPoints model.totalEnergyPoints
 
         sidebarView : Html Msg
         sidebarView =
@@ -304,7 +349,13 @@ viewDesktop model =
         --         , flightTasks = model.appState.flightTasks
         --         }
         --         model.flightTaskPage
-        , Map3d.view { restartOnboarding = SidebarMsg Sidebar.OnboardingRestarted, mapMsg = Map3dMsg } map3dItems model.map3dModel
+        , Map3d.view
+            { restartOnboarding = SidebarMsg Sidebar.OnboardingRestarted
+            , mapMsg = Map3dMsg
+            , flightSelected = FlightSelected
+            }
+            (flightPositionItems ++ totalEnergyItems)
+            model.map3dModel
 
         -- , detachedView TopLeft <|
         --     Element.map FlightTaskPageMsg <|

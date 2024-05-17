@@ -403,7 +403,7 @@ updateTiles model =
                 |> MaybeX.unwrap
                     []
                     (makeTiles
-                        (isInView model.viewArgs model.mapWindowSize)
+                        (Point3d.on xyPlane >> isInView model.viewArgs model.mapWindowSize)
                         model.mapFrame
                         model.mercatorRate
                         (Point3d.projectInto xyPlane model.viewArgs.focalPoint)
@@ -467,13 +467,9 @@ camera viewArgs =
         }
 
 
-isInView : ViewArgs -> WindowSize -> Point2d Meters PlaneCoords -> Bool
+isInView : ViewArgs -> WindowSize -> Point3d Meters WorldCoords -> Bool
 isInView viewArgs windowSize p =
     let
-        p3d : Point3d Meters WorldCoords
-        p3d =
-            Point3d.on xyPlane p
-
         sRect : Rectangle2d Pixels screenCoords
         sRect =
             screenRectangle windowSize
@@ -487,11 +483,11 @@ isInView viewArgs windowSize p =
             Projection.toScreenSpace
                 cmr
                 sRect
-                p3d
+                p
 
         depth : Quantity Float Meters
         depth =
-            Projection.depth cmr p3d
+            Projection.depth cmr p
     in
     Rectangle2d.contains projectedPoint sRect
         && Quantity.greaterThan (Length.meters 0) depth
@@ -834,7 +830,7 @@ subscriptions model =
     Sub.batch [ keyModSub, dragSub, cursorSub, demoSub ]
 
 
-mapItemView : { flightSelected : String -> msg } -> Model -> Map3dItem -> ( Svg msg, Scene3d.Entity WorldCoords )
+mapItemView : { flightSelected : String -> msg } -> Model -> Map3dItem -> Maybe ( Svg msg, Scene3d.Entity WorldCoords )
 mapItemView { flightSelected } model mapItem =
     let
         cmr : Camera3d Meters WorldCoords
@@ -870,29 +866,39 @@ mapItemView { flightSelected } model mapItem =
     case mapItem of
         Point geoPoint elevation value ->
             let
-                descend : Float
-                descend =
-                    if value < 0 then
-                        min 255 -(value * 5)
-
-                    else
-                        0
-
-                ascend : Float
-                ascend =
-                    if value > 0 then
-                        min 255 (value * 5)
-
-                    else
-                        0
-
-                color : Color
-                color =
-                    Color.rgb255 (255 - round descend) (255 - round descend - round ascend) (255 - round ascend)
+                pt : Point3d Meters WorldCoords
+                pt =
+                    to3dPoint geoPoint elevation
             in
-            ( Svg.g [] []
-            , Scene3d.point { radius = Pixels.float 4 } (Material.color color) (to3dPoint geoPoint elevation)
-            )
+            if isInView model.viewArgs model.mapWindowSize pt then
+                let
+                    descend : Float
+                    descend =
+                        if value < 0 then
+                            min 255 -(value * 5)
+
+                        else
+                            0
+
+                    ascend : Float
+                    ascend =
+                        if value > 0 then
+                            min 255 (value * 5)
+
+                        else
+                            0
+
+                    color : Color
+                    color =
+                        Color.rgb255 (255 - round descend) (255 - round descend - round ascend) (255 - round ascend)
+                in
+                Just
+                    ( Svg.g [] []
+                    , Scene3d.point { radius = Pixels.float 4 } (Material.color color) pt
+                    )
+
+            else
+                Nothing
 
         Marker label id p elev ->
             let
@@ -902,50 +908,58 @@ mapItemView { flightSelected } model mapItem =
                 point : Point3d Meters WorldCoords
                 point =
                     to3dPoint p elev
-
-                groundProjection : Point3d Meters WorldCoords
-                groundProjection =
-                    Point3d.projectOnto Plane3d.xy point
             in
-            ( Svg.text_
-                [ SvgAttr.x <| String.fromFloat pProjX
-                , SvgAttr.y <| String.fromFloat pProjY
-                , SvgAttr.dy "-10"
-                , SvgAttr.textAnchor "middle"
-                , SvgAttr.fill "#34495E"
-                , SvgAttr.fontFamily "Roboto Mono"
-                , SvgAttr.cursor "pointer"
-                , onClick (flightSelected id)
-                ]
-                [ Svg.text label ]
-            , Scene3d.group
-                [ Scene3d.point { radius = Pixels.float 4 } (Material.color Color.blue) (to3dPoint p elev)
-                , Scene3d.lineSegment (Material.color Color.purple) (LineSegment3d.from point groundProjection)
-                ]
-            )
+            if isInView model.viewArgs model.mapWindowSize point then
+                let
+                    groundProjection : Point3d Meters WorldCoords
+                    groundProjection =
+                        Point3d.projectOnto Plane3d.xy point
+                in
+                Just
+                    ( Svg.text_
+                        [ SvgAttr.x <| String.fromFloat pProjX
+                        , SvgAttr.y <| String.fromFloat pProjY
+                        , SvgAttr.dy "-10"
+                        , SvgAttr.textAnchor "middle"
+                        , SvgAttr.fill "#34495E"
+                        , SvgAttr.fontFamily "Roboto Mono"
+                        , SvgAttr.cursor "pointer"
+                        , onClick (flightSelected id)
+                        ]
+                        [ Svg.text label ]
+                    , Scene3d.group
+                        [ Scene3d.point { radius = Pixels.float 4 } (Material.color Color.blue) (to3dPoint p elev)
+                        , Scene3d.lineSegment (Material.color Color.purple) (LineSegment3d.from point groundProjection)
+                        ]
+                    )
 
-        Line xs ->
-            let
-                coordsToString : ( Float, Float ) -> String
-                coordsToString ( a, b ) =
-                    String.fromFloat a ++ "," ++ String.fromFloat b
+            else
+                Nothing
 
-                pts : List String
-                pts =
-                    xs |> List.map (uncurry to3dPoint >> project3dPoint >> coordsToString)
-            in
-            ( Svg.polyline
-                [ SvgAttr.points <| String.join " " pts
-                , SvgAttr.strokeWidth "2"
-                , SvgAttr.stroke "#555555"
-                , SvgAttr.fill "transparent"
-                ]
-                []
-            , Scene3d.nothing
-            )
+        Line _ ->
+            --             let
+            --                 coordsToString : ( Float, Float ) -> String
+            --                 coordsToString ( a, b ) =
+            --                     String.fromFloat a ++ "," ++ String.fromFloat b
+            -- r
+            --                 pts : List String
+            --                 pts =
+            --                     xs |> List.map (uncurry to3dPoint >> project3dPoint >> coordsToString)
+            --             in
+            --             Just ( Svg.polyline
+            --                 [ SvgAttr.points <| String.join " " pts
+            --                 , SvgAttr.strokeWidth "2"
+            --                 , SvgAttr.stroke "#555555"
+            --                 , SvgAttr.fill "transparent"
+            --                 ]
+            --                 []
+            --             , Scene3d.nothing
+            --             )
+            Nothing
 
         Cylinder _ (DistanceMeters _) (ElevationMeters _) ->
-            ( Svg.g [] [], Scene3d.nothing )
+            -- Just ( Svg.g [] [], Scene3d.nothing )
+            Nothing
 
 
 view : { restartOnboarding : msg, flightSelected : String -> msg, mapMsg : Msg -> msg } -> List Map3dItem -> Model -> Html msg
@@ -997,7 +1011,7 @@ view { restartOnboarding, flightSelected, mapMsg } mapItems model =
 
         mis : List ( Svg msg, Scene3d.Entity WorldCoords )
         mis =
-            List.map (mapItemView { flightSelected = flightSelected } model) mapItems
+            mapItems |> List.filterMap (mapItemView { flightSelected = flightSelected } model)
 
         entities : List (Scene3d.Entity WorldCoords)
         entities =

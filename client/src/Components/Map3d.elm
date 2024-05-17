@@ -870,8 +870,6 @@ mapItemView { flightSelected } model mapItem =
     case mapItem of
         Point geoPoint elevation value ->
             let
-                -- ( pProjX, pProjY ) =
-                --     to3dPoint geoPoint elevation |> project3dPoint
                 descend : Float
                 descend =
                     if value < 0 then

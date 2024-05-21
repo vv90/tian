@@ -4,7 +4,7 @@
   "description": "",
   "private": true,
   "scripts": {
-    "start": "elm-land server",
+    "start": "vite",
     "build": "vite build",
     "preview-build": "vite preview",
     "typecheck": "npm run build",

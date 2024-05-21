@@ -4,8 +4,8 @@
   "description": "",
   "private": true,
   "scripts": {
-    "start": "vite",
-    "build": "vite build",
+    "start": "elm-land generate && vite",
+    "build": "elm-land generate && vite build",
     "preview-build": "vite preview",
     "typecheck": "npm run build",
     "test-watch": "elm-test \"src/**/*Test.elm\" --watch",

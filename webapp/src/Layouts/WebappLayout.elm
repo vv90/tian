@@ -2,8 +2,10 @@ module Layouts.WebappLayout exposing (Model, Msg, Props, layout)
 
 import Effect exposing (Effect)
 import Element exposing (..)
+import Element.Background as Background
 import FreeLayout2
 import Layout exposing (Layout)
+import Palette
 import Route exposing (Route)
 import Shared
 import View exposing (View)
@@ -75,12 +77,15 @@ view shared { content } =
         let
             viewSidebar : Element contentMsg
             viewSidebar =
-                column [ width (px 200), spacing 20, alignTop, padding 20 ]
+                column [ width (px 200), height fill, spacing 20, alignTop, padding 20, Background.color <| rgba255 255 255 255 0.5 ]
                     [ text "sidebar content"
                     ]
         in
-        row [ width fill, height fill ]
-            [ viewSidebar
-            , el [ alignTop, width fill ] <| content.element
+        row
+            [ width fill
+            , height fill
+            , Element.inFront viewSidebar
+            ]
+            [ el [ alignTop, width fill ] <| content.element
             ]
     }

@@ -1,6 +1,6 @@
 module Shared.Model exposing (Model)
 
-{-| -}
+import FreeLayout2
 
 
 {-| Normally, this value would live in "Shared.elm"
@@ -11,4 +11,5 @@ own file, so they can be imported by `Effect.elm`
 
 -}
 type alias Model =
-    {}
+    { layout : FreeLayout2.LayoutState
+    }

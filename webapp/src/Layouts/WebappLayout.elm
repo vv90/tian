@@ -2,6 +2,7 @@ module Layouts.WebappLayout exposing (Model, Msg, Props, layout)
 
 import Effect exposing (Effect)
 import Element exposing (..)
+import FreeLayout2
 import Layout exposing (Layout)
 import Route exposing (Route)
 import Shared
@@ -13,11 +14,11 @@ type alias Props =
 
 
 layout : Props -> Shared.Model -> Route () -> Layout () Model Msg contentMsg
-layout props shared route =
+layout _ shared _ =
     Layout.new
         { init = init
         , update = update
-        , view = view
+        , view = view shared
         , subscriptions = subscriptions
         }
 
@@ -55,7 +56,7 @@ update msg model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.none
 
 
@@ -63,9 +64,23 @@ subscriptions model =
 -- VIEW
 
 
-view : { toContentMsg : Msg -> contentMsg, content : View contentMsg, model : Model } -> View contentMsg
-view { toContentMsg, model, content } =
+view : Shared.Model -> { toContentMsg : Msg -> contentMsg, content : View contentMsg, model : Model } -> View contentMsg
+view shared { content } =
     { title = content.title
-    , attributes = content.attributes
-    , element = column [][ content.element]
+
+    -- TODO: add TextStyle to bodyAttributes
+    -- TODO: add Toasts to bodyAttributes
+    , attributes = FreeLayout2.bodyAttributes shared.layout ++ content.attributes
+    , element =
+        let
+            viewSidebar : Element contentMsg
+            viewSidebar =
+                column [ width (px 200), spacing 20, alignTop, padding 20 ]
+                    [ text "sidebar content"
+                    ]
+        in
+        row [ width fill, height fill ]
+            [ viewSidebar
+            , el [ alignTop, width fill ] <| content.element
+            ]
     }

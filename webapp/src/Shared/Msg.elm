@@ -1,6 +1,6 @@
 module Shared.Msg exposing (Msg(..))
 
-{-| -}
+import FreeLayout2
 
 
 {-| Normally, this value would live in "Shared.elm"
@@ -11,4 +11,4 @@ own file, so they can be imported by `Effect.elm`
 
 -}
 type Msg
-    = NoOp
+    = GotNewWindowSize FreeLayout2.WindowSize

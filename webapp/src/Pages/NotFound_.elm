@@ -1,4 +1,4 @@
-module Pages.Home_ exposing (Model, Msg, page)
+module Pages.NotFound_ exposing (Model, Msg, page)
 
 import Effect
 import Element exposing (..)

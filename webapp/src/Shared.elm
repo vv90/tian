@@ -1,23 +1,31 @@
 module Shared exposing
-    ( Flags, decoder
+    ( defaultPage
+    , Flags, decoder
     , Model, Msg
     , init, update, subscriptions
     )
 
 {-|
 
+@docs defaultPage
 @docs Flags, decoder
 @docs Model, Msg
 @docs init, update, subscriptions
 
 -}
 
+import Dict
 import Effect exposing (Effect)
 import Json.Decode
 import Route exposing (Route)
 import Route.Path
 import Shared.Model
 import Shared.Msg
+
+
+defaultPage : { path : Route.Path.Path, query : Dict.Dict String String, hash : Maybe String }
+defaultPage =
+    { path = Route.Path.Radar, query = Dict.empty, hash = Nothing }
 
 
 

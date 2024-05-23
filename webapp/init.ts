@@ -36,83 +36,38 @@ const getConfig = async () => {
     node: rootNode,
   });
 
-  // function subscribeToFlights() {
-  //   const socket = new WebSocket(`ws://${location.hostname}:8081/watchFlights`);
+  function subscribeToFlights() {
+    const socket = new WebSocket(`ws://${location.hostname}:8081/watchFlights`);
 
-  //   socket.addEventListener("message", (event) => {
-  //     if (event.data instanceof Blob) {
-  //       const reader = new FileReader();
+    socket.addEventListener("message", (event) => {
+      if (event.data instanceof Blob) {
+        const reader = new FileReader();
 
-  //       reader.readAsText(event.data);
-  //     }
+        reader.readAsText(event.data);
+      }
 
-  //     app.ports.flightPositionReceiver.send(event.data);
-  //   });
+      app.ports.flightPositionReceiver.send(event.data);
+    });
 
-  //   socket.addEventListener("open", (event) => {
-  //     console.log("Connected to server: ", event);
-  //   });
+    socket.addEventListener("open", (event) => {
+      console.log("Connected to server: ", event);
+    });
 
-  //   socket.addEventListener("error", (event) => {
-  //     console.log("Error: ", event);
-  //   });
+    socket.addEventListener("error", (event) => {
+      console.log("Error: ", event);
+    });
 
-  //   socket.addEventListener("close", (event) => {
-  //     console.log("Closed: ", event);
-  //     subscribeToFlights();
-  //   });
-  // }
+    socket.addEventListener("close", (event) => {
+      console.log("Closed: ", event);
+      subscribeToFlights();
+    });
+  }
 
-  // app.ports.watchFlight.subscribe(subscribeToFlights);
+  app.ports.watchFlight.subscribe(subscribeToFlights);
 
-  // app.ports.onboardingCompleted.subscribe(() => {
-  //   localStorage.setItem("onboardingCompleted", "true");
-  // });
-
-  // app.ports.startDemo.subscribe(function () {
-  //   // Create your WebSocket.
-
-  //   const socket = new WebSocket(`ws://${location.host}:8081/demo`);
-
-  //   // When a command goes to the `sendMessage` port, we pass the message
-  //   // along to the WebSocket.
-  //   // app.ports.sendMessage.subscribe(function (message) {
-  //   //   socket.send(message);
-  //   // });
-
-  //   // When a message comes into our WebSocket, we pass the message along
-  //   // to the `messageReceiver` port.
-  //   socket.addEventListener("message", function (event) {
-  //     if (event.data instanceof Blob) {
-  //       const reader = new FileReader();
-
-  //       reader.onload = () => {
-  //         console.log("Result: " + reader.result);
-  //       };
-
-  //       reader.readAsText(event.data);
-  //     } else {
-  //       console.log("Result: " + event.data);
-  //     }
-  //     // console.log("Received message from server:", event.data);
-  //     app.ports.messageReceiver.send(event.data);
-  //   });
-  //   socket.addEventListener("open", function (event) {
-  //     console.log("Connected to server: ", event);
-  //     // socket.send(
-  //     //   `user test99123 pass -1 vers testsoftware 1.0_05 filter r/33.25/-96.5/50`
-  //     // );
-  //     // app.ports.socketConnected.send(event.data);
-  //   });
-  //   socket.addEventListener("error", function (event) {
-  //     console.log("Error: ", event);
-  //     // app.ports.socketError.send(event.data);
-  //   });
-  //   socket.addEventListener("close", function (event) {
-  //     console.log("Closed: ", event);
-  //     // app.ports.socketClosed.send(event);
-  //   });
-  // });
+  app.ports.onboardingCompleted.subscribe(() => {
+    localStorage.setItem("onboardingCompleted", "true");
+  });
 })().catch(() =>
   displayErrorMessage("Something went wrong", "Please try again later")
 );

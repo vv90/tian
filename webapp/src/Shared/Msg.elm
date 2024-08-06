@@ -1,4 +1,4 @@
-module Shared.Msg exposing (Msg(..))
+module Shared.Msg exposing (Msg(..), test)
 
 import FreeLayout2
 
@@ -12,3 +12,8 @@ own file, so they can be imported by `Effect.elm`
 -}
 type Msg
     = GotNewWindowSize FreeLayout2.WindowSize
+
+
+test : Int
+test =
+    identity 42

@@ -30,18 +30,34 @@ defaultPage =
     { path = Route.Path.Radar, query = Dict.empty, hash = Nothing }
 
 
+type alias Config =
+    { backendUrl : String
+    , showDebug : Bool
+    }
+
+
 
 -- FLAGS
 
 
 type alias Flags =
-    { windowSize : FreeLayout2.WindowSize }
+    { windowSize : FreeLayout2.WindowSize
+    , config : Config
+    , onboardingCompleted : Bool
+    }
 
 
 decoder : Json.Decode.Decoder Flags
 decoder =
-    Json.Decode.map Flags
+    Json.Decode.map3 Flags
         (Json.Decode.field "windowSize" FreeLayout2.windowSizeDecoder)
+        (Json.Decode.field "config"
+            (Json.Decode.map2 Config
+                (Json.Decode.field "backendUrl" Json.Decode.string)
+                (Json.Decode.field "showDebug" Json.Decode.bool)
+            )
+        )
+        (Json.Decode.field "onboardingCompleted" Json.Decode.bool)
 
 
 

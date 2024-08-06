@@ -2,3 +2,6 @@
 /.elm-land
 /elm-stuff
 /node_modules
+
+# static tiles
+public/tiles

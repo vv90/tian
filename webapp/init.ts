@@ -46,7 +46,7 @@ const getConfig = async () => {
         reader.readAsText(event.data);
       }
 
-      app.ports.flightPositionReceiver.send(event.data);
+      // app.ports.flightPositionReceiver.send(event.data);
     });
 
     socket.addEventListener("open", (event) => {
@@ -63,11 +63,11 @@ const getConfig = async () => {
     });
   }
 
-  app.ports.watchFlight.subscribe(subscribeToFlights);
+  // app.ports.watchFlight.subscribe(subscribeToFlights);
 
-  app.ports.onboardingCompleted.subscribe(() => {
-    localStorage.setItem("onboardingCompleted", "true");
-  });
+  // app.ports.onboardingCompleted.subscribe(() => {
+  //   localStorage.setItem("onboardingCompleted", "true");
+  // });
 })().catch(() =>
-  displayErrorMessage("Something went wrong", "Please try again later")
+  displayErrorMessage("Something went wrong", "Please try again later"),
 );
